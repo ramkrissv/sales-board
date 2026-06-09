@@ -1436,9 +1436,9 @@ Each card includes:
 
 ---
 
-## 11. Implementation Roadmap (MACH-Aligned)
+## 11. Implementation Roadmap
 
-### Phase 1: Architecture & Design (Months 1-2)
+### Phase 1: Architecture & Design
 *Goal: Define domain boundaries, migrate to target stack, preserve all v1 features*
 
 **Domain Decomposition:**
@@ -1473,7 +1473,7 @@ Each card includes:
 - [ ] Developer portal with pre-built TypeScript SDK
 - [ ] Webhook delivery system (BullMQ + retry logic)
 
-### Phase 2: Core Engine & Intelligence Layer (Months 3-5)
+### Phase 2: Core Engine & Intelligence Layer
 *Goal: Build agent runtime, Knowledge Graph, and Workflow Engine*
 
 **Agent Runtime (Coordinator Pattern):**
@@ -1516,7 +1516,7 @@ Each card includes:
 - [ ] Build Service Line and Product/Solution catalog entities
 - [ ] POC-based pipeline views (My Pipeline, By Sales POC, By Service Line, By Product)
 
-### Phase 3: Headless Frontend & Agentification (Months 6-8)
+### Phase 3: Headless Frontend & Agentification
 *Goal: Build all new AI-native views, full agent fleet, agentic workflows*
 
 **New Views:**
@@ -1551,7 +1551,7 @@ Each card includes:
 - [ ] Implement human-in-the-loop approval gates for autonomous actions
 - [ ] Build agent observability dashboard (LangSmith integration)
 
-### Phase 4: Integrations & Testing (Months 9-10)
+### Phase 4: Integrations & Testing
 *Goal: Connect external systems, rigorous testing, production deployment*
 
 **System Integrations:**
@@ -1581,7 +1581,7 @@ Each card includes:
 - [ ] Configure monitoring: Sentry (errors), Datadog (APM), LangSmith (LLM observability)
 - [ ] Set up staging → production promotion flow
 
-### Phase 5: Enterprise Scale (Months 11-12+)
+### Phase 5: Enterprise Scale
 *Goal: Multi-tenancy, compliance, advanced analytics*
 
 - [ ] Multi-tenant architecture (organization isolation in MongoDB)
