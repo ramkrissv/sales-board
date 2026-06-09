@@ -7,7 +7,7 @@ import { useState } from 'react';
 import {
   X, DollarSign, Calendar, Users, CheckSquare, Percent,
   Globe, Briefcase, Tag, ExternalLink, Edit2, Save, Plus,
-  Trash2, ChevronRight, Clock, Building2,
+  Trash2, ChevronRight, Clock, Building2, Loader2, Sparkles,
 } from 'lucide-react';
 
 interface DealDetailProps {
@@ -21,6 +21,8 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'stakeholders' | 'tasks' | 'log'>('details');
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
+  const [analysis, setAnalysis] = useState<any>(null);
+  const analysisMutation = trpc.ai.analyzeDeal.useMutation();
 
   if (!opp) return null;
 
@@ -84,6 +86,14 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
             ) : (
               <button onClick={() => setEditing(true)} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground"><Edit2 className="h-4 w-4" /></button>
             )}
+            <button
+              onClick={() => analysisMutation.mutate({ opportunityId: opp.id }, { onSuccess: (data) => setAnalysis(data) })}
+              disabled={analysisMutation.isPending}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#7B52FF]/10 text-[#7B52FF] text-xs font-medium hover:bg-[#7B52FF]/20 transition-colors disabled:opacity-50"
+            >
+              {analysisMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              AI Analyze
+            </button>
             <button onClick={handleDelete} className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400"><Trash2 className="h-4 w-4" /></button>
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground"><X className="h-4 w-4" /></button>
           </div>
@@ -110,6 +120,47 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
         <div className="flex-1 overflow-y-auto p-5">
           {activeTab === 'details' && (
             <div className="space-y-5">
+              {/* AI Analysis Results */}
+              {analysis && (
+                <div className="p-4 rounded-xl bg-[#7B52FF]/5 border border-[#7B52FF]/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-[#7B52FF]" />
+                      <span className="text-sm font-medium text-foreground">AI Analysis</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-xs"><span className="text-muted-foreground">Health:</span> <span className="g-metric font-bold text-foreground">{analysis.healthScore}/100</span></div>
+                      <div className="text-xs"><span className="text-muted-foreground">Win:</span> <span className="g-metric font-bold text-foreground">{analysis.winProbability}%</span></div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-foreground leading-relaxed">{analysis.summary}</p>
+                  {analysis.risks?.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="g-section-label">Risks</div>
+                      {analysis.risks.map((r: any, i: number) => (
+                        <div key={i} className="flex items-start gap-2 text-xs">
+                          <span className={`g-chip ${r.severity === 'critical' ? 'bg-red-500/10 text-red-400' : r.severity === 'high' ? 'bg-orange-500/10 text-orange-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                            {r.severity}
+                          </span>
+                          <span className="text-foreground">{r.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {analysis.actions?.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="g-section-label">Recommended Actions</div>
+                      {analysis.actions.map((a: any, i: number) => (
+                        <div key={i} className="flex items-start gap-2 text-xs">
+                          <span className="g-chip bg-[#7B52FF]/10 text-[#7B52FF]">{a.priority}</span>
+                          <div><span className="text-foreground font-medium">{a.action}</span> <span className="text-muted-foreground">-- {a.reason}</span></div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* KPI Row */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-lg bg-card border border-border">
