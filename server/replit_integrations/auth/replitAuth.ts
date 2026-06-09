@@ -6,7 +6,10 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import MemoryStore from "memorystore";
 import { authStorage } from "./storage";
+
+const isReplitEnv = !!process.env.REPL_ID;
 
 const getOidcConfig = memoize(
   async () => {
@@ -20,6 +23,22 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+
+  if (!isReplitEnv) {
+    const MemStore = MemoryStore(session);
+    return session({
+      secret: process.env.SESSION_SECRET || "sales-board-secret-key",
+      store: new MemStore({ checkPeriod: sessionTtl }),
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        secure: false,
+        maxAge: sessionTtl,
+      },
+    });
+  }
+
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
@@ -63,6 +82,23 @@ async function upsertUser(claims: any) {
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
+
+  if (!isReplitEnv) {
+    // Standalone mode: no OIDC, auto-authenticate as a default user
+    app.use((req: any, _res, next) => {
+      if (!req.session.user) {
+        req.session.user = {
+          claims: { sub: "default-user" },
+          expires_at: Math.floor(Date.now() / 1000) + 86400 * 365,
+        };
+      }
+      req.user = req.session.user;
+      req.isAuthenticated = () => true;
+      next();
+    });
+    return;
+  }
+
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -131,6 +167,10 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  if (!isReplitEnv) {
+    return next();
+  }
+
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {
