@@ -21,7 +21,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Galent AI — Sales Intelligence',
+  title: 'Galent SalesPilot',
   description: 'AI-native revenue intelligence platform',
 };
 
