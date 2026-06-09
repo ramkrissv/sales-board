@@ -1436,75 +1436,232 @@ Each card includes:
 
 ---
 
-## 11. Phase Roadmap
+## 11. Implementation Roadmap (MACH-Aligned)
 
-### Phase 1: Platform Foundation (Current → v1.5)
-*Goal: Restructure shell, add Account entity, harden for production*
+### Phase 1: Architecture & Design (Months 1-2)
+*Goal: Define domain boundaries, migrate to target stack, preserve all v1 features*
 
-- [ ] Restructure navigation from header-dropdown to persistent left sidebar
-- [ ] Implement new design system (colors, typography, spacing from DESIGN.md)
-- [ ] Replace Replit auth with proper SSO (Google OAuth / SAML)
-- [ ] Update favicon to Galent brand icon
-- [ ] Add user roles (Admin, Manager, Rep, SDR, Viewer) with sidebar profile card
-- [ ] Create Account entity with multi-opportunity rollup
-- [ ] Server-side pagination on all list views
-- [ ] Full-text search (PostgreSQL tsvector)
-- [ ] Notification engine (in-app bell)
-- [ ] Data import (CSV) and bulk export
-- [ ] Dark mode polish per design system spec
+**Domain Decomposition:**
+- [ ] Define service boundaries: Identity, Deals/Pipeline, Accounts, Tasks, Stakeholders, Workflows, Agents, Integrations
+- [ ] Design MongoDB schema for all collections (migrate from PostgreSQL preserving all v1 data)
+- [ ] Set up MongoDB Atlas cluster (primary DB + Atlas Search + Vector Search indexes)
+- [ ] Implement centralized data schema with Mongoose ODM and Zod validation
+- [ ] Design Knowledge Graph schema (adjacency-list model in MongoDB)
 
-### Phase 2: Intelligence Layer (v2.0)
-*Goal: Add AI Copilot and Deal Intelligence to existing views*
+**Stack Migration:**
+- [ ] Scaffold Next.js 15 App Router project with TypeScript 5.6
+- [ ] Set up tRPC routers mirroring all existing Express API endpoints (zero functionality loss)
+- [ ] Migrate auth to NextAuth.js v5 (Google OAuth + SAML SSO)
+- [ ] Set up Redis (Upstash) for session store, cache, and pub/sub
+- [ ] Configure API gateway layer (rate limiting, API key management)
+- [ ] Set up BullMQ job queue for background tasks
 
-- [ ] AI Copilot right sidebar (persistent, all screens)
-- [ ] Agent runtime framework (trigger → reason → act → log)
-- [ ] Deal Health Score (0-100, green/yellow/red bars on Kanban cards)
-- [ ] Win Probability (purple bar on Kanban cards)
-- [ ] AI Status indicators on cards (on track / at risk dots)
-- [ ] Agent Signal cards on Kanban cards
-- [ ] Deal Coach agent (risk signals, next-best-action, strategic insights)
-- [ ] Pipeline Hygiene Agent (nightly: stale deals, missing fields)
-- [ ] Smart conversation summarization
-- [ ] AI insights in Copilot sidebar (Strategic Insight, Active Risks, Recommended Actions)
+**Design System Implementation:**
+- [ ] Implement Galent Intelligence System design tokens (colors, typography, spacing)
+- [ ] Restructure navigation: persistent left sidebar + top nav + AI Copilot right panel
+- [ ] Update all components to new design system (Source Serif 4 headers, Inter body, glassmorphism)
+- [ ] Update favicon and branding to proper Galent assets
+- [ ] Implement dark mode per design system spec
 
-### Phase 3: Agentic Views (v2.5)
-*Goal: Build the new AI-native views*
+**Data Migration:**
+- [ ] Write PostgreSQL → MongoDB migration scripts (all 31 seed opportunities + schema)
+- [ ] Validate: every v1 feature works identically on new stack
+- [ ] All existing views preserved: Kanban, Timeline, Schedule Board, Table, Dashboard, Tasks, Stakeholders
 
-- [ ] Account 360 Intelligence view (stakeholder neural map, health indicators, AI news insights)
-- [ ] AI Forecasting Lab (weighted pipeline waterfall, scenario modeling, agentic insights feed)
-- [ ] Revenue Funnel Intelligence (funnel stage cards with AI micro-insights, priority action pipeline)
-- [ ] Neural Command Center (multi-agent chat, actionable insights, neural core status)
-- [ ] Agent Registry (agent management, system health KPIs, registry logs)
-- [ ] Research Agent (auto-enrich accounts, stakeholder data, news signals)
-- [ ] Outreach Drafter agent (context-aware follow-ups with approve/send flow)
-- [ ] Competitive Intelligence agent
+**API Tooling:**
+- [ ] Interactive API documentation (Swagger/OpenAPI via tRPC-openapi)
+- [ ] Developer portal with pre-built TypeScript SDK
+- [ ] Webhook delivery system (BullMQ + retry logic)
 
-### Phase 4: Connected Platform (v3.0)
-*Goal: System integrations with AI-managed sync*
+### Phase 2: Core Engine & Intelligence Layer (Months 3-5)
+*Goal: Build agent runtime, Knowledge Graph, and Workflow Engine*
 
+**Agent Runtime (Coordinator Pattern):**
+- [ ] Implement Coordinator Agent using LangGraph / CrewAI + Claude API
+- [ ] Build composable Agent interface (invoke, wake, sleep, tools, memory, output schema)
+- [ ] Implement Deal Coach specialist agent (risk signals, next-best-action, strategic insights)
+- [ ] Implement Pipeline Hygiene Agent (nightly cron: stale deals, missing fields, duplicates)
+- [ ] Build Agent Actions Queue (pending → approved → executed, with WebSocket notifications)
+- [ ] Implement agent audit trail (terminal-style registry logs)
+
+**Knowledge Graph:**
+- [ ] Populate knowledge_graph collection from existing data (accounts, stakeholders, opportunities)
+- [ ] Implement relationship types: HAS_STAKEHOLDER, REPORTS_TO, CHAMPIONS, COMPETES_WITH, etc.
+- [ ] Build MongoDB $graphLookup aggregation queries for relationship traversal
+- [ ] Set up vector embeddings pipeline (OpenAI/Anthropic) for semantic search
+- [ ] Implement agent_memory collection with semantic retrieval
+
+**Deal Intelligence:**
+- [ ] Deal Health Score computation (0-100, multi-signal composite)
+- [ ] Win Probability prediction (historical pattern matching + LLM reasoning)
+- [ ] AI Status indicators on Kanban cards (on track / at risk / stale / closing)
+- [ ] Agent Signal cards embedded on opportunity cards
+- [ ] Smart conversation summarization (LLM-powered)
+
+**AI Copilot Sidebar:**
+- [ ] Persistent right panel on all screens with agent switcher (Deal Coach, Research, Live Insights, Activity Log)
+- [ ] Real-time Deal Stream with LIVE badge (WebSocket/SSE)
+- [ ] Strategic Insight cards, Active Risks, Recommended Actions
+- [ ] "Ask Copilot" natural language input
+
+**Integration Platform:**
+- [ ] Build iPaaS layer (event-driven message broker using BullMQ / Redis Streams)
+- [ ] Implement async sync framework for ERP/CRM/Fulfillment connections
+- [ ] Design webhook system for real-time upstream/downstream updates
+
+**Workflow Engine (v1):**
+- [ ] Implement trigger → condition → action engine (MongoDB-backed)
+- [ ] Build pre-built workflow templates (Discovery Checklist, Qualification Gate, Proposal Auto-Prep, etc.)
+- [ ] Implement customizable pipeline stages per service line
+- [ ] Build Service Line and Product/Solution catalog entities
+- [ ] POC-based pipeline views (My Pipeline, By Sales POC, By Service Line, By Product)
+
+### Phase 3: Headless Frontend & Agentification (Months 6-8)
+*Goal: Build all new AI-native views, full agent fleet, agentic workflows*
+
+**New Views:**
+- [ ] Account 360 Intelligence (stakeholder neural map, health indicators, AI news insights, opportunity rollup)
+- [ ] AI Forecasting Lab (weighted pipeline waterfall, scenario modeling sliders, agentic insights feed)
+- [ ] Revenue Funnel Intelligence (funnel stages with AI micro-insights, priority action pipeline, velocity chart)
+- [ ] Neural Command Center (multi-agent chat, neural core status, actionable insights, quick action chips)
+- [ ] Agent Registry (agent cards with LIVE/IDLE status, system health KPIs, registry logs, wake/manage)
+- [ ] Outreach Intelligence (campaign performance, SDR/AE toggle, AI outreach drafter with approve/send)
+
+**Enhanced Existing Views:**
+- [ ] Kanban cards: health bars, win probability, agent signals, invoke agent button
+- [ ] Enhanced Kanban columns: customizable per service line pipeline stages
+
+**Full Agent Fleet:**
+- [ ] Research Agent (auto-enrich accounts, stakeholder data, company news, tech stack detection)
+- [ ] Outreach Drafter Agent (context-aware follow-ups with source/tone tags, approve & send)
+- [ ] Forecast Agent (weighted pipeline, scenario modeling, gap-to-goal predictions)
+- [ ] Competitive Intel Agent (competitor detection, battle cards, threat assessment)
+- [ ] Meeting Prep Agent (pre-meeting briefing packets from KG context)
+- [ ] Handoff Agent (Won → delivery transition document generation)
+
+**Agentic Workflows:**
+- [ ] Agentic Mode for Workflow Engine (AI observes patterns → proposes workflows → optimizes)
+- [ ] A/B testing framework for workflow variants
+- [ ] Approval gates with configurable trust levels
+- [ ] SLA enforcement with auto-escalation
+
+**Agentic Layer Infrastructure:**
+- [ ] Expose all platform APIs as LLM tool/function calls
+- [ ] Connect LLM (Claude) to agent framework (LangGraph/CrewAI)
+- [ ] Implement human-in-the-loop approval gates for autonomous actions
+- [ ] Build agent observability dashboard (LangSmith integration)
+
+### Phase 4: Integrations & Testing (Months 9-10)
+*Goal: Connect external systems, rigorous testing, production deployment*
+
+**System Integrations:**
 - [ ] System Integrations view (integration cards, sync health, neural link intensity)
 - [ ] AI Schema Mapper (natural language field mapping between systems)
-- [ ] Salesforce integration (Enterprise CRM Sync, bidirectional)
-- [ ] HubSpot integration (Marketing Pipeline, inbound lead sync)
-- [ ] Outreach Intelligence view (campaign performance, SDR/AE toggle)
-- [ ] Gmail / Outlook email sync
-- [ ] Google Calendar / O365 integration
-- [ ] Slack integration (notifications, slash commands)
+- [ ] Salesforce integration (Enterprise CRM Sync, bidirectional, 2-min sync)
+- [ ] HubSpot integration (Marketing Pipeline, inbound lead sync, real-time)
+- [ ] Gmail / Outlook email sync (bidirectional, conversation log auto-population)
+- [ ] Google Calendar / O365 integration (meeting prep triggers)
+- [ ] Slack integration (notifications, slash commands, bot interactions)
 - [ ] Connect New Source flow (ZoomInfo, custom API endpoints)
 - [ ] Neural Audit Logs for integration health monitoring
 
-### Phase 5: Scale & Optimize (v3.5+)
-*Goal: Enterprise readiness*
+**Testing:**
+- [ ] API contract testing (all tRPC routes)
+- [ ] Integration testing (Salesforce, HubSpot sync reliability)
+- [ ] Load testing (10K concurrent users, 1M opportunities target)
+- [ ] Webhook reliability testing (retry, dead-letter queue)
+- [ ] Agent accuracy testing (deal score, win probability calibration)
+- [ ] Security audit (OWASP Top 10, API key management, credential encryption)
+- [ ] E2E testing (Playwright) for all views and workflows
 
-- [ ] Multi-tenant architecture
+**Deployment:**
+- [ ] Containerize with Docker (Next.js app + Agent runtime as separate services)
+- [ ] Deploy on AWS: ECS/Fargate for agent runtime, Vercel for frontend
+- [ ] Set up CI/CD pipeline (GitHub Actions)
+- [ ] Configure monitoring: Sentry (errors), Datadog (APM), LangSmith (LLM observability)
+- [ ] Set up staging → production promotion flow
+
+### Phase 5: Enterprise Scale (Months 11-12+)
+*Goal: Multi-tenancy, compliance, advanced analytics*
+
+- [ ] Multi-tenant architecture (organization isolation in MongoDB)
 - [ ] Team hierarchy and org-level pipeline views
-- [ ] Field-level permissions
+- [ ] Field-level permissions (RBAC on sensitive fields)
 - [ ] Forecast categories (Commit / Best Case / Pipeline / Omitted)
 - [ ] Rep leaderboard and coaching insights
 - [ ] Revenue waterfall visualization
-- [ ] SOC 2 compliance and data residency
-- [ ] White-label / custom branding
-- [ ] Mobile native app
+- [ ] Pipeline movement Sankey diagrams
+- [ ] Cohort analysis and stage conversion tracking
+- [ ] SOC 2 Type II compliance
+- [ ] GDPR / PCI-DSS compliance checklist
+- [ ] Data residency (multi-region deployment)
+- [ ] White-label / custom branding options
+- [ ] Mobile native app (React Native)
+- [ ] Real-time data pipeline for upstream/downstream syncing (Kafka for high-volume deployments)
+- [ ] Neo4j migration for Knowledge Graph (if MongoDB $graphLookup becomes a bottleneck)
+
+---
+
+## 11A. Architecture & Product Review
+
+### Architect Review
+
+**Strengths of this architecture:**
+
+1. **MongoDB as unified data + KG + vector store** — Eliminates operational complexity of running 3 separate databases. Atlas Search + Vector Search + $graphLookup covers full-text, semantic, and graph queries in one platform. For a team scaling to 1M opportunities, this is the right pragmatic choice over premature Neo4j.
+
+2. **Coordinator Pattern** — The right agentic pattern for this use case. Avoids the chaos of fully autonomous multi-agent swarms. The coordinator decomposes, delegates, and aggregates — maintaining control while enabling parallelism. LangGraph provides the state machine backbone; Claude provides the reasoning.
+
+3. **Composable feature modules** — Each feature (Pipeline, Account 360, Forecasting, etc.) is an independent module with its own UI, API, agents, and workflows. This enables parallel team development and eventual micro-frontend decomposition if needed.
+
+4. **Event-driven integration layer** — BullMQ + Redis Streams is the right choice for the current scale. Kafka is overkill until >10K events/second. The iPaaS pattern (async sync with retry + dead-letter) handles the Salesforce/HubSpot integration complexity well.
+
+**Risks & Mitigations:**
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| **MongoDB $graphLookup performance at scale** | Slow KG queries with >1M nodes | Monitor query performance. Phase 5 has Neo4j migration path. Use denormalized edge lists + index on nodeId/nodeType |
+| **LLM latency in agent runtime** | User-facing agent responses >2s | Cache frequent inferences in Redis. Use streaming responses (SSE) for real-time feel. Run non-urgent agents async via BullMQ |
+| **PostgreSQL → MongoDB migration data loss** | Loss of v1 data or functionality | Write idempotent migration scripts with rollback. Run parallel (both DBs) for 2 weeks before cutover. Automated diff-checking |
+| **Agent hallucination in critical actions** | Incorrect deal scores, bad email drafts | Mandatory human-in-the-loop for all external actions (emails, stage changes, TCV modifications). Confidence thresholds. Audit trail for every agent action |
+| **Scope creep across 5 phases** | Delivery delays, team burnout | Phase 1 must deliver a working product (all v1 features on new stack). Each subsequent phase is independently deployable. Feature flags for gradual rollout |
+| **Integration complexity (Salesforce/HubSpot)** | Schema drift, sync failures | AI Schema Mapper with continuous monitoring. Health scores per integration. Auto-alert on sync degradation |
+
+**Architecture Decision Records (ADRs):**
+
+| Decision | Choice | Rationale | Alternative Considered |
+|----------|--------|-----------|----------------------|
+| Primary Database | MongoDB Atlas | Flexible schema for deals/agents/workflows; native JSON; Atlas Search + Vector Search eliminates need for Elasticsearch + Pinecone | PostgreSQL + pgvector (limited graph capability) |
+| Knowledge Graph | MongoDB adjacency lists + $graphLookup | Operational simplicity; sufficient for <1M nodes; same DB as primary data | Neo4j (better graph queries but adds operational burden) |
+| Agent Framework | LangGraph + Claude API | Coordinator pattern support; state machine DAGs; best-in-class reasoning from Claude | CrewAI (less flexible DAG support), AutoGen (Microsoft lock-in) |
+| Frontend | Next.js 15 App Router | SSR/streaming for AI responses; file-based routing; React Server Components for performance | Remix (less ecosystem), current Vite SPA (no SSR) |
+| API Layer | tRPC | End-to-end type safety with TypeScript; auto-generated client; composable routers | REST + OpenAPI (more boilerplate), GraphQL (complexity for this use case) |
+| Queue System | BullMQ (Redis) | Simple, fast, battle-tested for job queues; sufficient for <10K events/s | Kafka (overkill at current scale), AWS SQS (vendor lock-in) |
+| Auth | NextAuth.js v5 | SSO support (Google, Azure AD, Okta); JWT sessions; middleware RBAC | Auth0 (cost), Clerk (less control), custom Passport (more maintenance) |
+
+### Product Owner Review
+
+**Product Alignment Assessment:**
+
+1. **User Story Coverage** — The PRD covers all 5 target personas (AE, SDR, Sales Leadership, Presales, Sales Ops). Each new view maps to specific persona needs. The SDR/AE view toggle in Outreach Intelligence is a good example of role-specific UX.
+
+2. **Feature Prioritization** — Phase 1 correctly prioritizes migration + design system (foundational). Phase 2 adds the highest-value AI features (Deal Health, Copilot). Phase 3 builds the "wow" views that differentiate from Salesforce/HubSpot. Phases 4-5 are growth/enterprise plays.
+
+3. **v1 Feature Preservation** — Critical requirement met. All 7 existing views, all CRUD operations, all data models, seed data, and filtering capabilities are explicitly preserved in Phase 1. The migration is additive.
+
+4. **Workflow Engine** — The customizable pipeline stages per service line is a strong differentiator for Galent's consulting/staffing business where IT Services and Staffing have fundamentally different sales motions. The agentic workflow mode (AI proposes/optimizes workflows) is the key innovation here.
+
+5. **Competitive Differentiation:**
+   - vs. **Salesforce**: Galent AI is "intelligence-first" — AI is the primary interface, not an add-on. The Neural Command Center and Agent Registry have no Salesforce equivalent.
+   - vs. **HubSpot**: Deeper AI integration, agentic automation, knowledge graph relationships. HubSpot's AI is limited to content generation.
+   - vs. **Gong/Clari**: Galent combines revenue intelligence with pipeline management in one platform. Others are analytics-only overlays.
+
+6. **Gaps to Address:**
+   - **Onboarding flow**: No first-run experience defined. Recommend adding a guided setup wizard in Phase 1.
+   - **Mobile experience**: Deferred to Phase 5. Consider a progressive web app (PWA) in Phase 3 as an interim.
+   - **Pricing/Packaging**: No mention of tier structure. Recommend defining Free/Pro/Enterprise tiers before Phase 2 launch.
+   - **Data export/portability**: Ensure users can export all their data (GDPR requirement) from day 1.
+   - **Offline capability**: Not addressed. For field sales, consider offline-first data caching in Phase 5.
 
 ---
 
