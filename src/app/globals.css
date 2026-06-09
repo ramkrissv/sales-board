@@ -90,6 +90,11 @@
   }
 }
 
+/* ─── Heading font ─── */
+h1, h2, h3 {
+  font-family: var(--font-display);
+}
+
 /* ─── Typography Utilities ─── */
 .g-kpi {
   font-size: 30px;
@@ -144,11 +149,20 @@
 /* ─── Background Pattern ─── */
 .g-scene {
   background:
-    radial-gradient(circle, rgba(var(--g-fg-3-rgb), 0.22) 1px, transparent 1px),
-    radial-gradient(ellipse at 20% 0%, rgba(123,82,255,0.03), transparent 60%),
-    radial-gradient(ellipse at 80% 100%, rgba(34,211,238,0.02), transparent 60%),
+    radial-gradient(circle, rgba(var(--g-fg-3-rgb), 0.15) 1px, transparent 1px),
+    radial-gradient(ellipse at 20% 0%, rgba(123,82,255,0.04), transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(34,211,238,0.03), transparent 60%),
     var(--g-bg);
-  background-size: 16px 16px, auto, auto, auto;
+  background-size: 20px 20px, auto, auto, auto;
+}
+/* Light mode: softer dots */
+:root .g-scene {
+  background:
+    radial-gradient(circle, rgba(var(--g-fg-3-rgb), 0.08) 1px, transparent 1px),
+    radial-gradient(ellipse at 20% 0%, rgba(123,82,255,0.02), transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(34,211,238,0.015), transparent 60%),
+    var(--g-bg);
+  background-size: 20px 20px, auto, auto, auto;
 }
 
 /* ─── Animations ─── */
