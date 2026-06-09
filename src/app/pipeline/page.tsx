@@ -9,7 +9,7 @@ const KanbanBoard = dynamic(
   () => import('@/components/kanban/KanbanBoard').then(m => ({ default: m.KanbanBoard })),
   { ssr: false, loading: () => (
     <div className="flex items-center justify-center h-64">
-      <div className="flex items-center gap-3 text-slate-400">
+      <div className="flex items-center gap-3 text-muted-foreground">
         <Sparkles className="h-5 w-5 animate-pulse text-purple-400" />
         <span>Loading pipeline...</span>
       </div>

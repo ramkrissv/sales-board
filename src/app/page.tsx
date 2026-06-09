@@ -15,7 +15,7 @@ function HomeContent() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="flex items-center gap-3 text-slate-400">
+        <div className="flex items-center gap-3 text-muted-foreground">
           <Sparkles className="h-5 w-5 animate-pulse text-purple-400" />
           <span>Loading your pipeline intelligence...</span>
         </div>
@@ -44,10 +44,10 @@ function HomeContent() {
     <div className="max-w-5xl mx-auto space-y-8">
       {/* Greeting */}
       <div className="animate-flow-in">
-        <h1 className="text-2xl font-semibold text-white">
+        <h1 className="text-2xl font-semibold text-foreground">
           Good morning. <span className="text-purple-400">Here&apos;s your pipeline.</span>
         </h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           {activeDeals.length} active deals &middot; {atRiskDeals.length > 0 ? `${atRiskDeals.length} need attention` : 'All on track'} &middot; {negotiationDeals.length} ready to close
         </p>
       </div>
@@ -55,36 +55,36 @@ function HomeContent() {
       {/* Critical Actions — flowing cards */}
       {(atRiskDeals.length > 0 || negotiationDeals.length > 0 || overdueTasks.length > 0) && (
         <div className="space-y-3 animate-flow-in animate-flow-in-delay-1">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             <Zap className="h-3 w-3 text-purple-400" />
             Critical Actions
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {negotiationDeals.length > 0 && (
-              <Link href="/pipeline" className="group p-4 rounded-xl bg-[#111127] border border-emerald-500/20 hover:border-emerald-500/40 transition-all">
+              <Link href="/pipeline" className="group p-4 rounded-xl bg-card border border-emerald-500/20 hover:border-emerald-500/40 transition-all">
                 <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider mb-2">Ready to Close</div>
-                <div className="text-sm text-white font-medium">{negotiationDeals.length} deals in Negotiation</div>
-                <div className="text-xs text-slate-400 mt-1">{negotiationDeals.map(d => d.customerName).join(', ')}</div>
+                <div className="text-sm text-foreground font-medium">{negotiationDeals.length} deals in Negotiation</div>
+                <div className="text-xs text-muted-foreground mt-1">{negotiationDeals.map(d => d.customerName).join(', ')}</div>
                 <div className="flex items-center gap-1 mt-3 text-xs text-emerald-400 group-hover:gap-2 transition-all">
                   <span>Review deals</span><ArrowRight className="h-3 w-3" />
                 </div>
               </Link>
             )}
             {atRiskDeals.length > 0 && (
-              <Link href="/pipeline" className="group p-4 rounded-xl bg-[#111127] border border-orange-500/20 hover:border-orange-500/40 transition-all">
+              <Link href="/pipeline" className="group p-4 rounded-xl bg-card border border-orange-500/20 hover:border-orange-500/40 transition-all">
                 <div className="text-[10px] font-semibold text-orange-400 uppercase tracking-wider mb-2">Needs Attention</div>
-                <div className="text-sm text-white font-medium">{atRiskDeals.length} deals at risk</div>
-                <div className="text-xs text-slate-400 mt-1">Missing decision makers or TCV not set</div>
+                <div className="text-sm text-foreground font-medium">{atRiskDeals.length} deals at risk</div>
+                <div className="text-xs text-muted-foreground mt-1">Missing decision makers or TCV not set</div>
                 <div className="flex items-center gap-1 mt-3 text-xs text-orange-400 group-hover:gap-2 transition-all">
                   <span>Fix now</span><ArrowRight className="h-3 w-3" />
                 </div>
               </Link>
             )}
             {overdueTasks.length > 0 && (
-              <Link href="/tasks" className="group p-4 rounded-xl bg-[#111127] border border-red-500/20 hover:border-red-500/40 transition-all">
+              <Link href="/tasks" className="group p-4 rounded-xl bg-card border border-red-500/20 hover:border-red-500/40 transition-all">
                 <div className="text-[10px] font-semibold text-red-400 uppercase tracking-wider mb-2">Overdue</div>
-                <div className="text-sm text-white font-medium">{overdueTasks.length} overdue tasks</div>
-                <div className="text-xs text-slate-400 mt-1">Across {new Set(overdueTasks.map(t => t.owner)).size} owners</div>
+                <div className="text-sm text-foreground font-medium">{overdueTasks.length} overdue tasks</div>
+                <div className="text-xs text-muted-foreground mt-1">Across {new Set(overdueTasks.map(t => t.owner)).size} owners</div>
                 <div className="flex items-center gap-1 mt-3 text-xs text-red-400 group-hover:gap-2 transition-all">
                   <span>View tasks</span><ArrowRight className="h-3 w-3" />
                 </div>
@@ -102,12 +102,12 @@ function HomeContent() {
           { label: 'Active Deals', value: `${activeDeals.length}`, icon: TrendingUp, color: 'text-blue-400' },
           { label: 'Closing This Month', value: `${negotiationDeals.length}`, icon: Clock, color: 'text-amber-400' },
         ].map((kpi) => (
-          <div key={kpi.label} className="p-4 rounded-xl bg-[#111127] border border-[#2a2a4a]">
+          <div key={kpi.label} className="p-4 rounded-xl bg-card border border-border">
             <div className="flex items-center gap-2 mb-2">
               <kpi.icon className={`h-3.5 w-3.5 ${kpi.color}`} />
-              <span className="text-[11px] text-slate-500 uppercase tracking-wider">{kpi.label}</span>
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wider">{kpi.label}</span>
             </div>
-            <div className="text-xl font-semibold text-white">{kpi.value}</div>
+            <div className="text-xl font-semibold text-foreground">{kpi.value}</div>
           </div>
         ))}
       </div>
@@ -115,7 +115,7 @@ function HomeContent() {
       {/* Pipeline flow — mini kanban preview */}
       <div className="animate-flow-in animate-flow-in-delay-3">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             <Kanban className="h-3 w-3 text-purple-400" />
             Pipeline Flow
           </div>
@@ -135,12 +135,12 @@ function HomeContent() {
               'Won': 'border-green-500/30 text-green-400',
             };
             return (
-              <div key={stage} className={`flex-1 min-w-[140px] p-3 rounded-xl bg-[#111127] border ${colors[stage]?.split(' ')[0] || 'border-[#2a2a4a]'}`}>
-                <div className={`text-[10px] font-semibold uppercase tracking-wider ${colors[stage]?.split(' ')[1] || 'text-slate-400'}`}>
+              <div key={stage} className={`flex-1 min-w-[140px] p-3 rounded-xl bg-card border ${colors[stage]?.split(' ')[0] || 'border-border'}`}>
+                <div className={`text-[10px] font-semibold uppercase tracking-wider ${colors[stage]?.split(' ')[1] || 'text-muted-foreground'}`}>
                   {stage}
                 </div>
-                <div className="text-lg font-semibold text-white mt-1">{stageDeals.length}</div>
-                <div className="text-[11px] text-slate-500">${(stageTcv / 1000).toFixed(0)}k</div>
+                <div className="text-lg font-semibold text-foreground mt-1">{stageDeals.length}</div>
+                <div className="text-[11px] text-muted-foreground">${(stageTcv / 1000).toFixed(0)}k</div>
               </div>
             );
           })}
@@ -149,7 +149,7 @@ function HomeContent() {
 
       {/* Recent deals — flowing list */}
       <div className="animate-flow-in animate-flow-in-delay-4">
-        <div className="flex items-center gap-2 text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
           <Clock className="h-3 w-3 text-purple-400" />
           Recent Opportunities
         </div>
@@ -161,37 +161,37 @@ function HomeContent() {
               'Proposal': 'bg-purple-500/20 text-purple-400',
               'Negotiation': 'bg-emerald-500/20 text-emerald-400',
               'Won': 'bg-green-500/20 text-green-400',
-              'Lost': 'bg-slate-500/20 text-slate-400',
+              'Lost': 'bg-slate-500/20 text-muted-foreground',
               'On Hold': 'bg-orange-500/20 text-orange-400',
             };
             return (
               <Link
                 key={opp.id}
                 href={`/pipeline?deal=${opp.id}`}
-                className="flex items-center gap-4 p-3 rounded-xl bg-[#111127] border border-[#2a2a4a] hover:border-purple-500/30 transition-all group"
+                className="flex items-center gap-4 p-3 rounded-xl bg-card border border-border hover:border-purple-500/30 transition-all group"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-white group-hover:text-purple-300 transition-colors truncate">
+                  <div className="text-sm font-medium text-foreground group-hover:text-purple-300 transition-colors truncate">
                     {opp.customerName}
                   </div>
-                  <div className="text-xs text-slate-500 truncate">{opp.opportunityName}</div>
+                  <div className="text-xs text-muted-foreground truncate">{opp.opportunityName}</div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   {opp.tcv > 0 && (
-                    <span className="text-sm font-medium text-white">${(opp.tcv / 1000).toFixed(0)}k</span>
+                    <span className="text-sm font-medium text-foreground">${(opp.tcv / 1000).toFixed(0)}k</span>
                   )}
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[opp.status] || 'bg-slate-500/20 text-slate-400'}`}>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[opp.status] || 'bg-slate-500/20 text-muted-foreground'}`}>
                     {opp.status}
                   </span>
-                  <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                     <Users className="h-3 w-3" />
                     {(opp.customerStakeholders || []).length}
                   </div>
-                  <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                     <CheckSquare className="h-3 w-3" />
                     {(opp.subTasks || []).filter(t => t.status === 'complete').length}/{(opp.subTasks || []).length}
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-purple-400 transition-colors" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-purple-400 transition-colors" />
                 </div>
               </Link>
             );

@@ -10,7 +10,7 @@ function StakeholdersContent() {
   const [roleFilter, setRoleFilter] = useState<'all' | 'decision_maker' | 'primary'>('all');
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64 text-slate-400">Loading stakeholders...</div>;
+    return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading stakeholders...</div>;
   }
 
   const allStakeholders = opportunities.flatMap(opp =>
@@ -30,21 +30,21 @@ function StakeholdersContent() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-white">Stakeholders</h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <h1 className="text-xl font-semibold text-foreground">Stakeholders</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           {allStakeholders.length} contacts · {decisionMakers.length} decision makers · {primaryContacts.length} primary contacts
         </p>
       </div>
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search people..."
-            className="w-full pl-9 pr-3 py-2 text-sm bg-[#111127] border border-[#2a2a4a] rounded-lg text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-purple-500/40"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-lg text-slate-200 placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40"
           />
         </div>
         <div className="flex gap-1">
@@ -53,7 +53,7 @@ function StakeholdersContent() {
               key={val}
               onClick={() => setRoleFilter(val as 'all' | 'decision_maker' | 'primary')}
               className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                roleFilter === val ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30' : 'text-slate-500 hover:text-slate-300 border border-transparent'
+                roleFilter === val ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30' : 'text-muted-foreground hover:text-foreground border border-transparent'
               }`}
             >
               {label}
@@ -64,14 +64,14 @@ function StakeholdersContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {filtered.map((person, i) => (
-          <div key={person.id || i} className="p-4 rounded-xl bg-[#111127] border border-[#2a2a4a] hover:border-purple-500/20 transition-all">
+          <div key={person.id || i} className="p-4 rounded-xl bg-card border border-border hover:border-purple-500/20 transition-all">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center text-purple-400 text-sm font-bold flex-shrink-0">
                 {person.name.split(' ').map(n => n[0]).join('').slice(0,2)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-white truncate">{person.name}</span>
+                  <span className="text-sm font-medium text-foreground truncate">{person.name}</span>
                   {person.isDecisionMaker && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 flex items-center gap-1">
                       <Crown className="h-2.5 w-2.5" /> DM
@@ -83,11 +83,11 @@ function StakeholdersContent() {
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-500">{person.title}</div>
-                <div className="text-xs text-slate-600 mt-1">{person.customerName} · {person.opportunityName}</div>
+                <div className="text-xs text-muted-foreground">{person.title}</div>
+                <div className="text-xs text-muted-foreground mt-1">{person.customerName} · {person.opportunityName}</div>
               </div>
               <div className="flex flex-col gap-1 flex-shrink-0">
-                {person.email && <span className="text-[11px] text-slate-500">{person.email}</span>}
+                {person.email && <span className="text-[11px] text-muted-foreground">{person.email}</span>}
                 {person.linkedInUrl && (
                   <a href={person.linkedInUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1">
                     LinkedIn <ExternalLink className="h-2.5 w-2.5" />
@@ -98,7 +98,7 @@ function StakeholdersContent() {
           </div>
         ))}
         {filtered.length === 0 && (
-          <div className="col-span-2 text-center py-12 text-slate-500 text-sm">No stakeholders match your filter.</div>
+          <div className="col-span-2 text-center py-12 text-muted-foreground text-sm">No stakeholders match your filter.</div>
         )}
       </div>
     </div>

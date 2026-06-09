@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import {
   Kanban, TrendingUp, CalendarClock, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles,
-  Bot, Link2, Settings, Search, Bell, Plus, MessageCircle,
+  Bot, Link2, Settings, Bell, Plus, Sun, Moon,
 } from 'lucide-react';
 
 const navItems = [
@@ -26,6 +27,7 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
   const [commandOpen, setCommandOpen] = useState(false);
 
   if (pathname === '/login') {
@@ -33,9 +35,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a1a] text-slate-200">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Thin icon sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-14 bg-[#0d0d20] border-r border-[#1a1a35] z-50 flex flex-col items-center py-3 gap-1">
+      <aside className="fixed left-0 top-0 bottom-0 w-14 z-50 flex flex-col items-center py-3 gap-1"
+        style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}>
         {/* Logo */}
         <Link href="/" className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-emerald-500 flex items-center justify-center mb-4">
           <Sparkles className="h-4 w-4 text-white" />
@@ -53,14 +56,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   'w-10 h-10 rounded-lg flex items-center justify-center transition-all group relative',
                   isActive
-                    ? 'bg-purple-600/20 text-purple-400'
-                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                    ? 'bg-purple-600/20 text-purple-600 dark:text-purple-400'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                 )}
               >
                 <item.icon className="h-[18px] w-[18px]" />
                 {isActive && <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-purple-500" />}
-                {/* Tooltip */}
-                <div className="absolute left-14 px-2 py-1 rounded bg-slate-800 text-xs text-slate-200 opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">
+                <div className="absolute left-14 px-2 py-1 rounded bg-card border border-border text-xs opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50 shadow-lg">
                   {item.label}
                 </div>
               </Link>
@@ -70,10 +72,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Bottom icons */}
         <div className="flex flex-col gap-1 mt-2">
-          <button className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-white/5">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            title="Toggle theme"
+          >
+            <Sun className="h-[18px] w-[18px] dark:hidden" />
+            <Moon className="h-[18px] w-[18px] hidden dark:block" />
+          </button>
+          <button className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary">
             <Settings className="h-[18px] w-[18px]" />
           </button>
-          <div className="w-8 h-8 rounded-full bg-purple-600/30 flex items-center justify-center text-purple-300 text-xs font-bold mx-auto">
+          <div className="w-8 h-8 rounded-full bg-purple-600/20 dark:bg-purple-600/30 flex items-center justify-center text-purple-600 dark:text-purple-300 text-xs font-bold mx-auto">
             AU
           </div>
         </div>
@@ -82,18 +92,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="ml-14">
         {/* Top command bar */}
-        <header className="sticky top-0 z-40 h-12 bg-[#0a0a1a]/80 backdrop-blur-xl border-b border-[#1a1a35] flex items-center px-5 gap-4">
+        <header className="sticky top-0 z-40 h-12 backdrop-blur-xl flex items-center px-5 gap-4"
+          style={{ background: 'var(--topbar-bg)', borderBottom: '1px solid var(--border-color)' }}>
           <button
             onClick={() => setCommandOpen(!commandOpen)}
-            className="flex-1 max-w-xl flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111127] border border-[#2a2a4a] text-sm text-slate-400 hover:border-purple-500/30 hover:text-slate-300 transition-colors"
+            className="flex-1 max-w-xl flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border text-sm text-muted-foreground hover:border-purple-500/30 hover:text-foreground transition-colors"
           >
-            <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+            <Sparkles className="h-3.5 w-3.5 text-purple-500" />
             <span>Ask Galent anything about your pipeline...</span>
-            <kbd className="ml-auto text-[10px] text-slate-600 bg-[#1a1a35] px-1.5 py-0.5 rounded">&#x2318;K</kbd>
+            <kbd className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">&#x2318;K</kbd>
           </button>
 
           <div className="flex items-center gap-2 ml-auto">
-            <button className="relative p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5">
+            <button className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
               <Bell className="h-4 w-4" />
               <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-purple-500 rounded-full" />
             </button>
