@@ -28,7 +28,7 @@ function TimelineContent() {
         <p className="text-sm text-muted-foreground mt-1">{activeDeals.length} active deals over the next 90 days</p>
       </div>
 
-      <div className="rounded-xl bg-card border border-border p-5 overflow-x-auto">
+      <div className="rounded-xl g-surface g-elevated p-5 overflow-x-auto">
         {/* Month headers */}
         <div className="flex mb-4 border-b border-border pb-2">
           {Array.from({ length: 4 }, (_, i) => {

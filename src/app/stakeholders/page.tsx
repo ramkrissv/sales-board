@@ -44,7 +44,7 @@ function StakeholdersContent() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search people..."
-            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-lg text-slate-200 placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40"
+            className="w-full pl-9 pr-3 py-2 text-sm g-surface g-elevated rounded-lg text-slate-200 placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40"
           />
         </div>
         <div className="flex gap-1">
@@ -64,7 +64,7 @@ function StakeholdersContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {filtered.map((person, i) => (
-          <div key={person.id || i} className="p-4 rounded-xl bg-card border border-border hover:border-purple-500/20 transition-all">
+          <div key={person.id || i} className="p-4 rounded-xl g-surface g-elevated hover:border-purple-500/20 transition-all">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center text-purple-400 text-sm font-bold flex-shrink-0">
                 {person.name.split(' ').map(n => n[0]).join('').slice(0,2)}

@@ -38,7 +38,7 @@ function TableContent() {
           <h1 className="text-xl font-semibold text-foreground">Pipeline Table</h1>
           <p className="text-sm text-muted-foreground mt-1">{filtered.length} opportunities</p>
         </div>
-        <button onClick={handleExport} className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground hover:border-purple-500/30 transition-colors">
+        <button onClick={handleExport} className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg g-surface g-elevated text-muted-foreground hover:text-foreground hover:border-purple-500/30 transition-colors">
           <Download className="h-3.5 w-3.5" /> Export CSV
         </button>
       </div>
@@ -46,10 +46,10 @@ function TableContent() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
-          className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-lg text-slate-200 placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40" />
+          className="w-full pl-9 pr-3 py-2 text-sm g-surface g-elevated rounded-lg text-slate-200 placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40" />
       </div>
 
-      <div className="rounded-xl bg-card border border-border overflow-hidden">
+      <div className="rounded-xl g-surface g-elevated overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

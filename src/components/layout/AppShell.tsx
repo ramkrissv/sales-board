@@ -41,10 +41,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen g-scene text-foreground">
       {/* Thin icon sidebar */}
       <aside className="fixed left-0 top-0 bottom-0 w-14 z-50 flex flex-col items-center py-3 gap-1"
-        style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}>
+        style={{ background: 'var(--g-bg)', borderRight: '1px solid var(--g-line)' }}>
         {/* Logo */}
         <Link href="/" className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-emerald-500 flex items-center justify-center mb-4">
           <Sparkles className="h-4 w-4 text-white" />
@@ -101,8 +101,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="ml-14">
         {/* Top command bar */}
-        <header className="sticky top-0 z-40 h-12 backdrop-blur-xl flex items-center px-5 gap-4"
-          style={{ background: 'var(--topbar-bg)', borderBottom: '1px solid var(--border-color)' }}>
+        <header className="sticky top-0 z-40 h-12 g-glass flex items-center px-5 gap-4"
+          style={{ borderBottom: '1px solid rgba(var(--g-line-rgb), 0.4)' }}>
           <button
             onClick={() => setCommandOpen(!commandOpen)}
             className="flex-1 max-w-xl flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border text-sm text-muted-foreground hover:border-purple-500/30 hover:text-foreground transition-colors"

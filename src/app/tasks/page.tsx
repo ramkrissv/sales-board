@@ -55,7 +55,7 @@ function TasksContent() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search tasks..."
-            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-lg text-slate-200 placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40"
+            className="w-full pl-9 pr-3 py-2 text-sm g-surface g-elevated rounded-lg text-slate-200 placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40"
           />
         </div>
         <div className="flex gap-1">

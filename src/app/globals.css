@@ -4,78 +4,78 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Inter', sans-serif;
-  --font-display: 'Inter', sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Montserrat', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  /* Light theme (default) */
-  --color-background: var(--bg);
-  --color-foreground: var(--fg);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-fg);
-  --color-popover: var(--card);
-  --color-popover-foreground: var(--card-fg);
-  --color-primary: #7c3aed;
+  --color-background: var(--g-bg);
+  --color-foreground: var(--g-fg);
+  --color-card: var(--g-card);
+  --color-card-foreground: var(--g-fg);
+  --color-popover: var(--g-card);
+  --color-popover-foreground: var(--g-fg);
+  --color-primary: #7B52FF;
   --color-primary-foreground: #ffffff;
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-fg);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-fg);
-  --color-accent: var(--secondary);
-  --color-accent-foreground: var(--secondary-fg);
-  --color-destructive: #ef4444;
-  --color-border: var(--border-color);
-  --color-input: var(--border-color);
-  --color-ring: #7c3aed;
+  --color-secondary: var(--g-bg-2);
+  --color-secondary-foreground: var(--g-fg);
+  --color-muted: var(--g-bg-2);
+  --color-muted-foreground: var(--g-fg-3);
+  --color-accent: var(--g-bg-2);
+  --color-accent-foreground: var(--g-fg);
+  --color-destructive: #FB2C36;
+  --color-border: var(--g-line);
+  --color-input: var(--g-line);
+  --color-ring: #7B52FF;
   --color-success: #00dc82;
-  --color-warning: #f97316;
+  --color-warning: #FE6E00;
 }
 
-/* Light mode variables */
+/* ─── Light Mode ─── */
 :root {
-  --bg: #f8f9fc;
-  --fg: #1a1a2e;
-  --card: #ffffff;
-  --card-fg: #1a1a2e;
-  --secondary: #f1f0f9;
-  --secondary-fg: #1a1a2e;
-  --muted: #f1f0f9;
-  --muted-fg: #64748b;
-  --border-color: #e2e0ef;
-  --surface: #ffffff;
-  --surface-hover: #f8f7fd;
-  --sidebar-bg: #ffffff;
-  --sidebar-border: #e2e0ef;
-  --topbar-bg: rgba(248,249,252,0.8);
-  --text-primary: #1a1a2e;
-  --text-secondary: #64748b;
-  --text-tertiary: #94a3b8;
+  --g-brand: #7B52FF;
+  --g-orange: #FE6E00;
+  --g-red: #FB2C36;
+
+  --g-bg: #FAFAFA;
+  --g-bg-2: #F4F4F5;
+  --g-bg-3: #E4E4E7;
+  --g-line: #D4D4D8;
+  --g-fg: #09090B;
+  --g-fg-2: #3F3F46;
+  --g-fg-3: #71717A;
+  --g-card: #FFFFFF;
+  --g-hover: 0,0,0;
+
+  --g-bg-rgb: 250,250,250;
+  --g-bg-2-rgb: 244,244,245;
+  --g-line-rgb: 212,212,216;
+  --g-fg-3-rgb: 113,113,122;
+
   color-scheme: light;
 }
 
-/* Dark mode variables */
+/* ─── Dark Mode ─── */
 .dark {
-  --bg: #0a0a1a;
-  --fg: #e2e8f0;
-  --card: #111127;
-  --card-fg: #e2e8f0;
-  --secondary: #1e1e3a;
-  --secondary-fg: #e2e8f0;
-  --muted: #1a1a35;
-  --muted-fg: #94a3b8;
-  --border-color: #2a2a4a;
-  --surface: #111127;
-  --surface-hover: #1a1a35;
-  --sidebar-bg: #0d0d20;
-  --sidebar-border: #1a1a35;
-  --topbar-bg: rgba(10,10,26,0.8);
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
+  --g-bg: #09090B;
+  --g-bg-2: #0F172A;
+  --g-bg-3: #1E293B;
+  --g-line: #334155;
+  --g-fg: #F1F5F9;
+  --g-fg-2: #CBD5E1;
+  --g-fg-3: #64748B;
+  --g-card: #0F172A;
+  --g-hover: 255,255,255;
+
+  --g-bg-rgb: 9,9,11;
+  --g-bg-2-rgb: 15,23,42;
+  --g-line-rgb: 51,65,85;
+  --g-fg-3-rgb: 100,116,139;
+
   color-scheme: dark;
 }
 
@@ -85,32 +85,118 @@
   }
   body {
     @apply font-sans antialiased;
-    background: var(--bg);
-    color: var(--fg);
+    background: var(--g-bg);
+    color: var(--g-fg);
   }
 }
 
-/* Glow effects for AI elements */
+/* ─── Typography Utilities ─── */
+.g-kpi {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.g-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--g-fg-3);
+}
+.g-metric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.g-chip {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* ─── Surface & Glass ─── */
+.g-surface {
+  background: rgba(var(--g-bg-2-rgb), 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(var(--g-line-rgb), 0.4);
+  border-radius: 12px;
+}
+.g-glass {
+  background: rgba(var(--g-bg-2-rgb), 0.6);
+  backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(var(--g-line-rgb), 0.3);
+}
+.g-elevated {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02);
+}
+
+/* ─── AI Glow Effects ─── */
 .ai-glow {
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.15), 0 0 60px rgba(124, 58, 237, 0.05);
+  box-shadow: 0 0 20px rgba(123, 82, 255, 0.15), 0 0 60px rgba(123, 82, 255, 0.05);
 }
 .ai-glow-green {
   box-shadow: 0 0 20px rgba(0, 220, 130, 0.15), 0 0 60px rgba(0, 220, 130, 0.05);
 }
 
-/* Smooth flowing animations */
+/* ─── Background Pattern ─── */
+.g-scene {
+  background:
+    radial-gradient(circle, rgba(var(--g-fg-3-rgb), 0.22) 1px, transparent 1px),
+    radial-gradient(ellipse at 20% 0%, rgba(123,82,255,0.03), transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(34,211,238,0.02), transparent 60%),
+    var(--g-bg);
+  background-size: 16px 16px, auto, auto, auto;
+}
+
+/* ─── Animations ─── */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(123,82,255,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(123,82,255,0); }
+}
+
 .animate-flow-in { animation: fadeInUp 0.4s ease-out forwards; }
 .animate-flow-in-delay-1 { animation-delay: 0.1s; opacity: 0; }
 .animate-flow-in-delay-2 { animation-delay: 0.2s; opacity: 0; }
 .animate-flow-in-delay-3 { animation-delay: 0.3s; opacity: 0; }
 .animate-flow-in-delay-4 { animation-delay: 0.4s; opacity: 0; }
+.animate-pulse-live { animation: pulse-live 2s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
-/* Scrollbar styling */
-::-webkit-scrollbar { width: 6px; }
+/* ─── Focus Ring ─── */
+:focus-visible {
+  outline: 2px solid hsl(262 83% 58%);
+  outline-offset: 2px;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--muted-fg); }
+::-webkit-scrollbar-thumb { background: var(--g-line); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--g-fg-3); }
+
+/* ─── Table Rows ─── */
+.g-table-row {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(var(--g-line-rgb), 0.25);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.g-table-row:hover {
+  background: rgba(var(--g-hover), 0.04);
+}
+
+/* ─── Pipeline Phase Colors ─── */
+.phase-signal { color: rgb(139,92,246); }
+.phase-context { color: rgb(59,130,246); }
+.phase-correlate { color: rgb(6,182,212); }

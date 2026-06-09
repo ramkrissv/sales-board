@@ -102,12 +102,12 @@ function HomeContent() {
           { label: 'Active Deals', value: `${activeDeals.length}`, icon: TrendingUp, color: 'text-blue-400' },
           { label: 'Closing This Month', value: `${negotiationDeals.length}`, icon: Clock, color: 'text-amber-400' },
         ].map((kpi) => (
-          <div key={kpi.label} className="p-4 rounded-xl bg-card border border-border">
+          <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated">
             <div className="flex items-center gap-2 mb-2">
               <kpi.icon className={`h-3.5 w-3.5 ${kpi.color}`} />
-              <span className="text-[11px] text-muted-foreground uppercase tracking-wider">{kpi.label}</span>
+              <span className="g-section-label">{kpi.label}</span>
             </div>
-            <div className="text-xl font-semibold text-foreground">{kpi.value}</div>
+            <div className="g-kpi text-foreground">{kpi.value}</div>
           </div>
         ))}
       </div>
@@ -168,7 +168,7 @@ function HomeContent() {
               <Link
                 key={opp.id}
                 href={`/pipeline?deal=${opp.id}`}
-                className="flex items-center gap-4 p-3 rounded-xl bg-card border border-border hover:border-purple-500/30 transition-all group"
+                className="flex items-center gap-4 p-3 rounded-xl g-surface g-elevated hover:border-purple-500/30 transition-all group"
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-foreground group-hover:text-purple-300 transition-colors truncate">

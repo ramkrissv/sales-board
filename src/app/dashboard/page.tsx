@@ -54,7 +54,7 @@ function AnalyticsContent() {
           { label: 'Win Rate', value: `${winRate}%`, sub: `${wonDeals.length}W / ${lostDeals.length}L`, color: 'text-blue-400' },
           { label: 'Avg Deal Size', value: `$${activeDeals.length > 0 ? Math.round(totalPipeline/activeDeals.length/1000) : 0}k`, sub: 'active deals', color: 'text-amber-400' },
         ].map(kpi => (
-          <div key={kpi.label} className="p-4 rounded-xl bg-card border border-border">
+          <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated">
             <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{kpi.label}</div>
             <div className="text-xl font-semibold text-foreground">{kpi.value}</div>
             <div className="text-[11px] text-muted-foreground mt-1">{kpi.sub}</div>
@@ -63,7 +63,7 @@ function AnalyticsContent() {
       </div>
 
       {/* Sales Funnel */}
-      <div className="p-5 rounded-xl bg-card border border-border">
+      <div className="p-5 rounded-xl g-surface g-elevated">
         <div className="text-sm font-medium text-foreground mb-4">Sales Funnel</div>
         <div className="space-y-3">
           {funnelData.map((stage, i) => {
@@ -90,7 +90,7 @@ function AnalyticsContent() {
       {/* Two columns: By Owner + By Industry */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* By Owner */}
-        <div className="p-5 rounded-xl bg-card border border-border">
+        <div className="p-5 rounded-xl g-surface g-elevated">
           <div className="text-sm font-medium text-foreground mb-4">By Owner</div>
           <div className="space-y-3">
             {topOwners.map(([owner, data]) => (
@@ -111,7 +111,7 @@ function AnalyticsContent() {
         </div>
 
         {/* By Industry */}
-        <div className="p-5 rounded-xl bg-card border border-border">
+        <div className="p-5 rounded-xl g-surface g-elevated">
           <div className="text-sm font-medium text-foreground mb-4">By Industry</div>
           <div className="space-y-3">
             {Object.entries(byIndustry).sort((a,b) => b[1] - a[1]).map(([industry, count]) => (

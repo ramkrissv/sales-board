@@ -39,7 +39,7 @@ function ScheduleContent() {
             </div>
             <div className="space-y-2">
               {bucket.items.map(opp => (
-                <div key={opp.id} className="p-2.5 rounded-lg bg-secondary border border-border hover:border-purple-500/20 transition-all">
+                <div key={opp.id} className="p-2.5 rounded-lg bg-card border border-border hover:border-purple-500/20 transition-all">
                   <div className="text-xs font-medium text-foreground truncate">{opp.customerName}</div>
                   <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{opp.opportunityName}</div>
                   <div className="flex items-center justify-between mt-2">
