@@ -7,11 +7,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    env_file:
+      - .env.local
     environment:
       - MONGODB_URI=mongodb://mongo:27017/galent
       - REDIS_URL=redis://redis:6379
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=galent-ai-secret-change-in-production
       - NODE_ENV=production
     depends_on:
       - mongo
