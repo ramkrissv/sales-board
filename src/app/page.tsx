@@ -2,15 +2,18 @@
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { format } from 'date-fns';
+import { useState } from 'react';
 import {
   AlertTriangle, ArrowRight, TrendingUp, DollarSign,
   Target, Clock, Sparkles, Zap, ChevronRight,
   Users, CheckSquare, Kanban
 } from 'lucide-react';
 import Link from 'next/link';
+import { DealDetail } from '@/components/modals/DealDetail';
 
 function HomeContent() {
   const { opportunities, isLoading } = useOpportunities();
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -165,10 +168,10 @@ function HomeContent() {
               'On Hold': 'bg-orange-500/20 text-orange-400',
             };
             return (
-              <Link
+              <button
                 key={opp.id}
-                href={`/pipeline?deal=${opp.id}`}
-                className="flex items-center gap-4 p-3 rounded-xl g-surface g-elevated hover:border-purple-500/30 transition-all group"
+                onClick={() => setSelectedOppId(opp.id)}
+                className="flex items-center gap-4 p-3 rounded-xl g-surface g-elevated hover:border-purple-500/30 transition-all group w-full text-left"
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-foreground group-hover:text-purple-300 transition-colors truncate">
@@ -193,11 +196,16 @@ function HomeContent() {
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-purple-400 transition-colors" />
                 </div>
-              </Link>
+              </button>
             );
           })}
         </div>
       </div>
+
+      {/* Deal Detail Modal */}
+      {selectedOppId && (
+        <DealDetail opportunityId={selectedOppId} onClose={() => setSelectedOppId(null)} />
+      )}
     </div>
   );
 }

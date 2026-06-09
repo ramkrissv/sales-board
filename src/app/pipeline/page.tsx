@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { OpportunityProvider } from '@/lib/store';
+import { DealDetail } from '@/components/modals/DealDetail';
 import { Sparkles } from 'lucide-react';
 
 const KanbanBoard = dynamic(
@@ -17,11 +18,6 @@ const KanbanBoard = dynamic(
   )}
 );
 
-const OpportunityModal = dynamic(
-  () => import('@/components/modals/OpportunityModal').then(m => ({ default: m.OpportunityModal })),
-  { ssr: false }
-);
-
 export default function PipelinePage() {
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
@@ -29,7 +25,7 @@ export default function PipelinePage() {
     <OpportunityProvider>
       <KanbanBoard onCardClick={setSelectedOppId} />
       {selectedOppId && (
-        <OpportunityModal
+        <DealDetail
           opportunityId={selectedOppId}
           onClose={() => setSelectedOppId(null)}
         />
