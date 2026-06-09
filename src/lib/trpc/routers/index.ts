@@ -7,6 +7,7 @@ import { accountRouter } from './account';
 import { authRouter } from './auth';
 import { userRouter } from './user';
 import { graphRouter } from './graph';
+import { aiRouter } from './ai';
 
 export const appRouter = router({
   opportunity: opportunityRouter,
@@ -17,6 +18,7 @@ export const appRouter = router({
   auth: authRouter,
   user: userRouter,
   graph: graphRouter,
+  ai: aiRouter,
 });
 
 export type AppRouter = typeof appRouter;
