@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { BarChart3, Users, Calendar, Target, TrendingUp, Kanban } from "lucide-react";
+import galentLogo from '@/assets/galent-logo.svg';
 
 export function LandingPage() {
   return (
@@ -9,12 +10,7 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#00dc82] flex items-center justify-center">
-                <Target className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-[#7c3aed] to-[#00dc82] bg-clip-text text-transparent">
-                Galent
-              </span>
+              <img src={galentLogo} alt="Galent" className="h-8" />
             </div>
             <Button 
               asChild 

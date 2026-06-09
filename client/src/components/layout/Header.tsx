@@ -15,8 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '../shared/ThemeToggle';
 import { NotificationPopover } from '../shared/NotificationPopover';
 
-import logoDark from '@/assets/logo-dark.png';
-import logoLight from '@/assets/logo-light.png';
+import galentLogo from '@/assets/galent-logo.svg';
 
 interface HeaderProps {
   toggleFilters: () => void;
@@ -66,8 +65,7 @@ export function Header({ toggleFilters, isFiltersOpen, onNewOpportunity }: Heade
     <header className="h-16 border-b bg-white dark:bg-slate-950 flex items-center px-4 justify-between sticky top-0 z-50">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 font-bold text-xl text-primary">
-          <img src={logoLight} alt="Galent" className="h-8 dark:hidden" />
-          <img src={logoDark} alt="Galent" className="h-8 hidden dark:block" />
+          <img src={galentLogo} alt="Galent" className="h-8" />
           <span className="hidden md:inline text-slate-900 dark:text-slate-100">Sales Pipeline <span className="text-primary font-normal">Tracker</span></span>
         </div>
 
