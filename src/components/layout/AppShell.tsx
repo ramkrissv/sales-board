@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import {
   Kanban, TrendingUp, CalendarClock, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles,
-  Bot, Link2, Settings, Bell, Plus, Sun, Moon,
+  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut,
 } from 'lucide-react';
 import { NewDealModal } from '@/components/modals/NewDealModal';
+import { CopilotPanel } from '@/components/ai/CopilotPanel';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Home', href: '/' },
@@ -30,9 +32,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
+  const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
   const [showNewDeal, setShowNewDeal] = useState(false);
+
+  const userInitials = session?.user?.name
+    ? session.user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+    : 'AU';
+  const userName = session?.user?.name || 'Admin User';
 
   useEffect(() => setMounted(true), []);
 
@@ -89,22 +98,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Moon className="h-[18px] w-[18px]" />
             )}
           </button>
-          <button className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary">
+          <button className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary"
+            title="Settings">
             <Settings className="h-[18px] w-[18px]" />
           </button>
-          <div className="w-8 h-8 rounded-full bg-purple-600/20 dark:bg-purple-600/30 flex items-center justify-center text-purple-600 dark:text-purple-300 text-xs font-bold mx-auto">
-            AU
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="h-[18px] w-[18px]" />
+          </button>
+          <div className="w-8 h-8 rounded-full bg-purple-600/20 dark:bg-purple-600/30 flex items-center justify-center text-purple-600 dark:text-purple-300 text-xs font-bold mx-auto"
+            title={userName}>
+            {userInitials}
           </div>
         </div>
       </aside>
 
       {/* Main content */}
-      <div className="ml-14">
+      <div className={`ml-14 transition-all duration-300 ${copilotOpen ? 'mr-96' : ''}`}>
         {/* Top command bar */}
         <header className="sticky top-0 z-40 h-12 g-glass flex items-center px-5 gap-4"
           style={{ borderBottom: '1px solid rgba(var(--g-line-rgb), 0.4)' }}>
           <button
-            onClick={() => setCommandOpen(!commandOpen)}
+            onClick={() => setCopilotOpen(!copilotOpen)}
             className="flex-1 max-w-xl flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border text-sm text-muted-foreground hover:border-purple-500/30 hover:text-foreground transition-colors"
           >
             <Sparkles className="h-3.5 w-3.5 text-purple-500" />
@@ -132,6 +150,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* AI Copilot Panel */}
+      <CopilotPanel isOpen={copilotOpen} onClose={() => setCopilotOpen(false)} />
 
       {/* New Deal Modal */}
       <NewDealModal isOpen={showNewDeal} onClose={() => setShowNewDeal(false)} />
