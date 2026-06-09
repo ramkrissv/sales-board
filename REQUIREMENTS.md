@@ -1,7 +1,7 @@
 # Galent AI — Revenue Intelligence Platform
 ## Product Requirements Document (PRD)
 
-**Version:** 3.0
+**Version:** 4.0
 **Date:** June 9, 2026
 **Owner:** Galent Product & Engineering
 **Status:** Active
@@ -131,7 +131,7 @@ The platform should feel like having a senior sales operations analyst, a resear
 - Auto-generated IDs (OPP-YYYY-NNNN)
 - Responsive design with mobile support
 
-### 2.4 Current Tech Stack
+### 2.4 Current Tech Stack (v1.0 — to be migrated)
 
 | Layer | Technology |
 |-------|-----------|
@@ -145,6 +145,579 @@ The platform should feel like having a senior sales operations analyst, a resear
 | Database | PostgreSQL 16, Drizzle ORM |
 | Auth | Passport + OIDC (Replit), express-session |
 | Build | Vite 7, esbuild, tsx |
+
+> **IMPORTANT:** All existing v1.0 features, data models, views, and seed data MUST be preserved during migration. No functionality loss is acceptable. The migration is additive — new architecture wraps and extends existing capabilities.
+
+### 2.5 Target Tech Stack (v4.0)
+
+| Layer | Technology | Rationale |
+|-------|-----------|-----------|
+| **Frontend** | Next.js 15 (App Router), React 19, TypeScript 5.6 | SSR/SSG, file-based routing, server components, streaming |
+| **UI Framework** | Tailwind CSS 4, Radix UI / shadcn, Framer Motion | Consistent with current; add motion for AI states |
+| **State** | TanStack React Query v5, Zustand | Replace Context with Zustand for complex agent state |
+| **Real-time** | Socket.IO / SSE | Agent stream, live deal updates, presence |
+| **Backend** | Next.js API Routes + tRPC | Type-safe API layer, end-to-end TypeScript |
+| **Database (Primary)** | MongoDB Atlas (with Mongoose ODM) | Flexible schema for deals, agents, workflows; native JSON storage for activity logs, agent memory, conversation threads |
+| **Knowledge Graph** | MongoDB Atlas + GraphQL layer (or Neo4j for Phase 5) | Stakeholder relationships, account hierarchies, agent context graphs stored as adjacency lists in MongoDB; GraphQL for traversal queries |
+| **Vector Store** | MongoDB Atlas Vector Search | Semantic search across conversation logs, agent memory, account intelligence. Embeddings via OpenAI/Anthropic |
+| **Agent Runtime** | LangGraph / CrewAI + Claude API (Anthropic) | Coordinator pattern, composable agent graphs, tool calling |
+| **LLM Provider** | Anthropic Claude (primary), OpenAI (fallback) | Agent reasoning, summarization, drafting, analysis |
+| **Auth** | NextAuth.js v5 (Auth.js) | SSO (Google, Azure AD, Okta), JWT sessions, RBAC middleware |
+| **Cache** | Redis (Upstash) | Session store, agent inference cache, real-time pub/sub |
+| **File Storage** | AWS S3 / Cloudflare R2 | Resource attachments, generated documents |
+| **Search** | MongoDB Atlas Search + Vector Search | Full-text + semantic hybrid search |
+| **Queue** | BullMQ (Redis-backed) | Background agent jobs, webhook delivery, scheduled tasks |
+| **Deployment** | Vercel (frontend) + AWS ECS/Fargate (agent runtime) | Edge-optimized frontend; dedicated compute for agents |
+| **Monitoring** | Sentry, Datadog, LangSmith | Error tracking, APM, LLM observability |
+
+---
+
+## 2A. Full-Stack Architecture
+
+### 2A.1 System Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          CLIENT (Next.js 15)                            │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐    │
+│  │ Kanban   │ │Account360│ │Forecasting│ │ Agent    │ │Integra-  │    │
+│  │ Board    │ │   View   │ │   Lab    │ │ Registry │ │  tions   │    │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘    │
+│       │             │            │             │            │          │
+│  ┌────┴─────────────┴────────────┴─────────────┴────────────┴─────┐    │
+│  │              Zustand Store + TanStack Query + Socket.IO         │    │
+│  └────────────────────────────────┬────────────────────────────────┘    │
+└───────────────────────────────────┼────────────────────────────────────┘
+                                    │ tRPC / REST / WebSocket
+┌───────────────────────────────────┼────────────────────────────────────┐
+│                          API LAYER (Next.js + tRPC)                    │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐    │
+│  │ Deal API │ │Account   │ │Workflow  │ │ Agent    │ │Integra-  │    │
+│  │ Router   │ │  API     │ │  API     │ │   API    │ │tion API  │    │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘    │
+│       │             │            │             │            │          │
+│  ┌────┴─────────────┴────────────┴─────────────┴────────────┴─────┐    │
+│  │                    Service Layer (Business Logic)                │    │
+│  │  DealService │ AccountService │ WorkflowEngine │ AgentOrch.     │    │
+│  └────────────────────────────────┬────────────────────────────────┘    │
+└───────────────────────────────────┼────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────┼────────────────────────────────────┐
+│                     AGENT RUNTIME (Coordinator Pattern)                │
+│                                                                        │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                    COORDINATOR AGENT                            │    │
+│  │  Receives user intent / system trigger → decomposes into       │    │
+│  │  sub-tasks → dispatches to specialist agents → aggregates      │    │
+│  │  results → returns unified response                            │    │
+│  └────────┬──────────┬──────────┬──────────┬──────────┬───────────┘    │
+│           │          │          │          │          │                │
+│  ┌────────┴──┐ ┌─────┴────┐ ┌──┴───────┐ ┌┴────────┐ ┌┴──────────┐   │
+│  │Deal Coach │ │Research  │ │Outreach  │ │Forecast │ │Hygiene    │   │
+│  │  Agent   │ │  Agent   │ │  Agent   │ │  Agent  │ │  Agent    │   │
+│  └─────┬────┘ └────┬─────┘ └────┬─────┘ └────┬────┘ └─────┬─────┘   │
+│        │           │            │             │            │          │
+│  ┌─────┴───────────┴────────────┴─────────────┴────────────┴─────┐    │
+│  │                      TOOL LAYER                                │    │
+│  │  MongoDB Query │ Web Search │ Email Draft │ Task Create │ ...  │    │
+│  └────────────────────────────────┬────────────────────────────────┘    │
+└───────────────────────────────────┼────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────┼────────────────────────────────────┐
+│                        DATA LAYER (MongoDB Atlas)                      │
+│                                                                        │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │                    MongoDB Collections                           │   │
+│  │                                                                  │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────────┐  │   │
+│  │  │opportun-│ │accounts │ │stake-   │ │tasks    │ │workflows │  │   │
+│  │  │  ities  │ │         │ │holders  │ │         │ │          │  │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └──────────┘  │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────────┐  │   │
+│  │  │agents   │ │agent_   │ │agent_   │ │integra- │ │campaigns │  │   │
+│  │  │         │ │actions  │ │memory   │ │  tions  │ │          │  │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └──────────┘  │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐                           │   │
+│  │  │knowledge│ │context_ │ │users /  │                           │   │
+│  │  │_graph   │ │embeddings│ │sessions │                           │   │
+│  │  └─────────┘ └─────────┘ └─────────┘                           │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                        │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
+│  │ Atlas Search     │  │ Atlas Vector     │  │ Redis Cache      │      │
+│  │ (Full-text)      │  │ Search (Semantic)│  │ (Sessions/Queue) │      │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘      │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 2A.2 Agent Architecture — Coordinator Pattern
+
+The agent system uses a **Coordinator Pattern** (also called Orchestrator pattern) where a central coordinator agent decomposes complex requests and delegates to specialist agents.
+
+```
+                        User Request / System Trigger
+                                    │
+                                    ▼
+                    ┌───────────────────────────────┐
+                    │      COORDINATOR AGENT         │
+                    │                                │
+                    │  1. Parse intent               │
+                    │  2. Load context from KG       │
+                    │  3. Select specialist agents   │
+                    │  4. Build execution plan       │
+                    │  5. Dispatch & monitor         │
+                    │  6. Aggregate results          │
+                    │  7. Return to user / store     │
+                    └──────────┬────────────────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              │                │                │
+              ▼                ▼                ▼
+    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+    │  Deal Coach   │  │  Research    │  │  Outreach    │
+    │              │  │  Agent       │  │  Agent       │
+    │  Tools:      │  │  Tools:      │  │  Tools:      │
+    │  - query_db  │  │  - web_search│  │  - draft_email│
+    │  - score_deal│  │  - scrape_url│  │  - send_email │
+    │  - flag_risk │  │  - enrich_co │  │  - create_task│
+    │  - suggest   │  │  - news_feed │  │  - log_activity│
+    └──────────────┘  └──────────────┘  └──────────────┘
+```
+
+#### Coordinator Responsibilities
+| Step | What It Does | Implementation |
+|------|-------------|----------------|
+| **Intent Parsing** | Understands what the user/trigger wants | Claude with structured output (tool_use) |
+| **Context Loading** | Pulls relevant context from Knowledge Graph | MongoDB aggregation pipeline on `knowledge_graph` collection |
+| **Agent Selection** | Picks which specialist agents to invoke | Rule-based + LLM reasoning based on intent classification |
+| **Plan Building** | Creates DAG of agent tasks (parallel where possible) | LangGraph state machine or custom DAG executor |
+| **Dispatch** | Runs agents in parallel or sequence as needed | BullMQ jobs with dependency chains |
+| **Aggregation** | Combines specialist outputs into unified response | Claude summarization with structured output |
+| **Human-in-the-Loop** | Gates high-stakes actions for approval | Agent action queue with WebSocket notification |
+
+#### Agent Composability
+Each agent is a **composable unit** with a standard interface:
+
+```typescript
+interface Agent {
+  id: string;
+  name: string;
+  type: 'specialist' | 'coordinator';
+  capabilities: string[];          // What this agent can do
+  tools: Tool[];                   // Functions it can call
+  systemPrompt: string;            // Agent personality & rules
+  contextRequirements: string[];   // What context it needs from KG
+  outputSchema: ZodSchema;         // Structured output format
+
+  // Execution
+  invoke(input: AgentInput, context: AgentContext): Promise<AgentOutput>;
+
+  // Lifecycle
+  status: 'live' | 'idle' | 'sleeping' | 'error';
+  wake(): Promise<void>;
+  sleep(): Promise<void>;
+}
+
+interface AgentInput {
+  trigger: 'user_command' | 'system_event' | 'scheduled' | 'coordinator';
+  payload: Record<string, any>;
+  parentAgentId?: string;          // If dispatched by coordinator
+}
+
+interface AgentOutput {
+  actions: AgentAction[];          // Suggested actions (with approval gates)
+  insights: AgentInsight[];        // Generated insights
+  artifacts: AgentArtifact[];      // Drafts, documents, etc.
+  memoryUpdates: MemoryUpdate[];   // What to persist in agent memory
+  graphUpdates: GraphUpdate[];     // Knowledge graph mutations
+}
+```
+
+### 2A.3 Knowledge Graph (MongoDB)
+
+The Knowledge Graph is stored in MongoDB as adjacency-list documents, enabling relationship traversal without a dedicated graph database. For Phase 5, Neo4j can be added as a dedicated graph layer.
+
+#### `knowledge_graph` Collection Schema
+
+```typescript
+// Node document
+{
+  _id: ObjectId,
+  nodeId: string,           // "account:technova", "person:sarah-chen", "opp:opp-001"
+  nodeType: string,         // "account", "person", "opportunity", "product", "service_line", "competitor"
+  label: string,            // Display name
+  properties: {             // Entity-specific properties
+    // For accounts: industry, revenue, health, etc.
+    // For persons: title, email, sentiment, engagement_level
+    // For opportunities: tcv, stage, health_score, etc.
+  },
+  edges: [                  // Outgoing relationships
+    {
+      targetNodeId: string,
+      relationship: string, // "HAS_STAKEHOLDER", "OWNS_OPPORTUNITY", "COMPETES_WITH",
+                           // "REPORTS_TO", "CHAMPIONS", "EVALUATES", "SOLD_SERVICE",
+                           // "USES_PRODUCT", "INFLUENCED_BY"
+      properties: {
+        weight: number,     // Relationship strength (0-1)
+        since: Date,
+        lastInteraction: Date,
+        context: string     // How they're related
+      }
+    }
+  ],
+  embedding: [number],      // Vector embedding for semantic search
+  updatedAt: Date,
+  updatedBy: string         // "agent:research" or "user:admin"
+}
+```
+
+#### Relationship Types
+
+| Relationship | From → To | Description |
+|-------------|-----------|-------------|
+| `HAS_STAKEHOLDER` | Account → Person | Company employs this person |
+| `REPORTS_TO` | Person → Person | Org hierarchy |
+| `CHAMPIONS` | Person → Opportunity | This person is the internal champion |
+| `EVALUATES` | Person → Opportunity | Involved in evaluation |
+| `DECIDES` | Person → Opportunity | Decision maker |
+| `OWNS_OPPORTUNITY` | User → Opportunity | Sales rep ownership |
+| `BELONGS_TO_ACCOUNT` | Opportunity → Account | Deal at this company |
+| `COMPETES_WITH` | Account → Account | Competitive relationship |
+| `USES_PRODUCT` | Account → Product | Customer uses this product |
+| `SOLD_SERVICE` | Opportunity → ServiceLine | Service line sold in this deal |
+| `INFLUENCED_BY` | Opportunity → Opportunity | Cross-sell / reference relationship |
+| `SIMILAR_TO` | Account → Account | AI-detected similarity |
+
+#### Graph Queries (MongoDB Aggregation)
+
+```javascript
+// Find all decision makers for an account, 2 hops deep
+db.knowledge_graph.aggregate([
+  { $match: { nodeId: "account:technova" } },
+  { $graphLookup: {
+      from: "knowledge_graph",
+      startWith: "$edges.targetNodeId",
+      connectFromField: "edges.targetNodeId",
+      connectToField: "nodeId",
+      as: "connected",
+      maxDepth: 2,
+      restrictSearchWithMatch: {
+        "edges.relationship": { $in: ["HAS_STAKEHOLDER", "DECIDES"] }
+      }
+  }}
+]);
+
+// Semantic similarity: find accounts similar to a given account
+db.knowledge_graph.aggregate([
+  { $vectorSearch: {
+      index: "vector_index",
+      path: "embedding",
+      queryVector: accountEmbedding,
+      numCandidates: 100,
+      limit: 10,
+      filter: { nodeType: "account" }
+  }}
+]);
+```
+
+### 2A.4 Agent Context Graph
+
+Each agent session builds a **context graph** — a subgraph of the Knowledge Graph relevant to the current task. This is loaded by the Coordinator before dispatching to specialists.
+
+```typescript
+interface AgentContext {
+  // Subgraph of relevant nodes and edges
+  nodes: KnowledgeNode[];
+  edges: KnowledgeEdge[];
+
+  // Agent-specific memory (persisted between sessions)
+  memory: {
+    shortTerm: Record<string, any>;  // Current session state
+    longTerm: Record<string, any>;   // Persisted insights, preferences
+    episodic: AgentEpisode[];        // Past interaction summaries
+  };
+
+  // Conversation history (for multi-turn interactions)
+  conversationHistory: Message[];
+
+  // Current user context
+  user: { id: string; role: string; team: string; preferences: Record<string, any> };
+}
+```
+
+#### `agent_memory` Collection
+
+```typescript
+{
+  _id: ObjectId,
+  agentId: string,         // "deal-coach", "research-agent"
+  scopeType: string,       // "global", "account", "opportunity", "user"
+  scopeId: string,         // The specific entity ID
+  memoryType: string,      // "insight", "preference", "pattern", "fact"
+  content: string,         // Natural language memory
+  embedding: [number],     // For semantic retrieval
+  confidence: number,      // 0-1
+  expiresAt: Date | null,  // Null = permanent
+  createdAt: Date,
+  accessCount: number      // How often this memory is retrieved
+}
+```
+
+### 2A.5 Feature Composability Architecture
+
+Every feature in the platform is a **composable module** that can be independently developed, deployed, and composed with other features.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    FEATURE REGISTRY                           │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+│  │ Pipeline     │  │ Account 360 │  │ Forecasting │          │
+│  │ Management   │  │             │  │             │          │
+│  │ ──────────── │  │ ──────────── │  │ ──────────── │          │
+│  │ UI: Kanban,  │  │ UI: Neural  │  │ UI: Waterfall│         │
+│  │   Table,     │  │   Map,      │  │   Scenario,  │         │
+│  │   Timeline   │  │   Health    │  │   Insights   │         │
+│  │ API: deals/* │  │ API: acct/* │  │ API: forecast│         │
+│  │ Agents: Deal │  │ Agents: Res │  │ Agents: Fore │         │
+│  │   Coach      │  │   earch     │  │   cast       │         │
+│  │ Workflows:   │  │ Workflows:  │  │ Workflows:   │         │
+│  │   Stage gate │  │   Enrich    │  │   Digest     │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘          │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+│  │ Outreach     │  │ Integrations│  │ Workflow     │          │
+│  │ Intelligence │  │             │  │ Engine       │          │
+│  │ ──────────── │  │ ──────────── │  │ ──────────── │          │
+│  │ UI: Campaign │  │ UI: Sync    │  │ UI: Builder  │          │
+│  │   Drafter    │  │   Mapper    │  │   Canvas     │          │
+│  │ API: outreach│  │ API: integ/*│  │ API: workflow│          │
+│  │ Agents: Out- │  │ Agents:     │  │ Engine:      │          │
+│  │   reach      │  │   Schema    │  │   Trigger →  │          │
+│  │ Workflows:   │  │ Workflows:  │  │   Condition →│          │
+│  │   Sequence   │  │   Sync      │  │   Action     │          │
+│  └─────────────┘  └─────────────┘  └─────────────┘          │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Each feature module exposes:
+- **UI Components** (React, lazy-loaded)
+- **API Routes** (tRPC routers, composable)
+- **Agent Definitions** (specialist agents, composable into coordinator plans)
+- **Workflow Templates** (pre-built automation recipes)
+- **Data Models** (MongoDB schemas, registered in central registry)
+
+---
+
+## 2B. Service Lines, Products, and POC-Based Pipeline
+
+### 2B.1 Multi-Dimensional Pipeline Organization
+
+Opportunities must be viewable and filterable across multiple dimensions — not just by status, but by **service line**, **product/solution**, and **POC ownership**.
+
+#### Service Line Entity (Enhanced)
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | e.g., "its", "staffing", "consulting", "managed-services" |
+| name | string | "IT Services", "Staffing", "Consulting", "Managed Services" |
+| code | string | Abbreviation: "ITS", "STF", "CON", "MS" |
+| color | string | Badge color for visual distinction |
+| description | text | What this service line covers |
+| leads | string[] | Service line leadership POCs |
+| isActive | boolean | Whether available for new deals |
+
+#### Product / Solution Catalog
+| Field | Type | Description |
+|-------|------|-------------|
+| id | UUID | Product identifier |
+| name | string | "AI Platform", "QA CoE", "DevSecOps", "Cloud Migration", "Data Analytics" |
+| serviceLine | FK → service_lines | Which service line owns this product |
+| category | string | "Platform", "Service", "Accelerator", "IP" |
+| description | text | Product description |
+| defaultMargin | integer | Typical margin for this product |
+| defaultBillingModel | string | Typical billing approach |
+| techStack | string[] | Technologies involved |
+| isActive | boolean | Available for new deals |
+
+#### Enhanced Opportunity Fields (Service/Product)
+| Field | Type | Description |
+|-------|------|-------------|
+| serviceLineId | FK → service_lines | Primary service line |
+| secondaryServiceLines | FK[] → service_lines | Cross-sell service lines |
+| products | FK[] → products | Solutions being sold |
+| primaryProduct | FK → products | Lead product in the deal |
+
+#### POC-Based Pipeline Views
+| View | Filter | What It Shows |
+|------|--------|--------------|
+| **My Pipeline** | `primaryOwner = currentUser` | Rep's own deals |
+| **By Sales POC** | `salesPOCs includes X` | All deals where a specific sales POC is involved |
+| **By Presales POC** | `presalesPOCs includes X` | All deals where a presales POC is involved |
+| **By Service Line** | `serviceLineId = X` | Pipeline for IT Services, Staffing, etc. |
+| **By Product** | `products includes X` | Pipeline for a specific solution |
+| **By Account** | `accountId = X` | All deals at a specific company |
+| **Cross-sell View** | `secondaryServiceLines.length > 0` | Deals spanning multiple service lines |
+
+### 2B.2 Customizable Pipeline Stages (per Service Line)
+
+Different service lines may have different pipeline stages:
+
+```typescript
+interface PipelineConfig {
+  serviceLineId: string;
+  stages: {
+    id: string;
+    name: string;
+    order: number;
+    color: string;
+    requiredFields: string[];      // Fields that must be filled before entering this stage
+    autoTasks: TaskTemplate[];     // Tasks auto-created on stage entry
+    approvalRequired: boolean;     // Needs manager approval to enter
+    maxDaysAllowed: number | null; // SLA for time in stage
+    exitCriteria: string[];        // Conditions to move to next stage
+  }[];
+}
+
+// Example: IT Services pipeline
+{
+  serviceLineId: "its",
+  stages: [
+    { id: "discovery", name: "Discovery", order: 1, requiredFields: ["industry", "region"], ... },
+    { id: "qualification", name: "Qualification", order: 2, requiredFields: ["tcv", "billingModel"], ... },
+    { id: "solutioning", name: "Solutioning", order: 3, ... },  // ITS-specific stage
+    { id: "proposal", name: "Proposal", order: 4, ... },
+    { id: "negotiation", name: "Negotiation", order: 5, ... },
+    { id: "won", name: "Won", order: 6, ... },
+    { id: "lost", name: "Lost", order: 7, ... },
+  ]
+}
+
+// Example: Staffing pipeline (different stages)
+{
+  serviceLineId: "staffing",
+  stages: [
+    { id: "requirement", name: "Requirement", order: 1, ... },
+    { id: "sourcing", name: "Sourcing", order: 2, ... },
+    { id: "submission", name: "Submission", order: 3, ... },
+    { id: "interview", name: "Interview", order: 4, ... },
+    { id: "offer", name: "Offer", order: 5, ... },
+    { id: "placement", name: "Placement", order: 6, ... },
+    { id: "lost", name: "Lost", order: 7, ... },
+  ]
+}
+```
+
+---
+
+## 2C. Customizable Workflow Engine
+
+### 2C.1 Overview
+
+The Workflow Engine is a visual, configurable automation system that lets users (and AI agents) build **trigger → condition → action** workflows. It operates in both manual and **agentic mode** (AI auto-creates and optimizes workflows).
+
+### 2C.2 Workflow Data Model
+
+```typescript
+interface Workflow {
+  id: string;
+  name: string;                    // "Auto-task on Proposal Entry"
+  description: string;
+  isActive: boolean;
+  mode: 'manual' | 'agentic';     // Who created/manages this workflow
+  createdBy: string;               // User ID or "agent:deal-coach"
+  serviceLineId?: string;          // Scoped to service line (optional)
+
+  trigger: WorkflowTrigger;
+  conditions: WorkflowCondition[];  // ALL must be true (AND logic)
+  actions: WorkflowAction[];        // Executed in sequence
+
+  // Execution stats
+  executionCount: number;
+  lastExecutedAt: Date;
+  successRate: number;
+
+  // Agentic mode fields
+  agentSuggested: boolean;         // AI recommended this workflow
+  agentConfidence: number;         // How confident the agent is
+  agentRationale: string;          // Why the agent created this
+}
+```
+
+### 2C.3 Triggers
+
+| Trigger Type | Event | Configuration |
+|-------------|-------|---------------|
+| `deal_stage_change` | Opportunity moves to a new stage | `{ fromStage?, toStage, serviceLineId? }` |
+| `deal_created` | New opportunity created | `{ serviceLineId?, minTcv? }` |
+| `deal_field_update` | Specific field changed | `{ fieldName, oldValue?, newValue? }` |
+| `deal_inactive` | No activity for N days | `{ inactiveDays: number }` |
+| `task_overdue` | Task passes due date | `{ priorityFilter? }` |
+| `task_completed` | Task marked complete | `{ taskNamePattern? }` |
+| `stakeholder_added` | New stakeholder on a deal | `{ roleFilter? }` |
+| `agent_signal` | Agent detects a signal | `{ signalType, minConfidence }` |
+| `schedule` | Cron-based | `{ cronExpression }` — daily, weekly, monthly |
+| `integration_event` | External system event | `{ system, eventType }` — e.g., Salesforce field update |
+| `manual` | User-invoked | Button click or slash command |
+
+### 2C.4 Conditions
+
+| Condition Type | Check | Example |
+|---------------|-------|---------|
+| `field_equals` | Field matches value | `tcv > 500000` |
+| `field_contains` | Array field contains value | `customTags includes "strategic"` |
+| `field_in_range` | Numeric range | `margin between 20 and 40` |
+| `time_in_stage` | Days in current stage | `daysInStage > 14` |
+| `stakeholder_check` | Stakeholder criteria | `hasDecisionMaker = false` |
+| `task_check` | Task criteria | `overdueTasks > 0` |
+| `ai_score_check` | AI metric threshold | `dealHealthScore < 50` |
+| `service_line_match` | Service line filter | `serviceLineId = "its"` |
+| `product_match` | Product filter | `products includes "ai-platform"` |
+| `user_role_check` | User role | `owner.role = "SDR"` |
+
+### 2C.5 Actions
+
+| Action Type | What It Does | Configuration |
+|------------|-------------|---------------|
+| `create_tasks` | Auto-create tasks from template | `{ tasks: [{ name, owner, dueDaysFromNow, priority }] }` |
+| `update_field` | Set opportunity field | `{ field, value }` |
+| `change_stage` | Move to next/specific stage | `{ targetStage }` |
+| `send_notification` | Notify users | `{ channels: ['in_app', 'email', 'slack'], recipients, message }` |
+| `assign_owner` | Change deal ownership | `{ newOwner: string \| 'round_robin' \| 'manager' }` |
+| `invoke_agent` | Trigger an AI agent | `{ agentId, prompt, approvalRequired }` |
+| `create_draft` | Generate outreach draft | `{ templateId, stakeholderId, tone }` |
+| `log_activity` | Add to activity log | `{ message, type }` |
+| `webhook` | Call external URL | `{ url, method, payload }` |
+| `approval_gate` | Require approval to proceed | `{ approvers: ['manager', 'vp_sales'], timeout }` |
+| `escalate` | Escalate to manager | `{ reason, deadline }` |
+| `tag_deal` | Add custom tag | `{ tag }` |
+| `score_update` | Recalculate AI scores | `{ metrics: ['health', 'win_probability'] }` |
+
+### 2C.6 Agentic Workflow Mode
+
+In **Agentic Mode**, the AI Coordinator Agent can:
+
+1. **Observe** pipeline patterns ("Deals that get stuck in Qualification for >10 days with no decision-maker identified have a 70% loss rate")
+2. **Propose** new workflows ("I suggest creating a workflow: When a deal enters Qualification and has no decision-maker stakeholder after 5 days, auto-create a task 'Identify decision maker' and alert the owner")
+3. **Optimize** existing workflows ("Workflow 'Auto-task on Proposal' has a 90% task-completion rate but 3 of the 5 auto-tasks are always deleted by users. I suggest removing them.")
+4. **A/B test** workflow variants ("I'm testing two different follow-up timing strategies for deals entering Negotiation")
+
+The user always has final approval:
+- **[Apply Workflow]** / **[Dismiss]** for new workflow suggestions
+- **[Approve Optimization]** / **[Keep Current]** for modification proposals
+- Dashboard showing workflow performance metrics
+
+### 2C.7 Pre-Built Workflow Templates
+
+| Template | Trigger | Actions |
+|----------|---------|---------|
+| **Discovery Checklist** | Deal enters Discovery | Create tasks: Research company, Identify stakeholders, Schedule intro call, Qualify budget |
+| **Qualification Gate** | Deal moves to Qualification | Check: TCV filled, Decision maker identified, Budget confirmed. If not → block + notify |
+| **Proposal Auto-Prep** | Deal enters Proposal | Create tasks: Draft SOW, Pricing review, Presales architecture review, Legal review |
+| **Stale Deal Alert** | No activity > 14 days | Notify owner, invoke Deal Coach agent, log risk signal |
+| **Win Handoff** | Deal moves to Won | Invoke Handoff Agent, create delivery onboarding tasks, notify delivery team |
+| **Loss Analysis** | Deal moves to Lost | Prompt for loss reason, invoke Research Agent for win-back analysis, log to analytics |
+| **Executive Escalation** | TCV > $1M + stage = Negotiation | Require VP approval, create executive briefing task, invoke Meeting Prep agent |
+| **Competitor Alert** | Agent detects competitor | Invoke Competitive Intel agent, create battle card task, notify sales manager |
 
 ---
 
