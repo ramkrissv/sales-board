@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import {
@@ -10,6 +10,7 @@ import {
   LayoutDashboard, CheckSquare, Users, Network, Sparkles,
   Bot, Link2, Settings, Bell, Plus, Sun, Moon,
 } from 'lucide-react';
+import { NewDealModal } from '@/components/modals/NewDealModal';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Home', href: '/' },
@@ -27,8 +28,13 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme();
+  const router = useRouter();
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [showNewDeal, setShowNewDeal] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   if (pathname === '/login') {
     return <>{children}</>;
@@ -73,12 +79,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Bottom icons */}
         <div className="flex flex-col gap-1 mt-2">
           <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
             className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            title="Toggle theme"
+            title={mounted ? `Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode` : 'Toggle theme'}
           >
-            <Sun className="h-[18px] w-[18px] dark:hidden" />
-            <Moon className="h-[18px] w-[18px] hidden dark:block" />
+            {mounted && resolvedTheme === 'dark' ? (
+              <Sun className="h-[18px] w-[18px]" />
+            ) : (
+              <Moon className="h-[18px] w-[18px]" />
+            )}
           </button>
           <button className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary">
             <Settings className="h-[18px] w-[18px]" />
@@ -108,7 +117,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Bell className="h-4 w-4" />
               <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-purple-500 rounded-full" />
             </button>
-            <button className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors">
+            <button
+              onClick={() => setShowNewDeal(true)}
+              className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
+            >
               <Plus className="h-3.5 w-3.5" />
               New Deal
             </button>
@@ -120,6 +132,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* New Deal Modal */}
+      <NewDealModal isOpen={showNewDeal} onClose={() => setShowNewDeal(false)} />
     </div>
   );
 }
