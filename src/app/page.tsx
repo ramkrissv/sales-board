@@ -1,16 +1,31 @@
+'use client';
+
+import dynamic from 'next/dynamic';
+import { useState } from 'react';
+import { OpportunityProvider } from '@/lib/store';
+import { Loader2 } from 'lucide-react';
+
+const KanbanBoard = dynamic(() => import('@/components/kanban/KanbanBoard').then(m => ({ default: m.KanbanBoard })), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-purple-600" /></div>,
+});
+
+const OpportunityModal = dynamic(() => import('@/components/modals/OpportunityModal').then(m => ({ default: m.OpportunityModal })), {
+  ssr: false,
+});
+
 export default function HomePage() {
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Pipeline Board</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your sales pipeline with AI-powered insights</p>
-        </div>
-      </div>
-      <div className="text-center py-20 text-slate-400">
-        <p className="text-lg">Kanban board loading...</p>
-        <p className="text-sm mt-2">Pipeline data will appear here once connected to the database.</p>
-      </div>
-    </div>
+    <OpportunityProvider>
+      <KanbanBoard onCardClick={setSelectedOppId} />
+      {selectedOppId && (
+        <OpportunityModal
+          opportunityId={selectedOppId}
+          onClose={() => setSelectedOppId(null)}
+        />
+      )}
+    </OpportunityProvider>
   );
 }

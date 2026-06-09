@@ -16,11 +16,21 @@ import {
   HelpCircle,
   ChevronLeft,
   ChevronRight,
+  CalendarClock,
+  Table as TableIcon,
+  LayoutDashboard,
+  CheckSquare,
+  Users,
 } from 'lucide-react';
 
 const navItems = [
   { icon: Kanban, label: 'Kanban', href: '/' },
   { icon: TrendingUp, label: 'Timeline', href: '/timeline' },
+  { icon: CalendarClock, label: 'Schedule', href: '/schedule' },
+  { icon: TableIcon, label: 'Table', href: '/table' },
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
+  { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
+  { icon: Users, label: 'Stakeholders', href: '/stakeholders' },
   { icon: Network, label: 'Account 360', href: '/accounts' },
   { icon: Sparkles, label: 'AI Forecasting', href: '/forecasting' },
   { icon: Bot, label: 'Agent Registry', href: '/agents' },
