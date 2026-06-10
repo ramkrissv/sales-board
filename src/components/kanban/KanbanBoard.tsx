@@ -29,6 +29,7 @@ interface KanbanBoardProps {
 export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
   const { opportunities, filteredOpportunities, updateOpportunity } = useOpportunities();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [pendingMove, setPendingMove] = useState<{ oppId: string; oppName: string; customerName: string; fromStage: string; toStage: string } | null>(null);
 
   const columns = useMemo(() => {
     const cols: Record<Status, Opportunity[]> = {
@@ -102,11 +103,14 @@ export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
     }
 
     if (newStatus && newStatus !== opportunity.status) {
-      updateOpportunity(activeId, { status: newStatus });
-      // Open deal detail for editing after stage change
-      if (onCardClick) {
-        setTimeout(() => onCardClick(activeId), 300);
-      }
+      // Show confirmation dialog instead of instant move
+      setPendingMove({
+        oppId: activeId,
+        oppName: opportunity.opportunityName,
+        customerName: opportunity.customerName,
+        fromStage: opportunity.status,
+        toStage: newStatus,
+      });
     }
 
     setActiveId(null);
@@ -165,6 +169,40 @@ export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
           document.body
         )}
       </DndContext>
+
+      {/* Stage Change Confirmation Dialog */}
+      {pendingMove && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setPendingMove(null)} />
+          <div className="relative w-full max-w-md g-surface g-elevated rounded-2xl p-6 shadow-2xl space-y-4">
+            <h3 className="text-base font-semibold text-foreground">Move Deal?</h3>
+            <p className="text-sm text-muted-foreground">
+              Move <span className="font-medium text-foreground">{pendingMove.customerName}</span> from{' '}
+              <span className="g-chip bg-secondary text-muted-foreground">{pendingMove.fromStage}</span>{' → '}
+              <span className="g-chip bg-[#7c3aed]/10 text-[#7c3aed]">{pendingMove.toStage}</span>?
+            </p>
+            <p className="text-xs text-muted-foreground">{pendingMove.oppName}</p>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                onClick={() => setPendingMove(null)}
+                className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  updateOpportunity(pendingMove.oppId, { status: pendingMove.toStage as Status });
+                  if (onCardClick) setTimeout(() => onCardClick(pendingMove.oppId), 300);
+                  setPendingMove(null);
+                }}
+                className="px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors"
+              >
+                Confirm Move
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
