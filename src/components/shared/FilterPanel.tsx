@@ -154,6 +154,19 @@ export function FilterPanel() {
           Clear All
         </button>
       )}
+
+      {/* Saved Views */}
+      <div className="ml-auto">
+        <SavedViews onApply={(viewFilters) => {
+          setFilters(prev => ({
+            ...prev,
+            status: viewFilters.status as import('@/lib/types').Status[],
+            primaryOwner: viewFilters.primaryOwner,
+            industry: viewFilters.industry,
+            region: viewFilters.region,
+          }));
+        }} />
+      </div>
     </div>
   );
 }

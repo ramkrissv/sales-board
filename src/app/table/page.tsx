@@ -3,10 +3,11 @@
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { DealDetail } from '@/components/modals/DealDetail';
+import { ImportModal } from '@/components/modals/ImportModal';
 import { useState, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
 import {
-  Search, Download, ChevronDown, ChevronRight, ChevronUp,
+  Search, Download, Upload, ChevronDown, ChevronRight, ChevronUp,
   Sparkles, Users, CheckSquare, MoreHorizontal,
   Loader2
 } from 'lucide-react';
@@ -27,6 +28,7 @@ function TableContent() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [allExpanded, setAllExpanded] = useState(true);
   const [editingStage, setEditingStage] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   // Apply business filter
   const bizFiltered = useMemo(() => {
@@ -142,6 +144,9 @@ function TableContent() {
           <p className="text-sm text-muted-foreground">{sorted.length} projects &middot; ${(totalTcv / 1e6).toFixed(1)}M total &middot; {avgMargin}% avg margin</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
+            <Upload className="h-3.5 w-3.5" /> Import
+          </button>
           <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
             <Download className="h-3.5 w-3.5" /> Export
           </button>
@@ -317,6 +322,7 @@ function TableContent() {
       </div>
 
       {selectedOppId && <DealDetail opportunityId={selectedOppId} onClose={() => setSelectedOppId(null)} />}
+      <ImportModal isOpen={showImport} onClose={() => setShowImport(false)} />
     </div>
   );
 }

@@ -16,22 +16,36 @@ import { MeetingNotesModal } from '@/components/modals/MeetingNotesModal';
 import { CopilotPanel } from '@/components/ai/CopilotPanel';
 import { NotificationPopover } from '@/components/shared/NotificationPopover';
 
+// 5 core nav items — end-to-end sales lifecycle
+const navGroups = [
+  {
+    label: 'Sales',
+    items: [
+      { icon: LayoutDashboard, label: 'Command Center', href: '/' },
+      { icon: Magnet, label: 'Leads & Pipeline', href: '/leads' },
+      { icon: Kanban, label: 'Deal Room', href: '/pipeline' },
+      { icon: Sparkles, label: 'Intelligence', href: '/dashboard' },
+      { icon: Settings, label: 'Platform', href: '/settings' },
+    ],
+  },
+];
+// Flat list for mobile menu (includes all sub-pages)
 const navItems = [
-  { icon: LayoutDashboard, label: 'Home', href: '/' },
+  { icon: LayoutDashboard, label: 'Command Center', href: '/' },
   { icon: Magnet, label: 'Leads', href: '/leads' },
-  { icon: Kanban, label: 'Projects', href: '/pipeline' },
-  { icon: TrendingUp, label: 'Timeline', href: '/timeline' },
-  { icon: CalendarClock, label: 'Schedule', href: '/schedule' },
-  { icon: CalendarDays, label: 'Calendar', href: '/calendar' },
+  { icon: Kanban, label: 'Pipeline', href: '/pipeline' },
   { icon: TableIcon, label: 'Table', href: '/table' },
+  { icon: CalendarDays, label: 'Calendar', href: '/calendar' },
+  { icon: TrendingUp, label: 'Timeline', href: '/timeline' },
   { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
   { icon: Users, label: 'Contacts', href: '/stakeholders' },
   { icon: FileText, label: 'Contracts', href: '/contracts' },
   { icon: Network, label: 'Accounts', href: '/accounts' },
   { icon: Sparkles, label: 'Forecasting', href: '/forecasting' },
-  { icon: GitBranch, label: 'Workflows', href: '/workflows' },
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
   { icon: Bot, label: 'Agents', href: '/agents' },
   { icon: Link2, label: 'Integrations', href: '/integrations' },
+  { icon: GitBranch, label: 'Workflows', href: '/workflows' },
   { icon: Shield, label: 'Users', href: '/admin/users' },
 ];
 
@@ -61,37 +75,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen g-scene text-foreground">
       {/* Thin icon sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-14 z-50 hidden md:flex flex-col items-center py-3 gap-1"
+      <aside className="fixed left-0 top-0 bottom-0 w-48 z-50 hidden md:flex flex-col py-3"
         style={{ background: 'var(--g-bg)', borderRight: '1px solid var(--g-line)' }}>
-        {/* Logo */}
-        <Link href="/" className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-emerald-500 flex items-center justify-center mb-4">
-          <Sparkles className="h-4 w-4 text-white" />
+        {/* Galent Logo */}
+        <Link href="/" className="mb-4 flex-shrink-0 flex items-center gap-2 px-3" title="Galent SalesPilot">
+          <img src="/galent-logo.svg" alt="Galent" className="w-7 h-7 rounded-lg" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          <span className="text-sm font-bold text-foreground">Galent</span>
         </Link>
 
-        {/* Nav icons */}
+        {/* Nav icons — grouped */}
         <div className="flex-1 flex flex-col gap-0.5 overflow-y-auto">
-          {navItems.map((item) => {
+          {navGroups.map((group, gi) => (
+            <div key={group.label}>
+              {gi > 0 && <div className="mx-auto my-1.5 w-5 border-t" style={{ borderColor: 'var(--g-line)' }} />}
+              {group.items.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                title={item.label}
                 className={cn(
-                  'w-10 h-10 rounded-lg flex items-center justify-center transition-all group relative',
+                  'flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative mx-2',
                   isActive
-                    ? 'bg-purple-600/20 text-purple-600 dark:text-purple-400'
+                    ? 'bg-[#7c3aed]/10 text-[#7c3aed]'
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                 )}
               >
-                <item.icon className="h-[18px] w-[18px]" />
-                {isActive && <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-purple-500" />}
-                <div className="absolute left-14 px-2 py-1 rounded bg-card border border-border text-xs opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50 shadow-lg">
-                  {item.label}
-                </div>
+                {isActive && <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r bg-[#7c3aed]" />}
+                <item.icon className="h-4 w-4 flex-shrink-0" />
+                <span>{item.label}</span>
               </Link>
             );
           })}
+            </div>
+          ))}
         </div>
 
         {/* Bottom icons */}
