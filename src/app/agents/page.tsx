@@ -5,7 +5,7 @@ import {
   Bot, Shield, Sparkles, Zap, Play, Loader2, CheckSquare,
   AlertTriangle, Search, Clock, ArrowRight, Brain, Eye,
   Mail, Target, GitBranch, ChevronDown, ChevronRight,
-  BarChart3, RefreshCw
+  BarChart3, RefreshCw, FileText, Globe
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { DEFAULT_AGENT_CONFIGS, AVAILABLE_MODELS } from '@/lib/ai/config';
@@ -29,10 +29,14 @@ export default function AgentsPage() {
   const agentIcons: Record<string, any> = {
     'deal-coach': Brain, 'research-agent': Search, 'outreach-agent': Mail,
     'hygiene-agent': Shield, 'forecast-agent': BarChart3,
+    'intake-processor': Globe, 'proposal-drafter': FileText,
+    'account-intelligence': Eye, 'competitive-intel': Target,
   };
   const agentColors: Record<string, string> = {
     'deal-coach': '#5B4FE9', 'research-agent': '#3b82f6', 'outreach-agent': '#22c55e',
     'hygiene-agent': '#f59e0b', 'forecast-agent': '#06b6d4',
+    'intake-processor': '#8b5cf6', 'proposal-drafter': '#10b981',
+    'account-intelligence': '#ec4899', 'competitive-intel': '#ef4444',
   };
 
   const quickActions = [
@@ -40,6 +44,10 @@ export default function AgentsPage() {
     { id: 'find_at_risk_deals', label: 'Find At-Risk Deals', desc: 'Identify deals with missing DMs, stale activity, or $0 TCV', agent: 'deal-coach', icon: AlertTriangle },
     { id: 'suggest_next_steps', label: 'Suggest Next Steps', desc: 'AI recommends specific actions for each active deal', agent: 'deal-coach', icon: ArrowRight },
     { id: 'identify_stale_deals', label: 'Find Stale Deals', desc: 'Deals stuck in same stage for 14+ days', agent: 'hygiene-agent', icon: Clock },
+    { id: 'competitive_scan', label: 'Competitive Scan', desc: 'Find competitor mentions across all deals', agent: 'competitive-intel', icon: Shield },
+    { id: 'draft_proposals', label: 'Check Proposals', desc: 'Identify deals missing proposal artifacts', agent: 'proposal-drafter', icon: FileText },
+    { id: 'enrich_accounts', label: 'Enrich Accounts', desc: 'Find missing data and expansion opportunities', agent: 'account-intelligence', icon: Search },
+    { id: 'process_intake', label: 'Process Queue', desc: 'Review deals needing follow-up from recent activity', agent: 'intake-processor', icon: Zap },
   ];
 
   const handleRunAgent = (agentId: string, goal: string) => {

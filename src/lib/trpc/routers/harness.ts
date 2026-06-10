@@ -72,6 +72,10 @@ export const harnessRouter = router({
         'generate_weekly_report',
         'qualify_all_leads',
         'identify_stale_deals',
+        'competitive_scan',
+        'draft_proposals',
+        'enrich_accounts',
+        'process_intake',
       ]),
     }))
     .mutation(async ({ input }) => {
@@ -82,6 +86,10 @@ export const harnessRouter = router({
         generate_weekly_report: { agentId: 'forecast-agent', goal: 'Generate a weekly pipeline report: total pipeline, weighted forecast, deals won/lost this week, deals closing next week, at-risk deals, and top 3 recommendations.' },
         qualify_all_leads: { agentId: 'deal-coach', goal: 'Review all leads and qualify them based on ICP fit, engagement signals, and timing.' },
         identify_stale_deals: { agentId: 'hygiene-agent', goal: 'Find all deals that have been in the same stage for more than 14 days. For each, send a notification to the owner and create a follow-up task.' },
+        competitive_scan: { agentId: 'deal-coach', goal: 'Scan all active deals for competitor mentions in conversation logs. For each competitor found, summarize the competitive threat and suggest counter-positioning.' },
+        draft_proposals: { agentId: 'deal-coach', goal: 'For each deal in Proposal stage, check if a SOW exists. If not, list what proposal artifacts are missing based on the stage ontology.' },
+        enrich_accounts: { agentId: 'deal-coach', goal: 'Review all accounts. For each, identify: missing data fields, deals without stakeholders, and opportunities for expansion.' },
+        process_intake: { agentId: 'deal-coach', goal: 'Review recent activity and identify any deals that need follow-up based on meeting notes, stage transitions, or overdue tasks.' },
       };
 
       const config = goals[input.action];

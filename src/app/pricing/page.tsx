@@ -5,6 +5,7 @@ import { trpc } from '@/lib/trpc/client';
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { DollarSign, Plus, Trash2, Calculator, Download, Link2, Globe, Users, Percent } from 'lucide-react';
 
+// Geo rate cards — US onshore and India offshore from Galent rate card
 const GEO_RATES: Record<string, { label: string; multiplier: number }> = {
   'us': { label: 'US (Onshore)', multiplier: 1.0 },
   'canada': { label: 'Canada', multiplier: 0.85 },
@@ -14,19 +15,32 @@ const GEO_RATES: Record<string, { label: string; multiplier: number }> = {
   'apac': { label: 'APAC', multiplier: 0.45 },
 };
 
+// Roles with US base rates and India rates from actual Galent pricing
 const ROLES = [
-  { role: 'Project Manager', baseRate: 175 },
-  { role: 'Solution Architect', baseRate: 200 },
-  { role: 'Senior Developer', baseRate: 165 },
-  { role: 'Developer', baseRate: 135 },
-  { role: 'QA Engineer', baseRate: 120 },
-  { role: 'DevOps Engineer', baseRate: 155 },
-  { role: 'Data Engineer', baseRate: 160 },
-  { role: 'AI/ML Engineer', baseRate: 185 },
-  { role: 'UX Designer', baseRate: 140 },
-  { role: 'Business Analyst', baseRate: 145 },
-  { role: 'Scrum Master', baseRate: 150 },
+  { role: 'Program Manager', baseRate: 130, indiaRate: 0 },
+  { role: 'Technical Architect', baseRate: 120, indiaRate: 50 },
+  { role: 'QA Architect', baseRate: 100, indiaRate: 35 },
+  { role: 'Data Architect', baseRate: 110, indiaRate: 40 },
+  { role: 'Sr Full Stack Engineer', baseRate: 95, indiaRate: 30 },
+  { role: 'Business Analyst', baseRate: 90, indiaRate: 35 },
+  { role: 'DevOps Engineer', baseRate: 95, indiaRate: 35 },
+  { role: 'QA Engineer', baseRate: 80, indiaRate: 26 },
+  { role: 'Delivery Manager', baseRate: 110, indiaRate: 40 },
+  { role: 'AI/ML Engineer', baseRate: 130, indiaRate: 45 },
+  { role: 'UX Designer', baseRate: 90, indiaRate: 30 },
+  { role: 'Scrum Master', baseRate: 100, indiaRate: 35 },
 ];
+
+// Cost structure from Galent rate card
+const COST_PARAMS = {
+  usdToInr: 85,
+  hrsPerMonth: 160,
+  contingencyPct: 0.10,
+  sgaPct: 0.05,
+  seatCostPerHr: 2,
+  pcAssetMonthly: 80,
+  tePct: 0.04,
+};
 
 interface LineItem {
   id: string;
