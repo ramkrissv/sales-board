@@ -156,6 +156,15 @@ export const leadRouter = router({
       lead.score = qual.overallScore;
       if (qual.overallScore >= 60) lead.stage = 'qualify';
       await lead.save();
+
+      // Fire workflow for qualified leads
+      if (qual.overallScore >= 60) {
+        try {
+          const { executeWorkflows } = await import('@/lib/workflow/engine');
+          await executeWorkflows({ type: 'lead_qualified', metadata: { leadId: input.id, score: qual.overallScore } });
+        } catch (e) { console.error('Workflow error:', e); }
+      }
+
       return lead.toObject();
     }),
 
@@ -253,6 +262,18 @@ export const leadRouter = router({
       lead.convertedAt = new Date();
       lead.stage = 'converted';
       await lead.save();
+
+      // Fire workflow for deal creation from lead conversion
+      try {
+        const { executeWorkflows } = await import('@/lib/workflow/engine');
+        await executeWorkflows({
+          type: 'deal_created',
+          opportunityId: oppId,
+          opportunityName: `${lead.type === 'product' ? 'Product' : lead.type === 'services' ? 'Services' : 'Combined'} — ${lead.productInterest.concat(lead.serviceInterest).join(' + ') || 'New Opportunity'}`,
+          customerName: lead.company,
+          toStage: 'Discovery',
+        });
+      } catch (e) { console.error('Workflow error:', e); }
 
       return { lead: lead.toObject(), opportunityId: oppId };
     }),

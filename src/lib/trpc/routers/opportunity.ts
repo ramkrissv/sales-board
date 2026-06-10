@@ -122,6 +122,19 @@ export const opportunityRouter = router({
       });
 
       const plain = opportunity.toObject();
+
+      // Fire workflows for deal creation
+      try {
+        const { executeWorkflows } = await import('@/lib/workflow/engine');
+        await executeWorkflows({
+          type: 'deal_created',
+          opportunityId: plain.id,
+          opportunityName: plain.opportunityName,
+          customerName: plain.customerName,
+          toStage: plain.status,
+        });
+      } catch (e) { console.error('Workflow execution error:', e); }
+
       return {
         ...plain,
         customerStakeholders: [],
@@ -139,6 +152,9 @@ export const opportunityRouter = router({
     .mutation(async ({ input }) => {
       await connectDB();
       const { id, ...updates } = input;
+
+      // Fetch old opportunity before update to detect stage changes
+      const oldOpp = await Opportunity.findOne({ id }).lean() || await Opportunity.findById(id).lean();
 
       const updateData: any = {
         ...updates,
@@ -174,7 +190,37 @@ export const opportunityRouter = router({
           });
         }
 
+        // Fire workflows on stage change
+        if (input.status && oldOpp && (oldOpp as any).status !== input.status) {
+          try {
+            const { executeWorkflows } = await import('@/lib/workflow/engine');
+            await executeWorkflows({
+              type: 'deal_stage_change',
+              opportunityId: id,
+              opportunityName: (oldOpp as any).opportunityName,
+              customerName: (oldOpp as any).customerName,
+              fromStage: (oldOpp as any).status,
+              toStage: input.status,
+            });
+          } catch (e) { console.error('Workflow execution error:', e); }
+        }
+
         return enrichOpportunity(oppById);
+      }
+
+      // Fire workflows on stage change
+      if (input.status && oldOpp && (oldOpp as any).status !== input.status) {
+        try {
+          const { executeWorkflows } = await import('@/lib/workflow/engine');
+          await executeWorkflows({
+            type: 'deal_stage_change',
+            opportunityId: id,
+            opportunityName: (oldOpp as any).opportunityName,
+            customerName: (oldOpp as any).customerName,
+            fromStage: (oldOpp as any).status,
+            toStage: input.status,
+          });
+        } catch (e) { console.error('Workflow execution error:', e); }
       }
 
       return enrichOpportunity(opportunity);

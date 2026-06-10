@@ -10,6 +10,7 @@ import {
   Trash2, ChevronRight, Clock, Building2, Loader2, Sparkles,
   AlertTriangle, Zap, ArrowRight, Shield, TrendingUp,
   Mail, CalendarPlus, ArrowUpRight, FileText, MessageSquare,
+  GitBranch,
 } from 'lucide-react';
 import { MeetingNotesModal } from './MeetingNotesModal';
 import type { Status } from '@/lib/types';
@@ -103,6 +104,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
 
   const utils = trpc.useUtils();
   const { data: engagementTypes = [] } = trpc.engagementType.list.useQuery();
+  const { data: workflows = [] } = trpc.workflow.list.useQuery();
 
   const createStakeholderMutation = trpc.stakeholder.create.useMutation({
     onSuccess: () => {
@@ -505,6 +507,29 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Active Workflows */}
+              {(() => {
+                const activeWorkflows = (workflows as any[]).filter((w: any) =>
+                  w.isActive && w.trigger?.type === 'deal_stage_change' &&
+                  (!w.trigger?.config?.toStage || w.trigger.config.toStage === opp.status)
+                );
+                return activeWorkflows.length > 0 ? (
+                  <div>
+                    <div className="g-section-label mb-2">Active Workflows</div>
+                    <div className="space-y-1.5">
+                      {activeWorkflows.map((wf: any) => (
+                        <div key={wf._id} className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border text-xs">
+                          <GitBranch className="h-3 w-3 text-[#7c3aed]" />
+                          <span className="text-foreground">{wf.name}</span>
+                          <span className="text-muted-foreground">&middot; {wf.actions?.length || 0} actions</span>
+                          {wf.executionCount > 0 && <span className="text-muted-foreground">&middot; ran {wf.executionCount}x</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
             </div>
           )}
 
