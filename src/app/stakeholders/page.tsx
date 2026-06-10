@@ -53,8 +53,8 @@ function StakeholdersContent() {
     if (isDM || /\b(ceo|cto|cfo|cio|coo|svp|evp|president|chief|vp of|vice president|managing director)\b/.test(t)) return 'executive';
     if (/\b(director|head of|senior director|general manager)\b/.test(t)) return 'champion';
     if (/\b(manager|lead|principal|senior|architect|partner)\b/.test(t)) return 'influencer';
-    if (/\b(analyst|engineer|developer|designer|specialist|consultant|coordinator)\b/.test(t)) return 'end_user';
     if (/\b(procurement|legal|compliance|audit|risk)\b/.test(t)) return 'gatekeeper';
+    if (/\b(analyst|engineer|developer|designer|specialist|consultant|coordinator)\b/.test(t)) return 'end_user';
     return 'other';
   }
 
