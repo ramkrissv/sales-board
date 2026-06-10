@@ -7,7 +7,19 @@ export default function ForecastingPage() {
   const { data, isLoading } = trpc.forecast.getSummary.useQuery();
 
   if (isLoading || !data) {
-    return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading forecast data...</div>;
+    return (
+      <div className="max-w-5xl mx-auto space-y-8">
+        <div className="h-8 w-48 bg-card rounded animate-pulse" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-card rounded-xl animate-pulse" />)}
+        </div>
+        <div className="h-64 bg-card rounded-xl animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-48 bg-card rounded-xl animate-pulse" />
+          <div className="h-48 bg-card rounded-xl animate-pulse" />
+        </div>
+      </div>
+    );
   }
 
   const maxStageTcv = Math.max(...data.byStage.map(s => s.tcv), 1);

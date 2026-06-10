@@ -7,7 +7,7 @@ import { useTheme } from 'next-themes';
 import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import {
-  Kanban, TrendingUp, CalendarClock, Table as TableIcon,
+  Kanban, TrendingUp, CalendarClock, CalendarDays, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles,
   Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield, GitBranch,
 } from 'lucide-react';
@@ -20,6 +20,7 @@ const navItems = [
   { icon: Kanban, label: 'Projects', href: '/pipeline' },
   { icon: TrendingUp, label: 'Timeline', href: '/timeline' },
   { icon: CalendarClock, label: 'Schedule', href: '/schedule' },
+  { icon: CalendarDays, label: 'Calendar', href: '/calendar' },
   { icon: TableIcon, label: 'Table', href: '/table' },
   { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
   { icon: Users, label: 'Contacts', href: '/stakeholders' },

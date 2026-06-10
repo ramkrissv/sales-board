@@ -92,7 +92,15 @@ export default function AccountsPage() {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading accounts...</div>;
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="h-8 w-48 bg-card rounded animate-pulse" />
+        <div className="grid grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-card rounded-xl animate-pulse" />)}
+        </div>
+        <div className="h-64 bg-card rounded-xl animate-pulse" />
+      </div>
+    );
   }
 
   return (
@@ -207,8 +215,21 @@ export default function AccountsPage() {
 
       {/* Account List */}
       {filtered.length === 0 ? (
-        <div className="p-8 rounded-xl g-surface g-elevated text-center text-muted-foreground text-sm">
-          {accounts.length === 0 ? 'No accounts yet. Create your first account above.' : 'No accounts match your filters.'}
+        <div className="text-center py-16 text-muted-foreground">
+          <Building2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          {accounts.length === 0 ? (
+            <>
+              <p className="text-sm">No accounts yet. Create your first account.</p>
+              <button
+                onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyForm); }}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+              >
+                <Plus className="h-4 w-4" /> New Account
+              </button>
+            </>
+          ) : (
+            <p className="text-sm">No accounts match your filters.</p>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

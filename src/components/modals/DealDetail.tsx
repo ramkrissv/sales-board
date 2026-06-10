@@ -3,7 +3,7 @@
 import { useOpportunities } from '@/lib/store';
 import { trpc } from '@/lib/trpc/client';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   X, DollarSign, Calendar, Users, CheckSquare, Percent,
   Globe, Briefcase, Tag, ExternalLink, Edit2, Save, Plus,
@@ -38,6 +38,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   });
 
   const utils = trpc.useUtils();
+  const { data: engagementTypes = [] } = trpc.engagementType.list.useQuery();
 
   const createStakeholderMutation = trpc.stakeholder.create.useMutation({
     onSuccess: () => {
@@ -247,6 +248,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                   { icon: Globe, label: 'Region', value: opp.region, field: 'region' },
                   { icon: Briefcase, label: 'Service Line', value: opp.serviceLine || '\u2014', field: 'serviceLine' },
                   { icon: DollarSign, label: 'Billing Model', value: opp.billingModel || '\u2014', field: 'billingModel' },
+                  { icon: Tag, label: 'Engagement Type', value: (opp as any).engagementType || '\u2014', field: 'engagementType' },
                   { icon: Clock, label: 'Duration', value: opp.dealDuration, field: 'dealDuration' },
                   { icon: Users, label: 'Owner', value: opp.primaryOwner, field: 'primaryOwner' },
                   { icon: Calendar, label: 'Start Date', value: format(new Date(opp.startDate), 'MMM d, yyyy'), field: 'startDate' },
@@ -254,14 +256,27 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                 ].map(item => (
                   <div key={item.label} className="flex items-start gap-3">
                     <item.icon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <div>
+                    <div className="flex-1">
                       <div className="text-[11px] text-muted-foreground">{item.label}</div>
                       {editing ? (
-                        <input
-                          className="w-full px-2 py-1 text-sm bg-secondary border border-border rounded text-foreground"
-                          defaultValue={item.value}
-                          onChange={e => setEditForm((f: any) => ({ ...f, [item.field]: e.target.value }))}
-                        />
+                        item.field === 'engagementType' ? (
+                          <select
+                            className="w-full px-2 py-1 text-sm bg-secondary border border-border rounded text-foreground"
+                            defaultValue={item.value === '\u2014' ? '' : item.value}
+                            onChange={e => setEditForm((f: any) => ({ ...f, engagementType: e.target.value }))}
+                          >
+                            <option value="">Select engagement type</option>
+                            {engagementTypes.map((et: any) => (
+                              <option key={et.code} value={et.name}>{et.name} ({et.code})</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            className="w-full px-2 py-1 text-sm bg-secondary border border-border rounded text-foreground"
+                            defaultValue={item.value}
+                            onChange={e => setEditForm((f: any) => ({ ...f, [item.field]: e.target.value }))}
+                          />
+                        )
                       ) : (
                         <div className="text-sm text-foreground">{item.value}</div>
                       )}

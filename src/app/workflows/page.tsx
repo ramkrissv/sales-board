@@ -198,8 +198,12 @@ export default function WorkflowsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">
-        Loading workflows...
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="h-8 w-48 bg-card rounded animate-pulse" />
+        <div className="grid grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-card rounded-xl animate-pulse" />)}
+        </div>
+        <div className="h-64 bg-card rounded-xl animate-pulse" />
       </div>
     );
   }
@@ -403,8 +407,14 @@ export default function WorkflowsPage() {
         {workflows.length === 0 && !createMutation.isPending ? (
           <div className="text-center py-16 text-muted-foreground">
             <GitBranch className="h-10 w-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No workflows yet</p>
-            <p className="text-xs mt-1">Create your first workflow to automate your pipeline</p>
+            <p className="text-sm">No workflows yet. Create your first workflow.</p>
+            <p className="text-xs mt-1">Automate repetitive tasks across your pipeline.</p>
+            <button
+              onClick={() => { setEditingId(null); resetForm(); setShowForm(true); }}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+            >
+              <Plus className="h-4 w-4" /> New Workflow
+            </button>
           </div>
         ) : (
           workflows.map((wf: any) => {
