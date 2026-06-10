@@ -9,6 +9,7 @@ import {
   Phone, Video, Globe, Clock, AlertTriangle, Zap
 } from 'lucide-react';
 import Link from 'next/link';
+import { VoiceRecorder } from '@/components/voice/VoiceRecorder';
 
 type Channel = 'voice' | 'teams_transcript' | 'teams_chat' | 'outlook_email' | 'desktop_notes';
 
@@ -149,27 +150,26 @@ function IntakeContent() {
                 </select>
               </div>
 
-              {/* Voice upload (for voice channel) */}
+              {/* Voice recorder (for voice channel) */}
               {selectedChannel === 'voice' && (
-                <div className="p-6 rounded-xl g-surface g-elevated text-center border-2 border-dashed border-border">
-                  <Mic className="h-10 w-10 text-[#7c3aed] mx-auto mb-3 opacity-50" />
-                  <p className="text-sm text-foreground mb-1">Upload audio or paste transcription</p>
-                  <p className="text-xs text-muted-foreground mb-3">Supports voice notes, call recordings, or typed summaries</p>
-                  <p className="text-[10px] text-muted-foreground">Audio transcription coming soon — paste the transcript below for now</p>
-                </div>
+                <VoiceRecorder
+                  onTranscript={(transcript) => {
+                    setContent(transcript);
+                  }}
+                  isProcessing={processMutation.isPending}
+                />
               )}
 
               {/* Content area */}
-              <textarea value={content} onChange={e => setContent(e.target.value)}
+              {selectedChannel !== 'voice' && <textarea value={content} onChange={e => setContent(e.target.value)}
                 placeholder={
-                  selectedChannel === 'voice' ? 'Paste voice note transcription or type your notes...' :
                   selectedChannel === 'teams_transcript' ? 'Paste the Teams meeting transcript here...' :
                   selectedChannel === 'teams_chat' ? 'Paste the Teams chat thread here...' :
                   selectedChannel === 'outlook_email' ? 'Paste the email or email thread here...' :
                   'Type your notes, observations, or update...'
                 }
                 rows={8}
-                className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground resize-y font-mono" />
+                className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground resize-y font-mono" />}
 
               <button onClick={handleProcess} disabled={processMutation.isPending || !content.trim()}
                 className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors disabled:opacity-50 w-full justify-center">
