@@ -19,6 +19,7 @@ import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import { Status, Opportunity } from '@/lib/types';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { trpc } from '@/lib/trpc/client';
 
 const COLUMNS: Status[] = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Lost', 'On Hold'];
 
@@ -30,6 +31,26 @@ export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
   const { opportunities, filteredOpportunities, updateOpportunity } = useOpportunities();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<{ oppId: string; oppName: string; customerName: string; fromStage: string; toStage: string } | null>(null);
+
+  const { data: targetOntology } = trpc.ontology.getForStage.useQuery(
+    { stage: pendingMove?.toStage || '' },
+    { enabled: !!pendingMove }
+  );
+
+  const opportunity = pendingMove ? opportunities.find(o => o.id === pendingMove.oppId) : null;
+  const gateResults = (targetOntology?.gateCriteria || []).map((gate: any) => {
+    let met = false;
+    if (!opportunity) return { ...gate, met };
+    if (gate.field === 'tcv') met = (opportunity.tcv || 0) > 0;
+    else if (gate.field === 'margin') met = (opportunity.margin || 0) >= 15;
+    else if (gate.field === 'industry') met = !!opportunity.industry;
+    else if (gate.field === 'billingModel') met = !!opportunity.billingModel || !!opportunity.engagementType;
+    else if (gate.field === 'customerStakeholders') met = (opportunity.customerStakeholders || []).length > 0;
+    else if (gate.field === 'conversationLog') met = (opportunity.conversationLog || '').length > 50;
+    return { ...gate, met };
+  });
+  const allGatesMet = gateResults.length === 0 || gateResults.every((g: any) => g.met);
+  const unmetGates = gateResults.filter((g: any) => !g.met);
 
   const columns = useMemo(() => {
     const cols: Record<Status, Opportunity[]> = {
@@ -182,6 +203,19 @@ export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
               <span className="g-chip bg-[#7c3aed]/10 text-[#7c3aed]">{pendingMove.toStage}</span>?
             </p>
             <p className="text-xs text-muted-foreground">{pendingMove.oppName}</p>
+            {gateResults.length > 0 && (
+              <div className="space-y-1.5 p-3 rounded-lg bg-card border border-border">
+                <div className="g-section-label">Stage Gate Criteria</div>
+                {gateResults.map((gate: any, i: number) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] ${gate.met ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                      {gate.met ? '\u2713' : '\u2717'}
+                    </span>
+                    <span className={gate.met ? 'text-foreground' : 'text-red-400'}>{gate.description}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex gap-2 justify-end pt-2">
               <button
                 onClick={() => setPendingMove(null)}
@@ -195,9 +229,13 @@ export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
                   if (onCardClick) setTimeout(() => onCardClick(pendingMove.oppId), 300);
                   setPendingMove(null);
                 }}
-                className="px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors"
+                className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
+                  allGatesMet
+                    ? 'bg-[#7c3aed] hover:bg-[#6d28d9] text-white'
+                    : 'bg-orange-500 hover:bg-orange-600 text-white'
+                }`}
               >
-                Confirm Move
+                {allGatesMet ? 'Confirm Move' : 'Move Anyway (Override)'}
               </button>
             </div>
           </div>

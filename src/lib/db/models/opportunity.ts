@@ -39,6 +39,7 @@ export interface IOpportunity extends Document {
   accountId?: mongoose.Types.ObjectId;
   engagementType?: string;
   engagementTypes?: string[];
+  forecastCategory?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -121,6 +122,7 @@ const OpportunitySchema = new Schema<IOpportunity>(
     accountId: { type: Schema.Types.ObjectId, ref: 'Account', required: false },
     engagementType: { type: String, required: false },
     engagementTypes: { type: [String], default: [] },
+    forecastCategory: { type: String, enum: ['commit', 'best_case', 'pipeline', 'omitted'], default: 'pipeline' },
   },
   { timestamps: true }
 );

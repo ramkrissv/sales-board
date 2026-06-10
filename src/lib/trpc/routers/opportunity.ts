@@ -6,6 +6,7 @@ import { Opportunity } from '@/lib/db/models/opportunity';
 import { Stakeholder } from '@/lib/db/models/stakeholder';
 import { Task } from '@/lib/db/models/task';
 import { ResourceLink } from '@/lib/db/models/resource-link';
+import mongoose from 'mongoose';
 
 async function enrichOpportunity(opp: any) {
   const [customerStakeholders, subTasks, resourceLinks] = await Promise.all([
@@ -73,6 +74,7 @@ const createOpportunitySchema = z.object({
   stageEnteredDate: z.string().or(z.date()).optional(),
   sentimentScore: z.number().optional(),
   accountId: z.string().optional(),
+  forecastCategory: z.enum(['commit', 'best_case', 'pipeline', 'omitted']).optional(),
 });
 
 const updateOpportunitySchema = createOpportunitySchema.partial().extend({
@@ -134,6 +136,18 @@ export const opportunityRouter = router({
           toStage: plain.status,
         });
       } catch (e) { console.error('Workflow execution error:', e); }
+
+      // Auto activity logging
+      try {
+        const Activity = mongoose.models.Activity;
+        if (Activity) {
+          await Activity.create({
+            type: 'deal_created', entityType: 'opportunity', entityId: plain.id,
+            entityName: plain.customerName, description: `New deal created: ${plain.opportunityName}`,
+            userName: 'Admin User',
+          });
+        }
+      } catch {}
 
       return {
         ...plain,
@@ -205,6 +219,20 @@ export const opportunityRouter = router({
           } catch (e) { console.error('Workflow execution error:', e); }
         }
 
+        // Auto activity logging
+        try {
+          const Activity = mongoose.models.Activity;
+          if (Activity) {
+            const changes = Object.keys(input).filter(k => k !== 'id').join(', ');
+            await Activity.create({
+              type: input.status ? 'stage_change' : 'deal_updated', entityType: 'opportunity',
+              entityId: input.id, entityName: (oppById as any)?.customerName || input.id,
+              description: input.status ? `Stage changed to ${input.status}` : `Updated: ${changes}`,
+              userName: 'Admin User',
+            });
+          }
+        } catch {}
+
         return enrichOpportunity(oppById);
       }
 
@@ -222,6 +250,20 @@ export const opportunityRouter = router({
           });
         } catch (e) { console.error('Workflow execution error:', e); }
       }
+
+      // Auto activity logging
+      try {
+        const Activity = mongoose.models.Activity;
+        if (Activity) {
+          const changes = Object.keys(input).filter(k => k !== 'id').join(', ');
+          await Activity.create({
+            type: input.status ? 'stage_change' : 'deal_updated', entityType: 'opportunity',
+            entityId: input.id, entityName: (opportunity as any)?.customerName || input.id,
+            description: input.status ? `Stage changed to ${input.status}` : `Updated: ${changes}`,
+            userName: 'Admin User',
+          });
+        }
+      } catch {}
 
       return enrichOpportunity(opportunity);
     }),
@@ -287,6 +329,18 @@ export const opportunityRouter = router({
         Task.deleteMany({ opportunityId: oppId }),
         ResourceLink.deleteMany({ opportunityId: oppId }),
       ]);
+
+      // Auto activity logging
+      try {
+        const Activity = mongoose.models.Activity;
+        if (Activity) {
+          await Activity.create({
+            type: 'deal_deleted', entityType: 'opportunity', entityId: input.id,
+            entityName: input.id, description: `Deal deleted`,
+            userName: 'Admin User',
+          });
+        }
+      } catch {}
 
       return { success: true };
     }),

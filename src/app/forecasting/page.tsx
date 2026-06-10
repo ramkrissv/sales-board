@@ -1,10 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
-import { TrendingUp, Target, Percent, DollarSign } from 'lucide-react';
+import { TrendingUp, Target, Percent, DollarSign, CheckCircle, TrendingDown, Clock, EyeOff } from 'lucide-react';
+
+const CATEGORY_META: Record<string, { label: string; color: string; bgColor: string; icon: any; description: string }> = {
+  commit: { label: 'Commit', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', icon: CheckCircle, description: 'Owner says will close' },
+  best_case: { label: 'Best Case', color: 'text-blue-400', bgColor: 'bg-blue-500/10', icon: TrendingUp, description: 'Likely but not certain' },
+  pipeline: { label: 'Pipeline', color: 'text-purple-400', bgColor: 'bg-purple-500/10', icon: Clock, description: 'In progress' },
+  omitted: { label: 'Omitted', color: 'text-zinc-400', bgColor: 'bg-zinc-500/10', icon: EyeOff, description: 'Excluded from forecast' },
+};
 
 export default function ForecastingPage() {
+  const utils = trpc.useUtils();
   const { data, isLoading } = trpc.forecast.getSummary.useQuery();
+  const updateOpp = trpc.opportunity.update.useMutation({
+    onSuccess: () => { utils.forecast.getSummary.invalidate(); },
+  });
 
   if (isLoading || !data) {
     return (
@@ -133,6 +145,67 @@ export default function ForecastingPage() {
           )}
         </div>
       </div>
+
+      {/* Forecast by Category Cards */}
+      {data.byCategory && (
+        <>
+          <div>
+            <h2 className="text-sm font-medium text-foreground mb-3">Forecast by Category</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {data.byCategory.map((cat: any) => {
+                const meta = CATEGORY_META[cat.category] || CATEGORY_META.pipeline;
+                const Icon = meta.icon;
+                return (
+                  <div key={cat.category} className={`p-4 rounded-xl g-surface g-elevated`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] text-muted-foreground uppercase tracking-wider">{meta.label}</span>
+                      <Icon className={`h-4 w-4 ${meta.color}`} />
+                    </div>
+                    <div className="text-xl font-semibold text-foreground">${(cat.tcv / 1e6).toFixed(1)}M</div>
+                    <div className="text-[11px] text-muted-foreground mt-1">{cat.count} deals &middot; {meta.description}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Deals by Forecast Category Table */}
+          <div className="p-5 rounded-xl g-surface g-elevated">
+            <div className="text-sm font-medium text-foreground mb-4">Deals by Forecast Category</div>
+            <div className="space-y-1">
+              <div className="grid grid-cols-6 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground pb-2 border-b border-border">
+                <span>Customer</span>
+                <span>Opportunity</span>
+                <span className="text-right">TCV</span>
+                <span>Stage</span>
+                <span>Owner</span>
+                <span>Category</span>
+              </div>
+              {(data.activeOpportunities || []).map((opp: any) => (
+                <div key={opp.id} className="grid grid-cols-6 gap-2 py-2 border-b border-border/50 items-center">
+                  <span className="text-sm text-foreground truncate">{opp.customerName}</span>
+                  <span className="text-sm text-muted-foreground truncate">{opp.opportunityName}</span>
+                  <span className="text-sm text-foreground text-right">${(opp.tcv / 1000).toFixed(0)}k</span>
+                  <span className="text-xs text-muted-foreground">{opp.status}</span>
+                  <span className="text-xs text-muted-foreground truncate">{opp.primaryOwner}</span>
+                  <select
+                    value={opp.forecastCategory || 'pipeline'}
+                    onChange={(e) => {
+                      updateOpp.mutate({ id: opp.id, forecastCategory: e.target.value as any });
+                    }}
+                    className="text-xs bg-card border border-border rounded px-1.5 py-1 text-foreground"
+                  >
+                    <option value="commit">Commit</option>
+                    <option value="best_case">Best Case</option>
+                    <option value="pipeline">Pipeline</option>
+                    <option value="omitted">Omitted</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
