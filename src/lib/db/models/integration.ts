@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IIntegration extends Document {
   name: string;
-  type: 'crm' | 'marketing' | 'email' | 'calendar' | 'messaging' | 'storage';
+  type: 'crm' | 'marketing' | 'email' | 'calendar' | 'messaging' | 'storage' | 'project_management' | 'analytics' | 'finance' | 'hr' | 'devtools' | 'other';
   status: 'connected' | 'disconnected' | 'error';
   icon: string;
   description: string;
@@ -14,7 +14,7 @@ export interface IIntegration extends Document {
 
 const IntegrationSchema = new Schema<IIntegration>({
   name: { type: String, required: true, unique: true },
-  type: { type: String, enum: ['crm', 'marketing', 'email', 'calendar', 'messaging', 'storage'], required: true },
+  type: { type: String, enum: ['crm', 'marketing', 'email', 'calendar', 'messaging', 'storage', 'project_management', 'analytics', 'finance', 'hr', 'devtools', 'other'], required: true },
   status: { type: String, enum: ['connected', 'disconnected', 'error'], default: 'disconnected' },
   icon: String,
   description: String,

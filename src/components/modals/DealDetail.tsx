@@ -9,7 +9,7 @@ import {
   Globe, Briefcase, Tag, ExternalLink, Edit2, Save, Plus,
   Trash2, ChevronRight, Clock, Building2, Loader2, Sparkles,
   AlertTriangle, Zap, ArrowRight, Shield, TrendingUp,
-  Mail, CalendarPlus, ArrowUpRight,
+  Mail, CalendarPlus, ArrowUpRight, FileText,
 } from 'lucide-react';
 import type { Status } from '@/lib/types';
 
@@ -63,12 +63,19 @@ function WinProbabilityBar({ probability }: { probability: number }) {
 export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const { opportunities, updateOpportunity, deleteOpportunity } = useOpportunities();
   const opp = opportunities.find(o => o.id === opportunityId);
-  const [activeTab, setActiveTab] = useState<'details' | 'stakeholders' | 'tasks' | 'log'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'stakeholders' | 'tasks' | 'log' | 'documents'>('details');
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [analysis, setAnalysis] = useState<any>(null);
+  const [sowContent, setSowContent] = useState<string | null>(null);
   const [showStageSelector, setShowStageSelector] = useState(false);
   const analysisMutation = trpc.ai.analyzeDeal.useMutation();
+  const sowMutation = trpc.ai.generateSOW.useMutation({
+    onSuccess: (data) => {
+      setSowContent(data.content);
+      setActiveTab('documents');
+    },
+  });
 
   // Auto-analyze on open
   useEffect(() => {
@@ -195,6 +202,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
     { id: 'stakeholders' as const, label: `Stakeholders (${stakeholders.length})` },
     { id: 'tasks' as const, label: `Tasks (${completedTasks}/${tasks.length})` },
     { id: 'log' as const, label: 'Log' },
+    { id: 'documents' as const, label: 'Documents' },
   ];
 
   const inputClasses = 'w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#7B52FF]/20 focus:border-[#7B52FF]';
@@ -231,6 +239,14 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                 Analyzing...
               </div>
             )}
+            <button
+              onClick={() => sowMutation.mutate({ opportunityId: opp.id })}
+              disabled={sowMutation.isPending}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+            >
+              {sowMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+              SOW
+            </button>
             <button onClick={handleDelete} className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400"><Trash2 className="h-4 w-4" /></button>
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground"><X className="h-4 w-4" /></button>
           </div>
@@ -702,6 +718,48 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               ) : (
                 <div className="text-center py-8 text-muted-foreground text-sm">No conversation log yet.</div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'documents' && (
+            <div>
+              {sowMutation.isPending && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                  <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                  <span className="text-sm text-muted-foreground">Generating Statement of Work...</span>
+                </div>
+              )}
+              {sowContent ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm font-medium text-foreground">Statement of Work</span>
+                      <span className="g-chip bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">AI Generated</span>
+                    </div>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(sowContent); }}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div className="p-4 rounded-lg bg-card border border-border text-sm text-foreground whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
+                    {sowContent}
+                  </div>
+                </div>
+              ) : !sowMutation.isPending ? (
+                <div className="text-center py-8">
+                  <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-3 opacity-50" />
+                  <p className="text-sm text-muted-foreground mb-3">No documents generated yet.</p>
+                  <button
+                    onClick={() => sowMutation.mutate({ opportunityId: opp.id })}
+                    className="px-4 py-2 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                  >
+                    Generate SOW
+                  </button>
+                </div>
+              ) : null}
             </div>
           )}
         </div>

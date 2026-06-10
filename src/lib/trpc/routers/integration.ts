@@ -106,4 +106,75 @@ export const integrationRouter = router({
 
       return integration;
     }),
+
+  discover: protectedProcedure
+    .input(z.object({ serviceName: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
+      const client = getAnthropicClient();
+
+      const response = await client.messages.create({
+        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: `Research the software service "${input.serviceName}" and generate an integration definition for a sales intelligence platform. Return ONLY valid JSON:
+{
+  "name": "<official service name>",
+  "type": "<crm|marketing|email|calendar|messaging|storage|project_management|analytics|finance|hr|devtools|other>",
+  "description": "<1-2 sentence description of what this service does>",
+  "website": "<official website URL>",
+  "authMethod": "<oauth2|api_key|basic_auth|webhook>",
+  "availableActions": [
+    {"name": "<action name>", "description": "<what it does>", "direction": "<read|write|both>"}
+  ],
+  "availableDataTypes": ["<contacts|deals|tasks|emails|events|files|messages|projects|tickets|invoices|etc>"],
+  "apiDocsUrl": "<URL to API documentation>",
+  "webhookSupport": true or false,
+  "category": "<what category for a sales team: lead_enrichment|crm_sync|communication|project_tracking|document_management|analytics|other>"
+}`
+        }],
+      });
+
+      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      try {
+        return JSON.parse(cleaned);
+      } catch {
+        return { name: input.serviceName, type: 'other', description: text.slice(0, 200), error: 'Could not parse AI response' };
+      }
+    }),
+
+  addDiscovered: protectedProcedure
+    .input(z.object({
+      name: z.string(),
+      type: z.string(),
+      description: z.string(),
+      website: z.string().optional(),
+      authMethod: z.string().optional(),
+      availableActions: z.array(z.object({ name: z.string(), description: z.string(), direction: z.string() })).optional(),
+      category: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const existing = await Integration.findOne({ name: input.name });
+      if (existing) return existing.toObject();
+
+      const integration = await Integration.create({
+        name: input.name,
+        type: input.type,
+        status: 'disconnected',
+        description: input.description,
+        config: {
+          website: input.website,
+          authMethod: input.authMethod,
+          availableActions: input.availableActions,
+          category: input.category,
+        },
+        syncHealth: 0,
+        createdBy: 'ai-discovery',
+      });
+      return integration.toObject();
+    }),
 });
