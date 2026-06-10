@@ -56,22 +56,84 @@ function IntakeContent() {
     });
   };
 
-  const handleAction = (action: any) => {
-    if (action.type === 'add_task' && result?.matchedDealId) {
-      createTaskMutation.mutate({
-        opportunityId: result.matchedDealId,
-        name: action.description,
-        owner: sender || 'Unassigned',
-        dueDate: new Date(Date.now() + 7*24*60*60*1000).toISOString(),
-        priority: 'High' as const,
+  const activityMutation = trpc.activity.create.useMutation();
+  const updateOppMutation = trpc.opportunity.update.useMutation({ onSuccess: () => utils.opportunity.list.invalidate() });
+
+  const [actionsDone, setActionsDone] = useState<Set<number>>(new Set());
+
+  const handleAction = (action: any, index?: number) => {
+    const dealId = result?.matchedDealId;
+    const dealName = result?.matchedDealName || result?.extractedData?.customerName || 'Deal';
+
+    // Mark action as done visually
+    if (index !== undefined) setActionsDone(prev => new Set(prev).add(index));
+
+    if (action.type === 'add_task' || action.type === 'create_task') {
+      if (dealId) {
+        createTaskMutation.mutate({
+          opportunityId: dealId,
+          name: action.description || action.data?.name || 'Task from intake',
+          owner: sender || 'Unassigned',
+          dueDate: new Date(Date.now() + 7*24*60*60*1000).toISOString(),
+          priority: 'High' as const,
+        });
+      }
+      // Log to activity feed
+      activityMutation.mutate({
+        type: 'task_created', entityType: 'opportunity', entityId: dealId || 'intake',
+        entityName: dealName, description: `Task created: ${action.description}`,
       });
     }
-    if (action.type === 'add_stakeholder' && result?.matchedDealId && result?.extractedData?.contactName) {
-      createStakeholderMutation.mutate({
-        opportunityId: result.matchedDealId,
-        name: result.extractedData.contactName,
-        title: result.extractedData.contactTitle || '',
-        email: result.extractedData.contactEmail || undefined,
+
+    if (action.type === 'add_stakeholder') {
+      if (dealId && result?.extractedData?.contactName) {
+        createStakeholderMutation.mutate({
+          opportunityId: dealId,
+          name: result.extractedData.contactName,
+          title: result.extractedData.contactTitle || '',
+          email: result.extractedData.contactEmail || undefined,
+        });
+        activityMutation.mutate({
+          type: 'stakeholder_added', entityType: 'opportunity', entityId: dealId,
+          entityName: dealName, description: `Contact added: ${result.extractedData.contactName}`,
+        });
+      }
+    }
+
+    if (action.type === 'log_notes' || action.type === 'log_activity') {
+      // Append to deal's conversation log
+      if (dealId) {
+        const logText = action.description || result?.summary || '';
+        updateOppMutation.mutate({
+          id: dealId,
+          conversationLog: logText, // The server appends, or we send the full text
+        } as any);
+      }
+      activityMutation.mutate({
+        type: 'deal_updated', entityType: 'opportunity', entityId: dealId || 'intake',
+        entityName: dealName, description: action.description || 'Notes logged from intake',
+      });
+    }
+
+    if (action.type === 'update_deal' && dealId) {
+      const updates: any = {};
+      if (result?.extractedData?.tcv) updates.tcv = result.extractedData.tcv;
+      if (result?.extractedData?.status) updates.status = result.extractedData.status;
+      if (Object.keys(updates).length > 0) {
+        updateOppMutation.mutate({ id: dealId, ...updates } as any);
+        activityMutation.mutate({
+          type: 'deal_updated', entityType: 'opportunity', entityId: dealId,
+          entityName: dealName, description: `Deal updated from intake: ${Object.keys(updates).join(', ')}`,
+        });
+      }
+    }
+
+    if (action.type === 'create_deal') {
+      // Would need to open NewDealModal or navigate — for now log activity
+      activityMutation.mutate({
+        type: 'deal_created', entityType: 'opportunity', entityId: 'intake',
+        entityName: result?.extractedData?.customerName || 'New deal',
+        description: `New deal suggested from intake: ${result?.extractedData?.opportunityName || action.description}`,
       });
     }
   };
@@ -274,17 +336,21 @@ function IntakeContent() {
             {result.suggestedActions?.length > 0 && (
               <div className="space-y-2">
                 <div className="g-section-label">Suggested Actions</div>
-                {result.suggestedActions.map((action: any, i: number) => (
-                  <button key={i} onClick={() => handleAction(action)}
-                    className="flex items-center gap-3 w-full p-3 rounded-lg g-surface hover-glow text-left transition-all">
-                    <Zap className="h-4 w-4 text-[#7c3aed] flex-shrink-0" />
-                    <div className="flex-1">
-                      <div className="text-xs font-medium text-foreground capitalize">{action.type.replace('_', ' ')}</div>
-                      <div className="text-[11px] text-muted-foreground">{action.description}</div>
-                    </div>
-                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  </button>
-                ))}
+                {result.suggestedActions.map((action: any, i: number) => {
+                  const isDone = actionsDone.has(i);
+                  return (
+                    <button key={i} onClick={() => !isDone && handleAction(action, i)}
+                      disabled={isDone}
+                      className={`flex items-center gap-3 w-full p-3 rounded-lg text-left transition-all ${isDone ? 'bg-emerald-500/5 border border-emerald-500/20 opacity-70' : 'g-surface hover-glow'}`}>
+                      {isDone ? <CheckSquare className="h-4 w-4 text-emerald-400 flex-shrink-0" /> : <Zap className="h-4 w-4 text-[#7c3aed] flex-shrink-0" />}
+                      <div className="flex-1">
+                        <div className={`text-xs font-medium capitalize ${isDone ? 'text-emerald-400 line-through' : 'text-foreground'}`}>{action.type.replace(/_/g, ' ')}</div>
+                        <div className="text-[11px] text-muted-foreground">{action.description}</div>
+                      </div>
+                      {isDone ? <span className="text-[10px] text-emerald-400">Done</span> : <ArrowRight className="h-3 w-3 text-muted-foreground" />}
+                    </button>
+                  );
+                })}
               </div>
             )}
 

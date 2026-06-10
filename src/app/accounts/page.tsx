@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import {
   Search, Plus, Pencil, Trash2, X, Building2, Globe, MapPin,
-  Users, DollarSign, ChevronDown, ChevronUp,
+  Users, DollarSign, ChevronDown, ChevronUp, Sparkles, Loader2,
 } from 'lucide-react';
 import { RelationshipMap } from '@/components/views/RelationshipMap';
 
@@ -36,6 +36,9 @@ export default function AccountsPage() {
   const createMutation = trpc.account.create.useMutation({ onSuccess: () => { utils.account.list.invalidate(); setShowForm(false); setForm(emptyForm); } });
   const updateMutation = trpc.account.update.useMutation({ onSuccess: () => { utils.account.list.invalidate(); utils.account.getById.invalidate(); setEditingId(null); setForm(emptyForm); } });
   const deleteMutation = trpc.account.delete.useMutation({ onSuccess: () => { utils.account.list.invalidate(); setExpandedId(null); } });
+  const scoreIntentMutation = trpc.account.scoreIntent.useMutation({
+    onSuccess: () => utils.account.list.invalidate(),
+  });
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -242,6 +245,7 @@ export default function AccountsPage() {
               onToggle={() => setExpandedId(expandedId === account._id ? null : account._id)}
               onEdit={() => startEdit(account)}
               onDelete={() => { if (confirm('Delete this account?')) deleteMutation.mutate({ id: account._id }); }}
+              scoreIntentMutation={scoreIntentMutation}
             />
           ))}
         </div>
@@ -250,17 +254,33 @@ export default function AccountsPage() {
   );
 }
 
-function AccountRow({ account, expanded, onToggle, onEdit, onDelete }: {
-  account: any; expanded: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void;
+function AccountRow({ account, expanded, onToggle, onEdit, onDelete, scoreIntentMutation }: {
+  account: any; expanded: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void; scoreIntentMutation: any;
 }) {
   const { data: detail, isLoading } = trpc.account.getById.useQuery(
     { id: account._id },
     { enabled: expanded }
   );
 
+  const [accountBrief, setAccountBrief] = useState<string | null>(null);
+  const accountBriefMutation = trpc.ai.chat.useMutation({
+    onSuccess: (data: any) => setAccountBrief(data.response),
+  });
+
+  useEffect(() => {
+    if (expanded && !accountBrief) {
+      accountBriefMutation.mutate({
+        message: `Give a brief (3 sentences) account intelligence summary for ${account.companyName}. Include: deal status, relationship health, and one recommended action.`,
+      });
+    }
+  }, [expanded]); // eslint-disable-line
+
   const opportunities = detail?.opportunities || [];
   const dealCount = opportunities.length;
   const totalTcv = opportunities.reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+
+  const intentScore = account.accountHealth;
+  const intentData = account.intentData;
 
   return (
     <div className="rounded-xl g-surface g-elevated overflow-hidden">
@@ -277,6 +297,23 @@ function AccountRow({ account, expanded, onToggle, onEdit, onDelete }: {
                 {account.accountType}
               </span>
             )}
+            {intentData?.buyingStage && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-500/15 text-blue-400">
+                {intentData.buyingStage}
+              </span>
+            )}
+            {intentScore != null && (
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${intentScore > 70 ? 'bg-emerald-500/15 text-emerald-400' : intentScore >= 40 ? 'bg-amber-500/15 text-amber-400' : 'bg-red-500/15 text-red-400'}`}>
+                Intent: {intentScore}
+              </span>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); scoreIntentMutation.mutate({ id: account._id }); }}
+              disabled={scoreIntentMutation.isPending}
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors disabled:opacity-50">
+              {scoreIntentMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              Score
+            </button>
           </div>
           <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
             {account.industry && <span>{account.industry}</span>}
@@ -301,6 +338,24 @@ function AccountRow({ account, expanded, onToggle, onEdit, onDelete }: {
             <div className="py-6 text-sm text-muted-foreground text-center">Loading account details...</div>
           ) : (
             <div className="mt-4 space-y-5">
+              {/* AI Account Brief */}
+              {accountBriefMutation.isPending && (
+                <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-3.5 w-3.5 text-[#7c3aed] animate-spin" />
+                    <span className="text-xs font-semibold text-[#7c3aed]">Generating AI Account Brief...</span>
+                  </div>
+                </div>
+              )}
+              {accountBrief && (
+                <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20 mb-4 reveal">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="h-3.5 w-3.5 text-[#7c3aed]" />
+                    <span className="text-xs font-semibold text-[#7c3aed]">AI Account Brief</span>
+                  </div>
+                  <p className="text-xs text-foreground leading-relaxed">{accountBrief}</p>
+                </div>
+              )}
               {/* Account Info */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {account.website && (

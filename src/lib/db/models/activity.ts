@@ -9,6 +9,8 @@ export interface IActivity extends Document {
   userId: string;
   userName: string;
   metadata?: Record<string, any>;
+  revenueImpact?: number;
+  attributedTo?: string;
   createdAt: Date;
 }
 
@@ -21,6 +23,8 @@ const ActivitySchema = new Schema<IActivity>({
   userId: { type: String, default: 'default-user' },
   userName: { type: String, default: 'Admin User' },
   metadata: Schema.Types.Mixed,
+  revenueImpact: { type: Number, default: 0 },
+  attributedTo: String,
 }, { timestamps: true });
 
 ActivitySchema.index({ createdAt: -1 });
