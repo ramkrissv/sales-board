@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { Bell } from "lucide-react";
 import {
   Popover,
@@ -42,20 +41,8 @@ export function NotificationPopover() {
   const { data: notifications = [] } = trpc.notification.list.useQuery(undefined, { refetchInterval: 30000 });
   const { data: unreadCount = 0 } = trpc.notification.getUnreadCount.useQuery(undefined, { refetchInterval: 15000 });
 
-  // Real-time: refresh on Socket.IO notification events
-  useEffect(() => {
-    let socket: any = null;
-    try {
-      import('socket.io-client').then(({ io }) => {
-        socket = io({ path: '/api/socketio', transports: ['polling'], reconnection: true, reconnectionDelay: 5000 });
-        socket.on('notification:new', () => {
-          utils.notification.list.invalidate();
-          utils.notification.getUnreadCount.invalidate();
-        });
-      }).catch(() => {});
-    } catch {}
-    return () => { socket?.disconnect(); };
-  }, []); // eslint-disable-line
+  // Notifications auto-refresh via polling (refetchInterval above)
+  // Socket.IO real-time available when using custom server.ts
   const markRead = trpc.notification.markRead.useMutation({
     onSuccess: () => {
       utils.notification.list.invalidate();
