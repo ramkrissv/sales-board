@@ -17,6 +17,7 @@ interface NewDealModalProps {
 
 export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
   const utils = trpc.useUtils();
+  const { data: accounts = [] } = trpc.account.list.useQuery();
   const createMutation = trpc.opportunity.create.useMutation({
     onSuccess: () => {
       utils.opportunity.list.invalidate();
@@ -40,6 +41,7 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
     serviceLine: 'IT Services',
     billingModel: 'Time & Material',
     margin: 28,
+    accountId: '',
   };
 
   const [form, setForm] = useState(defaultForm);
@@ -81,6 +83,7 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
         customTags: [],
         conversationLog: '',
         activityLog: [],
+        ...(form.accountId ? { accountId: form.accountId } : {}),
       } as any);
     } catch (err: any) {
       setError(err.message || 'Failed to create opportunity');
@@ -212,12 +215,22 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
             </div>
           </div>
 
-          {/* Source */}
-          <div>
-            <label className="block text-xs text-muted-foreground mb-1.5">Source</label>
-            <input value={form.source} onChange={e => update('source', e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/40"
-              placeholder="e.g., Direct, Partner, Referral" />
+          {/* Source + Account */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1.5">Source</label>
+              <input value={form.source} onChange={e => update('source', e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/40"
+                placeholder="e.g., Direct, Partner, Referral" />
+            </div>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1.5">Account</label>
+              <select value={form.accountId} onChange={e => update('accountId', e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/40">
+                <option value="">No account</option>
+                {accounts.map((a: any) => <option key={a._id} value={a._id}>{a.companyName}</option>)}
+              </select>
+            </div>
           </div>
 
           {/* Submit */}
