@@ -111,6 +111,85 @@ Format as clean markdown. Be specific to the project, not generic.` }],
       return { content, generatedAt: new Date().toISOString(), opportunityId: input.opportunityId };
     }),
 
+  // Process meeting transcript
+  processTranscript: protectedProcedure
+    .input(z.object({
+      opportunityId: z.string().optional(),
+      source: z.enum(['teams', 'zoom', 'google_meet', 'notes', 'email']),
+      title: z.string(),
+      content: z.string().min(10),
+      date: z.string().optional(),
+      participants: z.array(z.string()).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
+      const client = getAnthropicClient();
+      const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514';
+
+      const response = await client.messages.create({
+        model,
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: `Analyze this sales meeting transcript/notes and extract structured intelligence.
+
+Source: ${input.source}
+Title: ${input.title}
+Date: ${input.date || 'Not specified'}
+Participants: ${input.participants?.join(', ') || 'Not specified'}
+
+TRANSCRIPT:
+${input.content}
+
+Return ONLY valid JSON:
+{
+  "summary": "<3-4 sentence summary of key discussion points>",
+  "actionItems": [
+    {"task": "<action>", "owner": "<who>", "dueDate": "<when, or 'TBD'>", "priority": "<High|Medium|Low>"}
+  ],
+  "stakeholderInsights": [
+    {"name": "<person name>", "title": "<role if mentioned>", "sentiment": "<positive|neutral|negative|cautious>", "keyQuote": "<notable quote or stance>", "isDecisionMaker": <true|false>}
+  ],
+  "dealSignals": {
+    "buyingIntent": "<strong|moderate|weak|unclear>",
+    "budgetMentioned": <true|false>,
+    "timelineMentioned": <true|false>,
+    "competitorsMentioned": ["<names>"],
+    "objections": ["<any concerns raised>"],
+    "nextSteps": ["<agreed next steps>"]
+  },
+  "suggestedUpdates": {
+    "updateConversationLog": true,
+    "createTasks": true,
+    "addStakeholders": true,
+    "updateDealStage": "<suggested stage or null>"
+  }
+}` }],
+      });
+
+      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      try {
+        const result = JSON.parse(cleaned);
+
+        // If linked to an opportunity, auto-update the conversation log
+        if (input.opportunityId) {
+          await connectDB();
+          const Opportunity = getOpportunityModel();
+          const opp = await Opportunity.findOne({ id: input.opportunityId });
+          if (opp) {
+            const timestamp = new Date().toISOString().split('T')[0];
+            const logEntry = `\n\n--- ${input.source.toUpperCase()} NOTES (${timestamp}) ---\n${input.title}\n${result.summary}\n\nAction Items:\n${result.actionItems.map((a: any) => `- ${a.task} (${a.owner}, ${a.priority})`).join('\n')}\n\nNext Steps:\n${result.dealSignals.nextSteps.map((s: any) => `- ${s}`).join('\n')}`;
+            opp.conversationLog = (opp.conversationLog || '') + logEntry;
+            await opp.save();
+          }
+        }
+
+        return { ...result, processedAt: new Date().toISOString() };
+      } catch {
+        return { summary: text.slice(0, 500), error: 'Could not parse structured output', processedAt: new Date().toISOString() };
+      }
+    }),
+
   // Chat with Deal Coach (conversational)
   chat: protectedProcedure
     .input(

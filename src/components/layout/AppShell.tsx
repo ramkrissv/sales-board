@@ -9,9 +9,10 @@ import { cn } from '@/lib/utils';
 import {
   Kanban, TrendingUp, CalendarClock, CalendarDays, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles, Magnet,
-  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield, GitBranch,
+  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield, GitBranch, MessageSquare,
 } from 'lucide-react';
 import { NewDealModal } from '@/components/modals/NewDealModal';
+import { MeetingNotesModal } from '@/components/modals/MeetingNotesModal';
 import { CopilotPanel } from '@/components/ai/CopilotPanel';
 import { NotificationPopover } from '@/components/shared/NotificationPopover';
 
@@ -43,6 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [showNewDeal, setShowNewDeal] = useState(false);
+  const [showMeetingNotes, setShowMeetingNotes] = useState(false);
 
   const userInitials = session?.user?.name
     ? session.user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -139,6 +141,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 ml-auto">
             <NotificationPopover />
             <button
+              onClick={() => setShowMeetingNotes(true)}
+              className="px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground text-xs font-medium flex items-center gap-1.5 transition-colors"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              Notes
+            </button>
+            <button
               onClick={() => setShowNewDeal(true)}
               className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
             >
@@ -159,6 +168,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* New Deal Modal */}
       <NewDealModal isOpen={showNewDeal} onClose={() => setShowNewDeal(false)} />
+
+      {/* Meeting Notes Modal */}
+      <MeetingNotesModal isOpen={showMeetingNotes} onClose={() => setShowMeetingNotes(false)} />
     </div>
   );
 }
