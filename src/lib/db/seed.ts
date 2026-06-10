@@ -38,7 +38,7 @@ const ServiceLineSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, unique: true },
     code: { type: String, required: true, unique: true },
-    color: { type: String, default: '#7c3aed' },
+    color: { type: String, default: '#5B4FE9' },
     isActive: { type: Boolean, default: true },
     pipelineStages: { type: [String], default: [] },
   },
@@ -943,7 +943,7 @@ export async function seed() {
     {
       name: 'IT Services',
       code: 'ITS',
-      color: '#7c3aed',
+      color: '#5B4FE9',
       isActive: true,
       pipelineStages: ['Discovery', 'Qualification', 'Solutioning', 'Proposal', 'Negotiation', 'Won', 'Lost', 'On Hold'],
     },

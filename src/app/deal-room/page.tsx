@@ -287,7 +287,7 @@ Log: ${(activeDeal.conversationLog||'').slice(0,300)}`;
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <Bot className="h-5 w-5 text-[#7c3aed]" /> Deal Room
+            <Bot className="h-5 w-5 text-[#5B4FE9]" /> Deal Room
           </h1>
           {activeDeal && (
             <p className="text-sm text-muted-foreground mt-0.5">
@@ -313,10 +313,10 @@ Log: ${(activeDeal.conversationLog||'').slice(0,300)}`;
               <div className={`max-w-[80%] space-y-2 ${msg.role === 'user' ? '' : ''}`}>
                 <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-[#7c3aed] text-white rounded-tr-sm'
+                    ? 'bg-[#5B4FE9] text-white rounded-tr-sm'
                     : 'g-surface text-foreground rounded-tl-sm'
                 }`}>
-                  {msg.role === 'assistant' && <Sparkles className="h-3.5 w-3.5 text-[#7c3aed] inline mr-1.5" />}
+                  {msg.role === 'assistant' && <Sparkles className="h-3.5 w-3.5 text-[#5B4FE9] inline mr-1.5" />}
                   <span className="whitespace-pre-wrap">{msg.content}</span>
                 </div>
                 {/* Action buttons */}
@@ -327,7 +327,7 @@ Log: ${(activeDeal.conversationLog||'').slice(0,300)}`;
                       return (
                         <button key={i} onClick={() => handleAction(action)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium g-surface hover-glow transition-all text-foreground">
-                          <Icon className="h-3 w-3 text-[#7c3aed]" />
+                          <Icon className="h-3 w-3 text-[#5B4FE9]" />
                           {action.label}
                         </button>
                       );
@@ -341,7 +341,7 @@ Log: ${(activeDeal.conversationLog||'').slice(0,300)}`;
         {(chatMutation.isPending || sowMutation.isPending) && (
           <div className="flex justify-start">
             <div className="px-4 py-3 rounded-2xl g-surface text-sm flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin text-[#7c3aed]" /> Thinking...
+              <Loader2 className="h-4 w-4 animate-spin text-[#5B4FE9]" /> Thinking...
             </div>
           </div>
         )}
@@ -353,9 +353,9 @@ Log: ${(activeDeal.conversationLog||'').slice(0,300)}`;
         <input value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
           placeholder={activeDeal ? `Message about ${activeDeal.customerName}...` : 'Start a conversation about your deals...'}
-          className="flex-1 px-4 py-3 text-sm g-surface rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/20" />
+          className="flex-1 px-4 py-3 text-sm g-surface rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#5B4FE9]/20" />
         <button onClick={handleSend} disabled={chatMutation.isPending || !input.trim()}
-          className="p-3 rounded-xl bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors disabled:opacity-50">
+          className="p-3 rounded-xl bg-[#5B4FE9] text-white hover:bg-[#4A3ED4] transition-colors disabled:opacity-50">
           <Send className="h-4 w-4" />
         </button>
       </div>

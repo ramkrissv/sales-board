@@ -117,15 +117,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     className={cn(
                       'flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative mx-2',
                       isActive
-                        ? 'bg-[#7c3aed]/10 text-[#7c3aed]'
+                        ? 'bg-[#5B4FE9]/10 text-[#5B4FE9]'
                         : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                     )}
                   >
-                    {isActive && <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r bg-[#7c3aed]" />}
+                    {isActive && <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r bg-[#5B4FE9]" />}
                     <item.icon className="h-4 w-4 flex-shrink-0" />
                     <span className="flex-1">{item.label}</span>
                     {item.badge !== undefined && (
-                      <span className="ml-auto text-[10px] font-semibold bg-[#7c3aed]/10 text-[#7c3aed] px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                      <span className="ml-auto text-[10px] font-semibold bg-[#5B4FE9]/10 text-[#5B4FE9] px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                         {item.badge}
                       </span>
                     )}
@@ -174,7 +174,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <aside className="fixed left-0 top-0 bottom-0 w-64 z-50 md:hidden flex flex-col bg-card border-r" style={{ borderColor: 'var(--g-line)' }}>
             <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--g-line)' }}>
               <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-[#7c3aed]" />
+                <Sparkles className="h-5 w-5 text-[#5B4FE9]" />
                 <span className="text-sm font-bold text-foreground">Galent SalesPilot</span>
               </div>
             </div>
@@ -183,11 +183,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
                 return (
                   <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? 'bg-[#5B4FE9]/10 text-[#5B4FE9]' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
                     <item.icon className="h-4 w-4" />
                     <span className="flex-1">{item.label}</span>
                     {item.badge !== undefined && (
-                      <span className="text-[10px] font-semibold bg-[#7c3aed]/10 text-[#7c3aed] px-1.5 py-0.5 rounded-full">
+                      <span className="text-[10px] font-semibold bg-[#5B4FE9]/10 text-[#5B4FE9] px-1.5 py-0.5 rounded-full">
                         {item.badge}
                       </span>
                     )}

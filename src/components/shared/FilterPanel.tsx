@@ -81,13 +81,13 @@ export function FilterPanel() {
               onClick={() => setOpenDropdown(isOpen ? null : dim.key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                 selected.length > 0
-                  ? 'border-purple-500/40 bg-purple-500/10 text-[#7c3aed]'
-                  : 'border-border bg-secondary text-muted-foreground hover:border-[#7c3aed]/30 hover:text-foreground'
+                  ? 'border-purple-500/40 bg-purple-500/10 text-[#5B4FE9]'
+                  : 'border-border bg-secondary text-muted-foreground hover:border-[#5B4FE9]/30 hover:text-foreground'
               }`}
             >
               {dim.label}
               {selected.length > 0 && (
-                <span className="text-[10px] font-bold text-[#7c3aed]">({selected.length})</span>
+                <span className="text-[10px] font-bold text-[#5B4FE9]">({selected.length})</span>
               )}
               <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -131,7 +131,7 @@ export function FilterPanel() {
         return selected.map(val => (
           <span
             key={`${dim.key}-${val}`}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-full bg-purple-500/15 text-[#7c3aed] border border-purple-500/20"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-full bg-purple-500/15 text-[#5B4FE9] border border-purple-500/20"
           >
             {val}
             <button

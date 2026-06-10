@@ -47,7 +47,7 @@ export function SavedViews({ onApply }: SavedViewsProps) {
               <button key={view.id}
                 onClick={() => { onApply(view.filters); setIsOpen(false); }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-xs text-foreground rounded-lg hover:bg-secondary transition-colors text-left">
-                <Bookmark className="h-3 w-3 text-[#7c3aed]" />
+                <Bookmark className="h-3 w-3 text-[#5B4FE9]" />
                 {view.name}
               </button>
             ))}

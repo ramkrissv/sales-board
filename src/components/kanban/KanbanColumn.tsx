@@ -53,7 +53,7 @@ export function KanbanColumn({ status, opportunities, onCardClick }: KanbanColum
               status === 'Lost' && "bg-slate-500",
               status === 'On Hold' && "bg-red-500",
             )} />
-            <Link href={`/pipeline/${encodeURIComponent(status)}`} className="hover:text-[#7c3aed] transition-colors">
+            <Link href={`/pipeline/${encodeURIComponent(status)}`} className="hover:text-[#5B4FE9] transition-colors">
               {status}
             </Link>
           </Badge>

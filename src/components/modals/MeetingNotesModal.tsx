@@ -63,8 +63,8 @@ export function MeetingNotesModal({ isOpen, onClose, opportunityId, opportunityN
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--g-line)' }}>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#7c3aed]/15 flex items-center justify-center">
-              <MessageSquare className="h-4 w-4 text-[#7c3aed]" />
+            <div className="w-8 h-8 rounded-lg bg-[#5B4FE9]/15 flex items-center justify-center">
+              <MessageSquare className="h-4 w-4 text-[#5B4FE9]" />
             </div>
             <div>
               <h2 className="text-base font-semibold text-foreground">Meeting Intelligence</h2>
@@ -119,7 +119,7 @@ export function MeetingNotesModal({ isOpen, onClose, opportunityId, opportunityN
               </div>
 
               <button onClick={handleProcess} disabled={processMutation.isPending || !content.trim() || !title.trim()}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm font-medium transition-colors disabled:opacity-50 w-full justify-center">
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#5B4FE9] hover:bg-[#4A3ED4] text-white text-sm font-medium transition-colors disabled:opacity-50 w-full justify-center">
                 {processMutation.isPending ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Processing with AI...</>
                 ) : (
@@ -130,9 +130,9 @@ export function MeetingNotesModal({ isOpen, onClose, opportunityId, opportunityN
           ) : (
             <>
               {/* AI Results */}
-              <div className="p-4 rounded-xl bg-[#7c3aed]/5 border border-[#7c3aed]/20">
+              <div className="p-4 rounded-xl bg-[#5B4FE9]/5 border border-[#5B4FE9]/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-4 w-4 text-[#7c3aed]" />
+                  <Sparkles className="h-4 w-4 text-[#5B4FE9]" />
                   <span className="text-sm font-medium text-foreground">AI Summary</span>
                 </div>
                 <p className="text-sm text-foreground leading-relaxed">{result.summary}</p>
@@ -187,7 +187,7 @@ export function MeetingNotesModal({ isOpen, onClose, opportunityId, opportunityN
                   <div className="g-section-label">Action Items ({result.actionItems.length})</div>
                   {result.actionItems.map((item: any, i: number) => (
                     <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-card border border-border">
-                      <CheckSquare className="h-3.5 w-3.5 text-[#7c3aed] flex-shrink-0" />
+                      <CheckSquare className="h-3.5 w-3.5 text-[#5B4FE9] flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs text-foreground">{item.task}</div>
                         <div className="text-[10px] text-muted-foreground">{item.owner} &middot; {item.dueDate}</div>
@@ -206,7 +206,7 @@ export function MeetingNotesModal({ isOpen, onClose, opportunityId, opportunityN
                   <div className="g-section-label">Stakeholder Insights ({result.stakeholderInsights.length})</div>
                   {result.stakeholderInsights.map((person: any, i: number) => (
                     <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-card border border-border">
-                      <div className="w-8 h-8 rounded-full bg-[#7c3aed]/15 flex items-center justify-center text-[#7c3aed] text-[10px] font-bold flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-[#5B4FE9]/15 flex items-center justify-center text-[#5B4FE9] text-[10px] font-bold flex-shrink-0">
                         {person.name.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -229,7 +229,7 @@ export function MeetingNotesModal({ isOpen, onClose, opportunityId, opportunityN
                   <div className="g-section-label">Next Steps</div>
                   {result.dealSignals.nextSteps.map((step: string, i: number) => (
                     <div key={i} className="flex items-center gap-2 text-xs text-foreground">
-                      <ArrowRight className="h-3 w-3 text-[#7c3aed] flex-shrink-0" /> {step}
+                      <ArrowRight className="h-3 w-3 text-[#5B4FE9] flex-shrink-0" /> {step}
                     </div>
                   ))}
                 </div>
@@ -249,7 +249,7 @@ export function MeetingNotesModal({ isOpen, onClose, opportunityId, opportunityN
                   Process Another
                 </button>
                 <button onClick={onClose}
-                  className="flex-1 px-3 py-2 rounded-lg bg-[#7c3aed] text-white text-xs font-medium">
+                  className="flex-1 px-3 py-2 rounded-lg bg-[#5B4FE9] text-white text-xs font-medium">
                   Done
                 </button>
               </div>

@@ -79,7 +79,7 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
       onClick={() => onClick(opp.id)}
       title={`Deal ID: ${opp.id}`}
       className={cn(
-        'p-3 rounded-xl bg-card border border-border cursor-pointer transition-all hover:border-[#7c3aed]/30 group mb-3 touch-none hover-lift',
+        'p-3 rounded-xl bg-card border border-border cursor-pointer transition-all hover:border-[#5B4FE9]/30 group mb-3 touch-none hover-lift',
         isDragging && 'opacity-50 rotate-1 shadow-lg'
       )}
     >
@@ -120,7 +120,7 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
       {/* Next step strip */}
       {nextTask ? (
         <div className="flex items-center gap-1.5 p-1.5 rounded-md bg-secondary mb-2 text-[10px]">
-          <ArrowRight className="h-2.5 w-2.5 text-[#7c3aed] flex-shrink-0" />
+          <ArrowRight className="h-2.5 w-2.5 text-[#5B4FE9] flex-shrink-0" />
           <span className="text-foreground truncate">{nextTask.name}</span>
           <span className={`flex-shrink-0 ${isPast(new Date(nextTask.dueDate)) ? 'text-red-500' : 'text-muted-foreground'}`}>
             &middot; {format(new Date(nextTask.dueDate), 'MMM d')}
@@ -143,7 +143,7 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
           )}
           {normDuration && <span>{normDuration}</span>}
         </div>
-        <div className="w-6 h-6 rounded-full bg-[#7c3aed]/10 flex items-center justify-center text-[#7c3aed] text-[9px] font-bold" title={opp.primaryOwner}>
+        <div className="w-6 h-6 rounded-full bg-[#5B4FE9]/10 flex items-center justify-center text-[#5B4FE9] text-[9px] font-bold" title={opp.primaryOwner}>
           {ownerInitials}
         </div>
       </div>

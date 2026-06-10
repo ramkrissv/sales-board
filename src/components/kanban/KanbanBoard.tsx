@@ -200,7 +200,7 @@ export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
             <p className="text-sm text-muted-foreground">
               Move <span className="font-medium text-foreground">{pendingMove.customerName}</span> from{' '}
               <span className="g-chip bg-secondary text-muted-foreground">{pendingMove.fromStage}</span>{' → '}
-              <span className="g-chip bg-[#7c3aed]/10 text-[#7c3aed]">{pendingMove.toStage}</span>?
+              <span className="g-chip bg-[#5B4FE9]/10 text-[#5B4FE9]">{pendingMove.toStage}</span>?
             </p>
             <p className="text-xs text-muted-foreground">{pendingMove.oppName}</p>
             {gateResults.length > 0 && (
@@ -230,7 +230,7 @@ export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
                 }}
                 className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
                   allGatesMet
-                    ? 'bg-[#7c3aed] hover:bg-[#6d28d9] text-white'
+                    ? 'bg-[#5B4FE9] hover:bg-[#4A3ED4] text-white'
                     : 'bg-orange-500 hover:bg-orange-600 text-white'
                 }`}
               >

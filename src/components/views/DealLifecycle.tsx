@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 
 const STAGES = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'];
 const STAGE_COLORS: Record<string, string> = {
-  Discovery: '#3b82f6', Qualification: '#f59e0b', Proposal: '#7c3aed',
+  Discovery: '#3b82f6', Qualification: '#f59e0b', Proposal: '#5B4FE9',
   Negotiation: '#22c55e', Won: '#10b981', Lost: '#ef4444', 'On Hold': '#f97316',
 };
 

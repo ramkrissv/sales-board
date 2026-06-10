@@ -76,7 +76,7 @@ function StageContent() {
 
           return (
             <button key={opp.id} onClick={() => setSelectedOppId(opp.id)}
-              className="w-full text-left p-4 rounded-xl g-surface g-elevated hover:!border-[#7c3aed]/20 transition-all">
+              className="w-full text-left p-4 rounded-xl g-surface g-elevated hover:!border-[#5B4FE9]/20 transition-all">
               <div className="flex items-center gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-foreground">{opp.customerName}</div>

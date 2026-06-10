@@ -92,7 +92,7 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="g-metric text-sm font-bold">${(block.tcv/1000).toFixed(0)}k</span>
-                    <span className="g-chip bg-[#7c3aed]/10 text-[#7c3aed]">{block.stage}</span>
+                    <span className="g-chip bg-[#5B4FE9]/10 text-[#5B4FE9]">{block.stage}</span>
                   </div>
                 </div>
                 {block.risk && (
@@ -108,7 +108,7 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
               <div key={i} className="space-y-1.5">
                 {block.deals.map((deal, j) => (
                   <button key={j} onClick={() => handleAction('open_deal', { id: deal.id })}
-                    className="flex items-center gap-3 w-full p-2.5 rounded-lg bg-card border border-border hover:border-[#7c3aed]/20 text-left transition-all text-xs reveal"
+                    className="flex items-center gap-3 w-full p-2.5 rounded-lg bg-card border border-border hover:border-[#5B4FE9]/20 text-left transition-all text-xs reveal"
                     style={{ animationDelay: `${j * 0.05}s` }}>
                     <span className="font-medium text-foreground flex-1">{deal.customer}</span>
                     <span className="g-chip bg-secondary text-muted-foreground">{deal.stage}</span>
@@ -116,7 +116,7 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
                     <span className="text-muted-foreground">{deal.owner}</span>
                     {deal.action && (
                       <button onClick={(e) => { e.stopPropagation(); handleAction(deal.action!, deal); }}
-                        className="px-2 py-0.5 rounded bg-[#7c3aed]/10 text-[#7c3aed] text-[10px] hover:bg-[#7c3aed]/20">
+                        className="px-2 py-0.5 rounded bg-[#5B4FE9]/10 text-[#5B4FE9] text-[10px] hover:bg-[#5B4FE9]/20">
                         Act
                       </button>
                     )}
@@ -127,8 +127,8 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
 
           case 'action_button': {
             const variants: Record<string, string> = {
-              primary: 'bg-[#7c3aed] text-white hover:bg-[#6d28d9]',
-              secondary: 'bg-card border border-border text-foreground hover:border-[#7c3aed]/30',
+              primary: 'bg-[#5B4FE9] text-white hover:bg-[#4A3ED4]',
+              secondary: 'bg-card border border-border text-foreground hover:border-[#5B4FE9]/30',
               warning: 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20',
               success: 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20',
             };
@@ -148,7 +148,7 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       a.variant === 'warning' ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' :
                       a.variant === 'success' ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20' :
-                      'bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20'
+                      'bg-[#5B4FE9]/10 text-[#5B4FE9] hover:bg-[#5B4FE9]/20'
                     }`}>
                     {a.label}
                   </button>
@@ -187,7 +187,7 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
                   <span className="g-metric text-foreground">{block.value}/{block.max}</span>
                 </div>
                 <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: block.color || '#7c3aed' }} />
+                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: block.color || '#5B4FE9' }} />
                 </div>
               </div>
             );
@@ -197,8 +197,8 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
             return (
               <div key={i} className="flex items-center gap-1">
                 {block.stages.map((s, j) => (
-                  <div key={j} className={`flex-1 p-2 rounded-lg text-center transition-all ${s.active ? 'bg-[#7c3aed]/10 border border-[#7c3aed]/30' : 'bg-card border border-border'}`}>
-                    <div className={`text-lg font-bold ${s.active ? 'text-[#7c3aed]' : 'text-foreground'}`}>{s.count}</div>
+                  <div key={j} className={`flex-1 p-2 rounded-lg text-center transition-all ${s.active ? 'bg-[#5B4FE9]/10 border border-[#5B4FE9]/30' : 'bg-card border border-border'}`}>
+                    <div className={`text-lg font-bold ${s.active ? 'text-[#5B4FE9]' : 'text-foreground'}`}>{s.count}</div>
                     <div className="text-[9px] text-muted-foreground">{s.name}</div>
                     <div className="text-[9px] text-muted-foreground">${(s.tcv/1000).toFixed(0)}k</div>
                   </div>
@@ -223,7 +223,7 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
           case 'contact_card':
             return (
               <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
-                <div className="w-9 h-9 rounded-full bg-[#7c3aed]/10 flex items-center justify-center text-[#7c3aed] text-xs font-bold">
+                <div className="w-9 h-9 rounded-full bg-[#5B4FE9]/10 flex items-center justify-center text-[#5B4FE9] text-xs font-bold">
                   {block.name.split(' ').map(n => n[0]).join('').slice(0,2)}
                 </div>
                 <div>
@@ -236,10 +236,10 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
 
           case 'insight':
             return (
-              <div key={i} className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20 flex items-start gap-2 text-xs">
-                <Sparkles className="h-3.5 w-3.5 text-[#7c3aed] mt-0.5 flex-shrink-0" />
+              <div key={i} className="p-3 rounded-lg bg-[#5B4FE9]/5 border border-[#5B4FE9]/20 flex items-start gap-2 text-xs">
+                <Sparkles className="h-3.5 w-3.5 text-[#5B4FE9] mt-0.5 flex-shrink-0" />
                 <div>
-                  {block.category && <span className="g-chip bg-[#7c3aed]/10 text-[#7c3aed] mr-1">{block.category}</span>}
+                  {block.category && <span className="g-chip bg-[#5B4FE9]/10 text-[#5B4FE9] mr-1">{block.category}</span>}
                   <span className="text-foreground">{block.content}</span>
                 </div>
               </div>

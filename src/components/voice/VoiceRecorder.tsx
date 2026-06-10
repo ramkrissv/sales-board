@@ -93,7 +93,7 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
       <div className="flex items-center justify-center gap-4 py-6">
         {!isRecording && !audioBlob ? (
           <button onClick={startRecording}
-            className="w-20 h-20 rounded-full bg-[#7c3aed] hover:bg-[#6d28d9] text-white flex items-center justify-center transition-all hover:scale-105 shadow-lg shadow-[#7c3aed]/25">
+            className="w-20 h-20 rounded-full bg-[#5B4FE9] hover:bg-[#4A3ED4] text-white flex items-center justify-center transition-all hover:scale-105 shadow-lg shadow-[#5B4FE9]/25">
             <Mic className="h-8 w-8" />
           </button>
         ) : isRecording ? (
@@ -144,7 +144,7 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
 
           {transcript.trim() && (
             <button onClick={handleSubmit} disabled={isProcessing}
-              className="w-full flex items-center gap-2 justify-center px-4 py-3 rounded-xl bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors disabled:opacity-50">
+              className="w-full flex items-center gap-2 justify-center px-4 py-3 rounded-xl bg-[#5B4FE9] hover:bg-[#4A3ED4] text-white font-medium transition-colors disabled:opacity-50">
               {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               {isProcessing ? 'Processing...' : 'Process Voice Note'}
             </button>
