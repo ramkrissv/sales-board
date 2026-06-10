@@ -37,6 +37,12 @@ export const stakeholderRouter = router({
       const stakeholder = await Stakeholder.create(input);
       const plain = stakeholder.toObject();
 
+      // Sync to knowledge graph
+      try {
+        const { GraphService } = await import('@/lib/graph/graph-service');
+        await GraphService.syncStakeholderToGraph(plain, input.opportunityId);
+      } catch (e) { console.error('Graph sync error:', e); }
+
       // Auto activity logging
       try {
         const Activity = mongoose.models.Activity;
