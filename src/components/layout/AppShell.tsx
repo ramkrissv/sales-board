@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import {
   Kanban, TrendingUp, CalendarClock, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles,
-  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut,
+  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText,
 } from 'lucide-react';
 import { NewDealModal } from '@/components/modals/NewDealModal';
 import { CopilotPanel } from '@/components/ai/CopilotPanel';
@@ -22,6 +22,7 @@ const navItems = [
   { icon: TableIcon, label: 'Table', href: '/table' },
   { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
   { icon: Users, label: 'Stakeholders', href: '/stakeholders' },
+  { icon: FileText, label: 'Contracts', href: '/contracts' },
   { icon: Network, label: 'Accounts', href: '/accounts' },
   { icon: Sparkles, label: 'Forecasting', href: '/forecasting' },
   { icon: Bot, label: 'Agents', href: '/agents' },

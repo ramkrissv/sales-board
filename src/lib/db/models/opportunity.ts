@@ -37,6 +37,8 @@ export interface IOpportunity extends Document {
   stageEnteredDate?: Date;
   sentimentScore?: number;
   accountId?: mongoose.Types.ObjectId;
+  engagementType?: string;
+  engagementTypes?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
