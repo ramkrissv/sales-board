@@ -8,6 +8,17 @@ import { Task } from '@/lib/db/models/task';
 import { ResourceLink } from '@/lib/db/models/resource-link';
 import mongoose from 'mongoose';
 
+function mapId(doc: any) {
+  if (!doc) return doc;
+  const { _id, ...rest } = doc;
+  const mapped: any = { ...rest, id: _id?.toString?.() ?? _id, _id };
+  // Serialize Date fields for sub-documents (tasks, stakeholders, etc.)
+  if (mapped.dueDate instanceof Date) mapped.dueDate = mapped.dueDate.toISOString();
+  if (mapped.createdAt instanceof Date) mapped.createdAt = mapped.createdAt.toISOString();
+  if (mapped.updatedAt instanceof Date) mapped.updatedAt = mapped.updatedAt.toISOString();
+  return mapped;
+}
+
 async function enrichOpportunity(opp: any) {
   const [customerStakeholders, subTasks, resourceLinks] = await Promise.all([
     Stakeholder.find({ opportunityId: opp.id || opp._id.toString() }).lean(),
@@ -18,9 +29,9 @@ async function enrichOpportunity(opp: any) {
   const plain = opp.toObject ? opp.toObject() : opp;
   return {
     ...plain,
-    customerStakeholders,
-    subTasks,
-    resourceLinks,
+    customerStakeholders: customerStakeholders.map(mapId),
+    subTasks: subTasks.map(mapId),
+    resourceLinks: resourceLinks.map(mapId),
     expectedCloseDate: plain.expectedCloseDate instanceof Date
       ? plain.expectedCloseDate.toISOString()
       : plain.expectedCloseDate,
