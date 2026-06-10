@@ -9,8 +9,9 @@ import {
   Globe, Briefcase, Tag, ExternalLink, Edit2, Save, Plus,
   Trash2, ChevronRight, Clock, Building2, Loader2, Sparkles,
   AlertTriangle, Zap, ArrowRight, Shield, TrendingUp,
-  Mail, CalendarPlus, ArrowUpRight, FileText,
+  Mail, CalendarPlus, ArrowUpRight, FileText, MessageSquare,
 } from 'lucide-react';
+import { MeetingNotesModal } from './MeetingNotesModal';
 import type { Status } from '@/lib/types';
 
 interface DealDetailProps {
@@ -69,6 +70,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const [analysis, setAnalysis] = useState<any>(null);
   const [sowContent, setSowContent] = useState<string | null>(null);
   const [showStageSelector, setShowStageSelector] = useState(false);
+  const [showMeetingNotes, setShowMeetingNotes] = useState(false);
   const analysisMutation = trpc.ai.analyzeDeal.useMutation();
   const sowMutation = trpc.ai.generateSOW.useMutation({
     onSuccess: (data) => {
@@ -246,6 +248,13 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
             >
               {sowMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
               SOW
+            </button>
+            <button
+              onClick={() => setShowMeetingNotes(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition-colors"
+            >
+              <MessageSquare className="h-3 w-3" />
+              Notes
             </button>
             <button onClick={handleDelete} className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400"><Trash2 className="h-4 w-4" /></button>
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground"><X className="h-4 w-4" /></button>
@@ -763,6 +772,13 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
             </div>
           )}
         </div>
+
+        <MeetingNotesModal
+          isOpen={showMeetingNotes}
+          onClose={() => setShowMeetingNotes(false)}
+          opportunityId={opp.id}
+          opportunityName={`${opp.customerName} — ${opp.opportunityName}`}
+        />
       </div>
     </div>
   );
