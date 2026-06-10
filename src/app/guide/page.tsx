@@ -146,7 +146,7 @@ export default function GuidePage() {
 
       {/* Live stats banner */}
       {(opportunities as any[]).length > 0 && (
-        <div className="grid grid-cols-4 gap-3 animate-flow-in">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-flow-in">
           {[
             { label: 'Pipeline', value: `$${(totalPipeline / 1e6).toFixed(1)}M`, color: '#7c3aed' },
             { label: 'Active Deals', value: String(activeDeals.length), color: '#22c55e' },

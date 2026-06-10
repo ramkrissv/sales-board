@@ -132,7 +132,7 @@ function PricingContent() {
       </div>
 
       {/* Config Row */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div>
           <label className="block text-[11px] text-muted-foreground mb-1">Engagement Type</label>
           <select value={engType} onChange={e => setEngType(e.target.value)}
@@ -164,7 +164,7 @@ function PricingContent() {
       </div>
 
       {/* KPI Summary */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Total Contract Value', value: `$${(calculations.totalWithMargin/1000).toFixed(0)}k`, icon: DollarSign, color: '#7c3aed' },
           { label: 'Monthly Run Rate', value: `$${(calculations.totalMonthlyCost/1000).toFixed(0)}k`, icon: Calculator, color: '#3b82f6' },
