@@ -167,9 +167,9 @@ export default function LoginPage() {
             <Sparkles className="h-7 w-7 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Galent <span className="text-purple-600">AI</span>
+            Galent <span className="text-purple-600">SalesPilot</span>
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Sales Intelligence Platform</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">AI-Native Sales Board</p>
         </div>
 
         <Suspense fallback={
@@ -181,7 +181,7 @@ export default function LoginPage() {
         </Suspense>
 
         <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-6">
-          &copy; 2026 Galent AI. All rights reserved.
+          &copy; 2026 Galent. All rights reserved.
         </p>
       </div>
     </div>
