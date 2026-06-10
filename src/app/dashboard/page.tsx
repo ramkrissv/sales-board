@@ -6,6 +6,13 @@ import { useSession } from 'next-auth/react';
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
+import { LayoutDashboard, BarChart3, TrendingUp } from 'lucide-react';
+
+const ANALYTICS_TABS: { id: string; label: string; icon: any; href?: string }[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'forecast', label: 'Forecast', icon: BarChart3, href: '/forecasting' },
+  { id: 'waterfall', label: 'Waterfall', icon: TrendingUp, href: '/waterfall' },
+];
 
 function AnalyticsContent() {
   const { filteredOpportunities: opportunities, isLoading, filters, setFilters } = useOpportunities();
@@ -310,10 +317,32 @@ function AnalyticsContent() {
   );
 }
 
+function AnalyticsTabBar() {
+  return (
+    <div className="flex items-center gap-1 mb-6 p-1 rounded-xl bg-secondary/50 w-fit">
+      {ANALYTICS_TABS.map(tab => {
+        const isActive = tab.id === 'dashboard';
+        return tab.href ? (
+          <Link key={tab.id} href={tab.href}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+            <tab.icon className="h-3.5 w-3.5" /> {tab.label}
+          </Link>
+        ) : (
+          <div key={tab.id}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-card text-foreground shadow-sm border border-border">
+            <tab.icon className="h-3.5 w-3.5 text-[#7c3aed]" /> {tab.label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   return (
     <OpportunityProvider>
       <FilterPanel />
+      <AnalyticsTabBar />
       <AnalyticsContent />
     </OpportunityProvider>
   );

@@ -176,7 +176,9 @@ function TasksContent() {
           return (
             <div
               key={task.id || i}
-              className={`flex items-center gap-4 p-3 rounded-xl g-surface transition-all group ${
+              className={`flex items-center gap-4 p-3.5 rounded-xl g-surface transition-all group ${
+                task.status === 'complete' ? 'opacity-70' : ''
+              } ${
                 isOverdue ? '!border-red-500/30' : 'hover:!border-[#7c3aed]/20'
               }`}
             >
@@ -239,24 +241,33 @@ function TasksContent() {
         )}
       </div>
 
-      {/* AI Suggestion after task completion */}
+      {/* AI Suggestion after task completion — prominent banner */}
       {completedTaskSuggestion && (
-        <div className="p-3 rounded-xl bg-[#7c3aed]/5 border border-[#7c3aed]/20 flex items-start gap-3 animate-flow-in">
-          <Sparkles className="h-4 w-4 text-[#7c3aed] mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <div className="text-xs font-medium text-foreground">Completed: {completedTaskSuggestion.taskName}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              What&apos;s next for {completedTaskSuggestion.customerName}?
-            </div>
-            <div className="flex gap-1.5 mt-2">
-              <button onClick={() => { setSelectedOppId(completedTaskSuggestion.oppId); setCompletedTaskSuggestion(null); }}
-                className="px-2 py-1 text-[10px] rounded bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20">
-                Open Deal
-              </button>
-              <button onClick={() => setCompletedTaskSuggestion(null)}
-                className="px-2 py-1 text-[10px] rounded text-muted-foreground hover:text-foreground">
-                Dismiss
-              </button>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md">
+          <div className="p-4 rounded-2xl g-surface g-elevated border border-[#7c3aed]/30 shadow-xl animate-flow-in">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-[var(--g-green-soft)] flex items-center justify-center shrink-0">
+                <CheckSquare className="h-4 w-4 text-[var(--g-green)]" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-foreground animate-celebrate">Task Complete!</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{completedTaskSuggestion.taskName}</div>
+                <div className="text-xs text-foreground mt-2">What&apos;s next for <span className="font-medium">{completedTaskSuggestion.customerName}</span>?</div>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => { setSelectedOppId(completedTaskSuggestion.oppId); setCompletedTaskSuggestion(null); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[#7c3aed] text-white font-medium hover:bg-[#6d28d9] transition-colors">
+                    <Sparkles className="h-3 w-3" /> Open Deal
+                  </button>
+                  <button onClick={() => { setShowAddForm(true); setNewTask(p => ({ ...p, oppId: completedTaskSuggestion.oppId })); setCompletedTaskSuggestion(null); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border text-foreground hover:bg-secondary transition-colors">
+                    <Plus className="h-3 w-3" /> Add Follow-up
+                  </button>
+                  <button onClick={() => setCompletedTaskSuggestion(null)}
+                    className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    Dismiss
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

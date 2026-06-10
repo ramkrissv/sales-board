@@ -17,41 +17,44 @@ import { MeetingNotesModal } from '@/components/modals/MeetingNotesModal';
 import { CopilotPanel } from '@/components/ai/CopilotPanel';
 import { NotificationPopover } from '@/components/shared/NotificationPopover';
 
-// Grouped navigation — clean sidebar layout
+// Grouped navigation — organized by sales lifecycle phases
 const navGroups: { label: string; items: { icon: any; label: string; href: string; badge?: number }[] }[] = [
   {
-    label: '',
+    label: 'Prospecting',
     items: [
-      { icon: Magnet, label: 'Leads', href: '/leads', badge: 12 },
-      { icon: Globe, label: 'Signal', href: '/intake' },
-      { icon: Kanban, label: 'Deals', href: '/pipeline' },
-      { icon: MessageCircle, label: 'Deal Room', href: '/deal-room' },
+      { icon: Magnet, label: 'Leads', href: '/leads' },
+      { icon: Globe, label: 'Signal Intake', href: '/intake' },
+      { icon: Mail, label: 'Campaigns', href: '/campaigns' },
       { icon: Network, label: 'Accounts', href: '/accounts' },
       { icon: Users, label: 'Contacts', href: '/stakeholders' },
-      { icon: CheckSquare, label: 'Tasks', href: '/tasks', badge: 5 },
-      { icon: FileText, label: 'Contracts', href: '/contracts' },
-      { icon: DollarSign, label: 'Pricing', href: '/pricing' },
-      { icon: Presentation, label: 'Presales', href: '/presales' },
     ],
   },
   {
-    label: 'Views',
+    label: 'Pipeline',
     items: [
-      { icon: TableIcon, label: 'Table', href: '/table' },
+      { icon: Kanban, label: 'Deals', href: '/pipeline' },
+      { icon: MessageCircle, label: 'Deal Room', href: '/deal-room' },
+      { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
       { icon: CalendarDays, label: 'Calendar', href: '/calendar' },
+      { icon: TableIcon, label: 'Table View', href: '/table' },
       { icon: TrendingUp, label: 'Timeline', href: '/timeline' },
+    ],
+  },
+  {
+    label: 'Close',
+    items: [
+      { icon: Presentation, label: 'Presales', href: '/presales' },
+      { icon: DollarSign, label: 'Pricing', href: '/pricing' },
+      { icon: FileText, label: 'Contracts', href: '/contracts' },
     ],
   },
   {
     label: 'Intelligence',
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-      { icon: BarChart3, label: 'Forecast', href: '/forecasting' },
+      { icon: LayoutDashboard, label: 'Analytics', href: '/dashboard' },
       { icon: Eye, label: 'Deal Graph', href: '/graph' },
       { icon: Sparkles, label: 'AI Agents', href: '/agents' },
       { icon: MessageSquare, label: 'Ask Galent', href: '/ask' },
-      { icon: Mail, label: 'Campaigns', href: '/campaigns' },
-      { icon: TrendingUp, label: 'Waterfall', href: '/waterfall' },
     ],
   },
   {
