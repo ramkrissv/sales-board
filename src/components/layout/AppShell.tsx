@@ -10,7 +10,7 @@ import {
   Kanban, TrendingUp, CalendarClock, CalendarDays, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles, Magnet,
   Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield, GitBranch, MessageSquare, MessageCircle, Menu,
-  BookOpen, Presentation, DollarSign, Globe,
+  BookOpen, Presentation, DollarSign, BarChart3, Globe,
 } from 'lucide-react';
 import { NewDealModal } from '@/components/modals/NewDealModal';
 import { MeetingNotesModal } from '@/components/modals/MeetingNotesModal';
@@ -35,18 +35,28 @@ const navGroups: { label: string; items: { icon: any; label: string; href: strin
     ],
   },
   {
-    label: 'Intelligence',
+    label: 'Views',
     items: [
-      { icon: TrendingUp, label: 'Forecast', href: '/forecasting' },
-      { icon: LayoutDashboard, label: 'Reports', href: '/dashboard' },
-      { icon: Sparkles, label: 'AI Agents', href: '/agents' },
+      { icon: TableIcon, label: 'Table', href: '/table' },
+      { icon: CalendarDays, label: 'Calendar', href: '/calendar' },
+      { icon: TrendingUp, label: 'Timeline', href: '/timeline' },
     ],
   },
   {
-    label: '',
+    label: 'Intelligence',
     items: [
+      { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
+      { icon: BarChart3, label: 'Forecast', href: '/forecasting' },
+      { icon: Sparkles, label: 'AI Agents', href: '/agents' },
+      { icon: MessageSquare, label: 'Ask Galent', href: '/ask' },
+    ],
+  },
+  {
+    label: 'Platform',
+    items: [
+      { icon: Link2, label: 'Integrations', href: '/integrations' },
+      { icon: GitBranch, label: 'Workflows', href: '/workflows' },
       { icon: Settings, label: 'Settings', href: '/settings' },
-      { icon: BookOpen, label: 'Guide', href: '/guide' },
     ],
   },
 ];
