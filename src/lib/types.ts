@@ -89,6 +89,8 @@ export interface Opportunity {
   margin?: number;
   source: string;
   customTags: string[];
+  engagementType?: string;
+  pricingModel?: string;
   createdAt: string;
   updatedAt: string;
   createdBy?: string | null;

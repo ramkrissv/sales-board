@@ -63,8 +63,15 @@ function ContractsContent() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">
-        Loading contracts...
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="h-8 w-48 bg-card rounded animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-card rounded-xl animate-pulse" />)}
+        </div>
+        <div className="h-12 bg-card rounded-lg animate-pulse" />
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => <div key={i} className="h-20 bg-card rounded-xl animate-pulse" />)}
+        </div>
       </div>
     );
   }
@@ -209,8 +216,22 @@ function ContractsContent() {
         {filtered.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No contracts found</p>
-            <p className="text-xs mt-1">Create your first contract to get started</p>
+            {contracts.length === 0 ? (
+              <>
+                <p className="text-sm">No contracts yet. Create your first contract.</p>
+                <button
+                  onClick={() => setShowNewForm(true)}
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+                >
+                  <Plus className="h-4 w-4" /> New Contract
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm">No contracts match your filters.</p>
+                <p className="text-xs mt-1">Try adjusting your search or filters.</p>
+              </>
+            )}
           </div>
         ) : (
           filtered.map((contract: any) => {

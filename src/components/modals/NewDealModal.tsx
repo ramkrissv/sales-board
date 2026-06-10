@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 
@@ -8,7 +8,6 @@ const STATUSES = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'
 const INDUSTRIES = ['Healthcare', 'Financial Services', 'Hospitality', 'Professional Services', 'Manufacturing', 'Retail', 'Technology', 'Other'];
 const REGIONS = ['North America', 'Europe', 'APAC', 'Latin America', 'Middle East'];
 const SERVICE_LINES = ['IT Services', 'Staffing'];
-const BILLING_MODELS = ['Time & Material', 'Fixed Price', 'Retainer', 'Milestone-based'];
 
 interface NewDealModalProps {
   isOpen: boolean;
@@ -18,6 +17,7 @@ interface NewDealModalProps {
 export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
   const utils = trpc.useUtils();
   const { data: accounts = [] } = trpc.account.list.useQuery();
+  const { data: engagementTypes = [] } = trpc.engagementType.list.useQuery();
   const createMutation = trpc.opportunity.create.useMutation({
     onSuccess: () => {
       utils.opportunity.list.invalidate();
@@ -39,13 +39,19 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
     region: 'North America',
     source: 'Direct',
     serviceLine: 'IT Services',
-    billingModel: 'Time & Material',
+    engagementType: '',
+    pricingModel: '',
     margin: 28,
     accountId: '',
   };
 
   const [form, setForm] = useState(defaultForm);
   const [error, setError] = useState('');
+
+  const selectedET = useMemo(
+    () => engagementTypes.find((et: any) => et.name === form.engagementType),
+    [engagementTypes, form.engagementType]
+  );
 
   if (!isOpen) return null;
 
@@ -76,7 +82,8 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
         region: form.region,
         source: form.source,
         serviceLine: form.serviceLine,
-        billingModel: form.billingModel,
+        billingModel: form.engagementType || undefined,
+        engagementType: form.engagementType || undefined,
         margin: Number(form.margin) || 0,
         salesPOCs: [],
         presalesPOCs: [],
@@ -176,7 +183,7 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
             </div>
           </div>
 
-          {/* Service Line + Billing */}
+          {/* Service Line + Engagement Type */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-muted-foreground mb-1.5">Service Line</label>
@@ -186,13 +193,30 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1.5">Billing Model</label>
-              <select value={form.billingModel} onChange={e => update('billingModel', e.target.value)}
+              <label className="block text-xs text-muted-foreground mb-1.5">Engagement Type</label>
+              <select value={form.engagementType} onChange={e => { update('engagementType', e.target.value); update('pricingModel', ''); }}
                 className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/40">
-                {BILLING_MODELS.map(b => <option key={b} value={b}>{b}</option>)}
+                <option value="">Select engagement type</option>
+                {engagementTypes.map((et: any) => (
+                  <option key={et.code} value={et.name}>{et.name} ({et.code})</option>
+                ))}
               </select>
             </div>
           </div>
+
+          {/* Pricing Model (shown when engagement type is selected and has pricing models) */}
+          {selectedET && (selectedET as any).pricingModels?.length > 0 && (
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1.5">Pricing Model</label>
+              <select value={form.pricingModel} onChange={e => update('pricingModel', e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/40">
+                <option value="">Select pricing model</option>
+                {(selectedET as any).pricingModels.map((pm: string) => (
+                  <option key={pm} value={pm}>{pm}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Dates */}
           <div className="grid grid-cols-3 gap-4">

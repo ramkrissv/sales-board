@@ -76,6 +76,11 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
                     {opportunity.serviceLine === 'IT Services' ? 'ITS' : 'STF'}
                   </Badge>
                 )}
+                {(opportunity as any).engagementType && (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 border-purple-300 text-purple-600 dark:border-purple-700 dark:text-purple-400">
+                    {(opportunity as any).engagementType}
+                  </Badge>
+                )}
               </div>
               <h4 className="font-semibold text-sm leading-tight line-clamp-2 text-slate-900 dark:text-slate-100">
                 {opportunity.opportunityName}
