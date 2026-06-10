@@ -1,15 +1,23 @@
 'use client';
 
 import { Opportunity } from '@/lib/types';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, Users, ListTodo, MessageSquare, Briefcase, Percent } from 'lucide-react';
-import { format } from 'date-fns';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
+import { format, differenceInDays, isPast } from 'date-fns';
+import { ArrowRight, Clock } from 'lucide-react';
+
+// Stage probability weights for weighted value
+const STAGE_WEIGHTS: Record<string, number> = {
+  'Discovery': 0.10, 'Qualification': 0.25, 'Proposal': 0.50,
+  'Negotiation': 0.75, 'Won': 1.0, 'Lost': 0, 'On Hold': 0.05,
+};
+
+function formatCompact(value: number): string {
+  if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+  if (value >= 1000) return (value / 1000).toFixed(0) + 'K';
+  return String(value);
+}
 
 interface KanbanCardProps {
   opportunity: Opportunity;
@@ -18,18 +26,10 @@ interface KanbanCardProps {
 
 export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
   const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({
     id: opportunity.id,
-    data: {
-      type: 'Opportunity',
-      opportunity,
-    },
+    data: { type: 'Opportunity', opportunity },
   });
 
   const style = {
@@ -37,16 +37,38 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
     transition,
   };
 
-  const completedTasks = opportunity.subTasks.filter(t => t.status === 'complete').length;
-  const totalTasks = opportunity.subTasks.length;
-  const decisionMakers = opportunity.customerStakeholders.filter(s => s.isDecisionMaker).length;
+  const opp = opportunity;
+  const weight = STAGE_WEIGHTS[opp.status] || 0;
+  const weightedValue = Math.round((opp.tcv || 0) * weight);
 
-  // Format currency
-  const formatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  });
+  // Next step: most urgent pending task
+  const pendingTasks = (opp.subTasks || [])
+    .filter(t => t.status === 'pending')
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  const nextTask = pendingTasks[0];
+
+  // Time in stage (use updatedAt as proxy if stageEnteredDate not available)
+  const stageDate = new Date(opp.updatedAt || opp.createdAt);
+  const daysInStage = differenceInDays(new Date(), stageDate);
+  const stageColor = daysInStage <= 7 ? 'text-emerald-500' : daysInStage <= 14 ? 'text-amber-500' : 'text-red-500';
+
+  // Close date coloring
+  const closeDate = new Date(opp.expectedCloseDate);
+  const daysToClose = differenceInDays(closeDate, new Date());
+  const closeDateColor = isPast(closeDate) ? 'text-red-500' : daysToClose <= 30 ? 'text-amber-500' : 'text-muted-foreground';
+
+  // Duration normalization
+  const normDuration = (opp.dealDuration || '')
+    .replace('12+ months', '12m+')
+    .replace(/ months?/, 'm')
+    .replace(/ weeks?/, 'w')
+    .replace(/ years?/, 'y');
+
+  // Service line abbreviation
+  const slBadge = opp.serviceLine === 'IT Services' ? 'ITS' : opp.serviceLine === 'Staffing' ? 'STF' : '';
+
+  // Owner initials
+  const ownerInitials = opp.primaryOwner.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
     <div
@@ -54,97 +76,77 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
       style={style}
       {...attributes}
       {...listeners}
+      onClick={() => onClick(opp.id)}
+      title={`Deal ID: ${opp.id}`}
       className={cn(
-        "touch-none mb-3 group",
-        isDragging ? "opacity-50 z-50" : "opacity-100"
+        'p-3 rounded-xl bg-card border border-border cursor-pointer transition-all hover:border-[#7c3aed]/30 group mb-3 touch-none',
+        isDragging && 'opacity-50 rotate-1 shadow-lg'
       )}
-      onClick={() => onClick(opportunity.id)}
     >
-      <Card className="cursor-pointer hover:shadow-md transition-shadow duration-200 border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
-        {/* Color stripe based on status intensity or priority logic could go here, keeping it clean for now */}
-        <div className="absolute top-0 left-0 w-1 h-full bg-transparent group-hover:bg-primary/50 transition-colors" />
+      {/* Header: Company + SL badge + time in stage */}
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-xs font-semibold text-foreground truncate">
+            {opp.customerName}
+          </span>
+          {slBadge && (
+            <span className="text-[9px] px-1 py-0.5 rounded bg-secondary text-muted-foreground flex-shrink-0">{slBadge}</span>
+          )}
+        </div>
+        <span className={`text-[10px] flex items-center gap-0.5 flex-shrink-0 ${stageColor}`} title={`${daysInStage} days in ${opp.status}`}>
+          <Clock className="h-2.5 w-2.5" />
+          {daysInStage}d
+        </span>
+      </div>
 
-        <CardHeader className="p-4 pb-2 space-y-2">
-          <div className="flex justify-between items-start">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider line-clamp-1">
-                  {opportunity.customerName}
-                </p>
-                {opportunity.serviceLine && (
-                  <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 border-slate-300">
-                    {opportunity.serviceLine === 'IT Services' ? 'ITS' : 'STF'}
-                  </Badge>
-                )}
-                {(opportunity as any).engagementType && (
-                  <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 border-purple-300 text-purple-600 dark:border-purple-700 dark:text-purple-400">
-                    {(opportunity as any).engagementType}
-                  </Badge>
-                )}
-              </div>
-              <h4 className="font-semibold text-sm leading-tight line-clamp-2 text-slate-900 dark:text-slate-100">
-                {opportunity.opportunityName}
-              </h4>
-            </div>
-            <div className="text-xs font-mono text-muted-foreground shrink-0 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-              {opportunity.id.split('-').pop()}
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="font-bold text-slate-900 dark:text-slate-100">
-              {formatter.format(opportunity.tcv)}
-            </div>
-            {opportunity.margin !== undefined && (
-              <div className="text-xs font-medium text-muted-foreground flex items-center gap-1 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 px-1.5 py-0.5 rounded">
-                <Percent className="h-3 w-3" />
-                {opportunity.margin}%
-              </div>
-            )}
-          </div>
-        </CardHeader>
+      {/* Deal name */}
+      <div className="text-[11px] text-muted-foreground truncate mb-2">{opp.opportunityName}</div>
 
-        <CardContent className="p-4 py-2 space-y-3">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5" title="Expected Close Date">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>{format(new Date(opportunity.expectedCloseDate), 'MMM d')}</span>
-            </div>
-            <div className="flex items-center gap-1.5" title="Deal Duration">
-              <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                {opportunity.dealDuration}
-              </span>
-            </div>
-            {opportunity.billingModel && (
-              <div className="flex items-center gap-1.5" title="Billing Model">
-                <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                  {opportunity.billingModel === 'Time & Material' ? 'T&M' :
-                   opportunity.billingModel === 'Fixed Price' ? 'FP' :
-                   opportunity.billingModel === 'Milestone-based' ? 'MB' : 'RET'}
-                </span>
-              </div>
-            )}
-          </div>
-        </CardContent>
+      {/* Value: face + weighted */}
+      <div className="flex items-baseline gap-1.5 mb-2">
+        <span className="text-sm font-bold text-foreground tabular-nums">
+          {opp.tcv > 0 ? `$${formatCompact(opp.tcv)}` : '$0'}
+        </span>
+        {opp.tcv > 0 && weight > 0 && (
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            &rarr; ${formatCompact(weightedValue)} wtd
+          </span>
+        )}
+        {opp.margin !== undefined && (
+          <span className="text-[10px] text-muted-foreground ml-auto">{opp.margin}%</span>
+        )}
+      </div>
 
-        <CardFooter className="p-4 pt-2 flex items-center justify-between border-t bg-slate-50/50 dark:bg-slate-900/30 text-xs text-muted-foreground">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1" title={`${completedTasks}/${totalTasks} Tasks Complete`}>
-              <ListTodo className={cn("h-3.5 w-3.5", totalTasks > 0 && completedTasks === totalTasks ? "text-green-600" : "")} />
-              <span>{completedTasks}/{totalTasks}</span>
-            </div>
-            <div className="flex items-center gap-1" title={`${opportunity.customerStakeholders.length} Stakeholders (${decisionMakers} Decision Makers)`}>
-              <Users className="h-3.5 w-3.5" />
-              <span>{opportunity.customerStakeholders.length}</span>
-            </div>
-          </div>
+      {/* Next step strip */}
+      {nextTask ? (
+        <div className="flex items-center gap-1.5 p-1.5 rounded-md bg-secondary mb-2 text-[10px]">
+          <ArrowRight className="h-2.5 w-2.5 text-[#7c3aed] flex-shrink-0" />
+          <span className="text-foreground truncate">{nextTask.name}</span>
+          <span className={`flex-shrink-0 ${isPast(new Date(nextTask.dueDate)) ? 'text-red-500' : 'text-muted-foreground'}`}>
+            &middot; {format(new Date(nextTask.dueDate), 'MMM d')}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 p-1.5 rounded-md bg-orange-500/5 border border-orange-500/10 mb-2 text-[10px] text-orange-500">
+          <span>No next step defined</span>
+        </div>
+      )}
 
-          <Avatar className="h-6 w-6 border-2 border-white dark:border-slate-950">
-            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-              {opportunity.primaryOwner.split(' ').map(n => n[0]).join('').substring(0, 2)}
-            </AvatarFallback>
-          </Avatar>
-        </CardFooter>
-      </Card>
+      {/* Footer: close date, billing, duration, owner */}
+      <div className="flex items-center justify-between text-[10px]">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span className={closeDateColor}>
+            {format(closeDate, 'MMM d')}
+          </span>
+          {opp.billingModel && (
+            <span>{opp.billingModel === 'Time & Material' ? 'T&M' : opp.billingModel === 'Fixed Price' ? 'FP' : opp.billingModel === 'Retainer' ? 'RET' : opp.billingModel === 'Milestone-based' ? 'MB' : opp.billingModel}</span>
+          )}
+          {normDuration && <span>{normDuration}</span>}
+        </div>
+        <div className="w-6 h-6 rounded-full bg-[#7c3aed]/10 flex items-center justify-center text-[#7c3aed] text-[9px] font-bold" title={opp.primaryOwner}>
+          {ownerInitials}
+        </div>
+      </div>
     </div>
   );
 }
