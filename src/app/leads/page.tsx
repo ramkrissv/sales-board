@@ -71,6 +71,8 @@ export default function LeadsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   // Add lead form state
   const [form, setForm] = useState({
@@ -97,13 +99,25 @@ export default function LeadsPage() {
 
   async function handleAiAction(leadId: string, action: string) {
     setProcessingId(leadId);
+    setActionError(null);
+    setActionSuccess(null);
     try {
+      const actionLabels: Record<string, string> = {
+        qualify: 'AI Qualification complete',
+        enrich: 'Company enrichment complete',
+        draft: 'Outreach draft generated',
+        convert: 'Converted to opportunity',
+      };
       if (action === 'qualify') await qualifyMutation.mutateAsync({ id: leadId });
       else if (action === 'enrich') await enrichMutation.mutateAsync({ id: leadId });
       else if (action === 'draft') await draftMutation.mutateAsync({ id: leadId });
       else if (action === 'convert') await convertMutation.mutateAsync({ id: leadId });
-    } catch (e) {
-      console.error('AI action failed:', e);
+      setActionSuccess(actionLabels[action] || 'Action complete');
+      setTimeout(() => setActionSuccess(null), 4000);
+    } catch (e: any) {
+      const msg = e?.message || 'Action failed — check that ANTHROPIC_API_KEY is set in .env.local';
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 6000);
     }
     setProcessingId(null);
   }
@@ -255,6 +269,18 @@ export default function LeadsPage() {
             </button>
           </div>
         </form>
+      )}
+
+      {/* Toast notifications */}
+      {actionSuccess && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl bg-[var(--g-green-soft)] border border-[var(--g-green)]/30 text-sm text-[var(--g-green)] font-medium flex items-center gap-2 animate-flow-in shadow-lg">
+          <Sparkles className="h-4 w-4" /> {actionSuccess}
+        </div>
+      )}
+      {actionError && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl bg-[var(--g-red-soft)] border border-[var(--g-red)]/30 text-sm text-[var(--g-red)] font-medium flex items-center gap-2 animate-flow-in shadow-lg max-w-md">
+          <XCircle className="h-4 w-4 shrink-0" /> {actionError}
+        </div>
       )}
 
       {/* ── Lead Cards ── */}

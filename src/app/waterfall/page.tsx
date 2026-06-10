@@ -1,7 +1,8 @@
 'use client';
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
-import { DollarSign, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, ArrowRight, LayoutDashboard, BarChart3 } from 'lucide-react';
+import Link from 'next/link';
 
 function WaterfallContent() {
   const { opportunities } = useOpportunities();
@@ -32,6 +33,19 @@ function WaterfallContent() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      {/* Analytics tab bar */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/50 w-fit">
+        <Link href="/dashboard" className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+          <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
+        </Link>
+        <Link href="/forecasting" className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+          <BarChart3 className="h-3.5 w-3.5" /> Forecast
+        </Link>
+        <div className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-card text-foreground shadow-sm border border-border">
+          <TrendingUp className="h-3.5 w-3.5 text-[#7c3aed]" /> Waterfall
+        </div>
+      </div>
+
       <div>
         <h1 className="text-xl font-semibold text-foreground">Revenue Waterfall</h1>
         <p className="text-sm text-muted-foreground">Pipeline movement over the last 30 days</p>

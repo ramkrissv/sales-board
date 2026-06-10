@@ -27,6 +27,12 @@ export type BillingModel = 'Time & Material' | 'Fixed Price' | 'Retainer' | 'Mil
 export type ClientType = 'New' | 'Existing';
 export type OpportunityType = 'New Deal' | 'Upsell' | 'Cross-sell' | 'Renewal' | 'Enhancement';
 
+// Deal classification: EE = Existing-Existing, EN = Existing-New, NN = New-New
+export type DealClassification = 'EE' | 'EN' | 'NN';
+// EE: Existing client, existing service line (renewal/expansion)
+// EN: Existing client, new service line (cross-sell)
+// NN: New client, new engagement (net new business)
+
 export interface Stakeholder {
   id: string;
   name: string;

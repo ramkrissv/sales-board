@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { ScopeSwitch, type Scope } from '@/components/shared/ScopeSwitch';
-import { TrendingUp, Target, Percent, DollarSign, CheckCircle, TrendingDown, Clock, EyeOff } from 'lucide-react';
+import { TrendingUp, Target, Percent, DollarSign, CheckCircle, TrendingDown, Clock, EyeOff, LayoutDashboard, BarChart3 } from 'lucide-react';
+import Link from 'next/link';
 
 const CATEGORY_META: Record<string, { label: string; color: string; bgColor: string; icon: any; description: string }> = {
   commit: { label: 'Commit', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', icon: CheckCircle, description: 'Owner says will close' },
@@ -41,6 +42,19 @@ export default function ForecastingPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      {/* Analytics tab bar */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/50 w-fit">
+        <Link href="/dashboard" className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+          <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
+        </Link>
+        <div className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-card text-foreground shadow-sm border border-border">
+          <BarChart3 className="h-3.5 w-3.5 text-[#7c3aed]" /> Forecast
+        </div>
+        <Link href="/waterfall" className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+          <TrendingUp className="h-3.5 w-3.5" /> Waterfall
+        </Link>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Forecasting</h1>
