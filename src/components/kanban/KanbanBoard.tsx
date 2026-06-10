@@ -226,7 +226,6 @@ export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
               <button
                 onClick={() => {
                   updateOpportunity(pendingMove.oppId, { status: pendingMove.toStage as Status });
-                  if (onCardClick) setTimeout(() => onCardClick(pendingMove.oppId), 300);
                   setPendingMove(null);
                 }}
                 className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${

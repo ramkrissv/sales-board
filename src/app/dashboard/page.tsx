@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
+import Link from 'next/link';
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 
 function AnalyticsContent() {
   const { filteredOpportunities: opportunities, isLoading, filters, setFilters } = useOpportunities();
+  const [funnelView, setFunnelView] = useState<'funnel' | 'bar' | 'table'>('funnel');
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading analytics...</div>;
@@ -34,13 +37,17 @@ function AnalyticsContent() {
   opportunities.forEach(o => { byIndustry[o.industry] = (byIndustry[o.industry] || 0) + 1; });
 
   // Funnel stages (active pipeline flow)
-  const funnelStages = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'] as const;
-  const funnelData = funnelStages.map(status => ({
-    status,
-    count: opportunities.filter(o => o.status === status).length,
-    tcv: opportunities.filter(o => o.status === status).reduce((sum, o) => sum + (o.tcv || 0), 0),
-  }));
+  const funnelStages = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'];
+  const funnelData = funnelStages.map((stage, i) => {
+    const deals = opportunities.filter(o => o.status === stage);
+    const tcv = deals.reduce((s, o) => s + (o.tcv || 0), 0);
+    const nextStage = funnelStages[i + 1];
+    const nextCount = nextStage ? opportunities.filter(o => o.status === nextStage).length : 0;
+    const convRate = deals.length > 0 && nextStage ? Math.round((nextCount / deals.length) * 100) : null;
+    return { stage, count: deals.length, tcv, convRate };
+  });
   const maxFunnelCount = Math.max(...funnelData.map(f => f.count), 1);
+  const stageColors = ['#3b82f6', '#f59e0b', '#7c3aed', '#22c55e', '#10b981'];
 
   // Business segmentation data
   const newBiz = opportunities.filter(o => o.clientType === 'New');
@@ -84,7 +91,7 @@ function AnalyticsContent() {
           { label: 'Win Rate', value: `${winRate}%`, sub: `${wonDeals.length}W / ${lostDeals.length}L`, color: 'text-blue-400' },
           { label: 'Avg Deal Size', value: `$${activeDeals.length > 0 ? Math.round(totalPipeline / activeDeals.length / 1000) : 0}k`, sub: 'active deals', color: 'text-amber-400' },
         ].map(kpi => (
-          <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated">
+          <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated hover-lift hover-glow">
             <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{kpi.label}</div>
             <div className={`text-xl font-semibold ${kpi.color}`}>{kpi.value}</div>
             <div className="text-[11px] text-muted-foreground mt-1">{kpi.sub}</div>
@@ -92,42 +99,109 @@ function AnalyticsContent() {
         ))}
       </div>
 
-      {/* Sales Funnel — Conversion Flow */}
-      <div className="p-5 rounded-xl g-surface g-elevated">
-        <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-4">Sales Funnel &mdash; Conversion Flow</div>
-        <div className="flex items-end justify-center gap-0.5">
-          {funnelStages.map((stage, i) => {
-            const count = funnelData[i].count;
-            const tcv = funnelData[i].tcv;
-            const widthPct = 100 - (i * 15);
-            const height = Math.max(30, (count / maxFunnelCount) * 80);
-            const colors = ['#3b82f6', '#f59e0b', '#7c3aed', '#22c55e', '#10b981'];
-
-            const nextCount = i < 4 ? funnelData[i + 1]?.count || 0 : 0;
-            const conversionRate = count > 0 && i < 4 ? Math.round((nextCount / count) * 100) : 0;
-
-            return (
-              <div key={stage} className="flex flex-col items-center" style={{ width: `${widthPct}%` }}>
-                <div className="w-full rounded-t-lg flex items-center justify-center transition-all"
-                  style={{ height: `${height}px`, backgroundColor: `${colors[i]}20`, borderBottom: `3px solid ${colors[i]}` }}>
-                  <span className="text-base font-semibold text-foreground">{count}</span>
-                </div>
-                <div className="text-[10px] text-muted-foreground mt-1 text-center">{stage}</div>
-                <div className="text-[10px] text-muted-foreground">${(tcv / 1000).toFixed(0)}k</div>
-                {i < 4 && conversionRate > 0 && (
-                  <div className="text-[9px] text-muted-foreground mt-0.5">
-                    &rarr; {conversionRate}%
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      {/* Sales Funnel — Interactive Multi-View */}
+      <div className="p-5 rounded-xl g-surface g-elevated hover-glow">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-foreground">Sales Funnel</h3>
+          <div className="flex gap-0.5 p-0.5 rounded-lg bg-secondary border border-border">
+            {(['funnel', 'bar', 'table'] as const).map(v => (
+              <button key={v} onClick={() => setFunnelView(v)}
+                className={`px-2.5 py-1 text-[10px] font-medium rounded-md capitalize transition-all ${
+                  funnelView === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}>
+                {v}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {funnelView === 'funnel' && (
+          <div className="space-y-1">
+            {funnelData.map((d, i) => {
+              const widthPct = Math.max(20, (d.count / maxFunnelCount) * 100);
+              return (
+                <div key={d.stage} className="reveal" style={{ animationDelay: `${i * 0.08}s` }}>
+                  <Link href={`/pipeline/${encodeURIComponent(d.stage)}`}
+                    className="flex items-center gap-3 group">
+                    <div className="w-24 text-right text-xs text-muted-foreground group-hover:text-foreground transition-colors">{d.stage}</div>
+                    <div className="flex-1">
+                      <div className="relative h-10 rounded-lg overflow-hidden transition-all group-hover:scale-[1.02]"
+                        style={{ width: `${widthPct}%`, backgroundColor: stageColors[i] + '20', border: `1px solid ${stageColors[i]}40` }}>
+                        <div className="absolute inset-0 flex items-center justify-between px-3">
+                          <span className="text-xs font-semibold" style={{ color: stageColors[i] }}>{d.count} deals</span>
+                          <span className="text-[10px] text-muted-foreground">${(d.tcv/1000).toFixed(0)}k</span>
+                        </div>
+                        <div className="absolute bottom-0 left-0 h-1 rounded-b-lg transition-all" style={{ width: '100%', backgroundColor: stageColors[i], opacity: 0.5 }} />
+                      </div>
+                    </div>
+                    {d.convRate !== null && (
+                      <div className="w-14 text-center">
+                        <span className="text-[10px] text-muted-foreground">&rarr; {d.convRate}%</span>
+                      </div>
+                    )}
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {funnelView === 'bar' && (
+          <div className="flex items-end justify-center gap-4 h-48">
+            {funnelData.map((d, i) => {
+              const heightPct = Math.max(15, (d.count / maxFunnelCount) * 100);
+              return (
+                <Link key={d.stage} href={`/pipeline/${encodeURIComponent(d.stage)}`}
+                  className="flex flex-col items-center gap-1 flex-1 group">
+                  <span className="text-xs font-semibold text-foreground g-metric">{d.count}</span>
+                  <div className="w-full rounded-t-lg transition-all group-hover:opacity-80 reveal"
+                    style={{ height: `${heightPct}%`, backgroundColor: stageColors[i], animationDelay: `${i * 0.1}s` }} />
+                  <span className="text-[10px] text-muted-foreground mt-1">{d.stage}</span>
+                  <span className="text-[10px] text-muted-foreground">${(d.tcv/1000).toFixed(0)}k</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {funnelView === 'table' && (
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b" style={{ borderColor: 'var(--g-line)' }}>
+                  <th className="px-4 py-2 text-left g-section-label">Stage</th>
+                  <th className="px-4 py-2 text-right g-section-label">Deals</th>
+                  <th className="px-4 py-2 text-right g-section-label">TCV</th>
+                  <th className="px-4 py-2 text-right g-section-label">Weighted</th>
+                  <th className="px-4 py-2 text-right g-section-label">Conv.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {funnelData.map((d, i) => {
+                  const weights = [0.1, 0.25, 0.5, 0.75, 1.0];
+                  return (
+                    <tr key={d.stage} className="border-b hover:bg-card/50 cursor-pointer transition-all" style={{ borderColor: 'var(--g-line)' }}
+                      onClick={() => window.location.href = `/pipeline/${encodeURIComponent(d.stage)}`}>
+                      <td className="px-4 py-2 flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stageColors[i] }} />
+                        <span className="text-foreground">{d.stage}</span>
+                      </td>
+                      <td className="px-4 py-2 text-right g-metric text-foreground">{d.count}</td>
+                      <td className="px-4 py-2 text-right g-metric text-foreground">${(d.tcv/1000).toFixed(0)}k</td>
+                      <td className="px-4 py-2 text-right g-metric text-muted-foreground">${(d.tcv * weights[i] / 1000).toFixed(0)}k</td>
+                      <td className="px-4 py-2 text-right text-muted-foreground">{d.convRate !== null ? `${d.convRate}%` : '\u2014'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Business Segmentation: Net New vs Existing + By Region */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-5 rounded-xl g-surface g-elevated">
+        <div className="p-5 rounded-xl g-surface g-elevated hover-lift hover-glow">
           <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-3">Net New vs Existing</div>
           <div className="space-y-3">
             <div>
@@ -153,7 +227,7 @@ function AnalyticsContent() {
           </div>
         </div>
 
-        <div className="p-5 rounded-xl g-surface g-elevated">
+        <div className="p-5 rounded-xl g-surface g-elevated hover-lift hover-glow">
           <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-3">By Region</div>
           <div className="space-y-2">
             {regionEntries.map(([region, count]) => (
@@ -168,7 +242,7 @@ function AnalyticsContent() {
       </div>
 
       {/* Forecast Chart — Pipeline by Close Month */}
-      <div className="p-5 rounded-xl g-surface g-elevated">
+      <div className="p-5 rounded-xl g-surface g-elevated hover-lift hover-glow">
         <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-4">Pipeline Forecast &mdash; by Close Month</div>
         {forecastMonths.length > 0 ? (
           <div className="flex items-end gap-2" style={{ height: '120px' }}>
@@ -197,7 +271,7 @@ function AnalyticsContent() {
       {/* Two columns: By Owner + By Industry */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* By Owner */}
-        <div className="p-5 rounded-xl g-surface g-elevated">
+        <div className="p-5 rounded-xl g-surface g-elevated hover-lift hover-glow">
           <div className="text-sm font-medium text-foreground mb-4">By Owner</div>
           <div className="space-y-3">
             {topOwners.map(([owner, data]) => (
@@ -218,7 +292,7 @@ function AnalyticsContent() {
         </div>
 
         {/* By Industry */}
-        <div className="p-5 rounded-xl g-surface g-elevated">
+        <div className="p-5 rounded-xl g-surface g-elevated hover-lift hover-glow">
           <div className="text-sm font-medium text-foreground mb-4">By Industry</div>
           <div className="space-y-3">
             {Object.entries(byIndustry).sort((a, b) => b[1] - a[1]).map(([industry, count]) => (
