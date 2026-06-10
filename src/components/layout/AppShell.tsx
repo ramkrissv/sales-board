@@ -65,6 +65,7 @@ const navItems: { icon: any; label: string; href: string; children?: { icon: any
 const platformItems: { icon: any; label: string; href: string }[] = [
   { icon: Link2, label: 'Integrations', href: '/integrations' },
   { icon: GitBranch, label: 'Workflows', href: '/workflows' },
+  { icon: BookOpen, label: 'Guide', href: '/guide' },
   { icon: Settings, label: 'Settings', href: '/settings' },
 ];
 
