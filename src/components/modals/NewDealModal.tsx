@@ -43,6 +43,7 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
     pricingModel: '',
     margin: 28,
     accountId: '',
+    lifecyclePhase: 'opportunity',
   };
 
   const [form, setForm] = useState(defaultForm);
@@ -91,6 +92,7 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
         conversationLog: '',
         activityLog: [],
         ...(form.accountId ? { accountId: form.accountId } : {}),
+        lifecyclePhase: form.lifecyclePhase || 'opportunity',
       } as any);
     } catch (err: any) {
       setError(err.message || 'Failed to create opportunity');
@@ -130,6 +132,18 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
                 className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/40"
                 placeholder="e.g., AI Platform Deployment" />
             </div>
+          </div>
+
+          {/* Lifecycle Phase */}
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1.5">Lifecycle Phase</label>
+            <select value={form.lifecyclePhase || 'opportunity'} onChange={e => update('lifecyclePhase', e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/40">
+              <option value="opportunity">Opportunity (early stage)</option>
+              <option value="deal">Deal (qualified, pursuing)</option>
+              <option value="engagement">Engagement (active work)</option>
+              <option value="delivery">Delivery (executing)</option>
+            </select>
           </div>
 
           {/* Owner + Status */}
