@@ -16,64 +16,36 @@ import { MeetingNotesModal } from '@/components/modals/MeetingNotesModal';
 import { CopilotPanel } from '@/components/ai/CopilotPanel';
 import { NotificationPopover } from '@/components/shared/NotificationPopover';
 
-// Grouped navigation — end-to-end sales lifecycle
-const navGroups = [
+// Grouped navigation — clean sidebar layout
+const navGroups: { label: string; items: { icon: any; label: string; href: string; badge?: number }[] }[] = [
   {
-    label: 'Pipeline',
+    label: '',
     items: [
-      { icon: LayoutDashboard, label: 'Command Center', href: '/' },
-      { icon: Magnet, label: 'Leads', href: '/leads' },
-      { icon: Kanban, label: 'Pipeline', href: '/pipeline' },
-      { icon: FileText, label: 'Contracts', href: '/contracts' },
+      { icon: Magnet, label: 'Leads', href: '/leads', badge: 12 },
+      { icon: Kanban, label: 'Deals', href: '/pipeline' },
       { icon: Network, label: 'Accounts', href: '/accounts' },
-    ],
-  },
-  {
-    label: 'Views',
-    items: [
-      { icon: TableIcon, label: 'Table', href: '/table' },
-      { icon: CalendarDays, label: 'Calendar', href: '/calendar' },
-      { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
       { icon: Users, label: 'Contacts', href: '/stakeholders' },
+      { icon: CheckSquare, label: 'Tasks', href: '/tasks', badge: 5 },
+      { icon: FileText, label: 'Contracts', href: '/contracts' },
     ],
   },
   {
     label: 'Intelligence',
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-      { icon: Sparkles, label: 'Forecasting', href: '/forecasting' },
-      { icon: Bot, label: 'Agents', href: '/agents' },
-      { icon: MessageCircle, label: 'Ask Galent', href: '/ask' },
+      { icon: TrendingUp, label: 'Forecast', href: '/forecasting' },
+      { icon: LayoutDashboard, label: 'Reports', href: '/dashboard' },
+      { icon: Sparkles, label: 'AI Agents', href: '/agents' },
     ],
   },
   {
-    label: 'Platform',
+    label: '',
     items: [
-      { icon: Link2, label: 'Integrations', href: '/integrations' },
-      { icon: GitBranch, label: 'Workflows', href: '/workflows' },
       { icon: Settings, label: 'Settings', href: '/settings' },
     ],
   },
 ];
-// Flat list for mobile menu (includes all sub-pages)
-const navItems = [
-  { icon: LayoutDashboard, label: 'Command Center', href: '/' },
-  { icon: Magnet, label: 'Leads', href: '/leads' },
-  { icon: Kanban, label: 'Pipeline', href: '/pipeline' },
-  { icon: TableIcon, label: 'Table', href: '/table' },
-  { icon: CalendarDays, label: 'Calendar', href: '/calendar' },
-  { icon: TrendingUp, label: 'Timeline', href: '/timeline' },
-  { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
-  { icon: Users, label: 'Contacts', href: '/stakeholders' },
-  { icon: FileText, label: 'Contracts', href: '/contracts' },
-  { icon: Network, label: 'Accounts', href: '/accounts' },
-  { icon: Sparkles, label: 'Forecasting', href: '/forecasting' },
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-  { icon: Bot, label: 'Agents', href: '/agents' },
-  { icon: Link2, label: 'Integrations', href: '/integrations' },
-  { icon: GitBranch, label: 'Workflows', href: '/workflows' },
-  { icon: Shield, label: 'Users', href: '/admin/users' },
-];
+// Flat list for mobile menu
+const navItems = navGroups.flatMap(g => g.items);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -112,30 +84,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Nav icons — grouped */}
         <div className="flex-1 flex flex-col gap-0.5 overflow-y-auto">
           {navGroups.map((group, gi) => (
-            <div key={group.label}>
+            <div key={gi}>
               {gi > 0 && <div className="mx-2 my-2 border-t" style={{ borderColor: 'var(--g-line)' }} />}
-              <div className="px-3 mb-1">
-                <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</span>
-              </div>
+              {group.label && (
+                <div className="px-3 mb-1">
+                  <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</span>
+                </div>
+              )}
               {group.items.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative mx-2',
-                  isActive
-                    ? 'bg-[#7c3aed]/10 text-[#7c3aed]'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-                )}
-              >
-                {isActive && <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r bg-[#7c3aed]" />}
-                <item.icon className="h-4 w-4 flex-shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+                const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative mx-2',
+                      isActive
+                        ? 'bg-[#7c3aed]/10 text-[#7c3aed]'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    )}
+                  >
+                    {isActive && <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r bg-[#7c3aed]" />}
+                    <item.icon className="h-4 w-4 flex-shrink-0" />
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge !== undefined && (
+                      <span className="ml-auto text-[10px] font-semibold bg-[#7c3aed]/10 text-[#7c3aed] px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -189,7 +168,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
                     <item.icon className="h-4 w-4" />
-                    <span>{item.label}</span>
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge !== undefined && (
+                      <span className="text-[10px] font-semibold bg-[#7c3aed]/10 text-[#7c3aed] px-1.5 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -199,7 +183,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content */}
-      <div className={`md:ml-14 transition-all duration-300 ${copilotOpen ? 'mr-96' : ''}`}>
+      <div className={`md:ml-48 transition-all duration-300 ${copilotOpen ? 'mr-96' : ''}`}>
         {/* Top command bar */}
         <header className="sticky top-0 z-40 h-12 g-glass flex items-center px-3 md:px-5 gap-2 md:gap-4"
           style={{ borderBottom: '1px solid rgba(var(--g-line-rgb), 0.4)' }}>

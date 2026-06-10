@@ -24,6 +24,12 @@ export function KanbanColumn({ status, opportunities, onCardClick }: KanbanColum
   });
 
   const totalValue = opportunities.reduce((sum, opp) => sum + opp.tcv, 0);
+  const stageWeightMap: Record<string, number> = {
+    'Discovery': 0.10, 'Qualification': 0.25, 'Proposal': 0.50,
+    'Negotiation': 0.75, 'Won': 1.0, 'Lost': 0, 'On Hold': 0.05,
+  };
+  const stageWeight = stageWeightMap[status] || 0;
+  const weightedTcv = totalValue * stageWeight;
   const formatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -54,6 +60,9 @@ export function KanbanColumn({ status, opportunities, onCardClick }: KanbanColum
         </div>
         <div className="text-xs font-semibold text-muted-foreground">
           {formatter.format(totalValue)}
+          {stageWeight > 0 && stageWeight < 1 && (
+            <span className="text-[10px] font-normal ml-1">/ {formatter.format(weightedTcv)} wtd</span>
+          )}
         </div>
       </div>
 
