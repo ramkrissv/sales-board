@@ -40,6 +40,12 @@ export interface IOpportunity extends Document {
   engagementType?: string;
   engagementTypes?: string[];
   forecastCategory?: string;
+  // Lifecycle tracking
+  lifecyclePhase?: string;
+  parentOpportunityId?: string;
+  childOpportunityIds?: string[];
+  contractIds?: string[];
+  convertedFromLeadId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -123,6 +129,12 @@ const OpportunitySchema = new Schema<IOpportunity>(
     engagementType: { type: String, required: false },
     engagementTypes: { type: [String], default: [] },
     forecastCategory: { type: String, enum: ['commit', 'best_case', 'pipeline', 'omitted'], default: 'pipeline' },
+    // Lifecycle tracking
+    lifecyclePhase: { type: String, enum: ['opportunity', 'deal', 'engagement', 'delivery', 'closed'], default: 'opportunity' },
+    parentOpportunityId: { type: String, required: false },
+    childOpportunityIds: { type: [String], default: [] },
+    contractIds: { type: [String], default: [] },
+    convertedFromLeadId: { type: String, required: false },
   },
   { timestamps: true }
 );

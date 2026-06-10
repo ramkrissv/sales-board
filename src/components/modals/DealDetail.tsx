@@ -12,8 +12,10 @@ import {
   Mail, CalendarPlus, ArrowUpRight, FileText, MessageSquare,
   GitBranch,
 } from 'lucide-react';
+import Link from 'next/link';
 import { MeetingNotesModal } from './MeetingNotesModal';
 import { DealLifecycle } from '@/components/views/DealLifecycle';
+import { Target } from 'lucide-react';
 import type { Status } from '@/lib/types';
 
 interface DealDetailProps {
@@ -73,6 +75,8 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const [sowContent, setSowContent] = useState<string | null>(null);
   const [showStageSelector, setShowStageSelector] = useState(false);
   const [showMeetingNotes, setShowMeetingNotes] = useState(false);
+  const [showCreateContract, setShowCreateContract] = useState(false);
+  const [contractType, setContractType] = useState('SOW');
   const analysisMutation = trpc.ai.analyzeDeal.useMutation();
   const sowMutation = trpc.ai.generateSOW.useMutation({
     onSuccess: (data) => {
@@ -104,6 +108,19 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   });
 
   const utils = trpc.useUtils();
+
+  const createContractMutation = trpc.contract.create.useMutation({
+    onSuccess: () => { utils.contract.list.invalidate(); setShowCreateContract(false); },
+  });
+
+  const createFollowOnMutation = trpc.opportunity.create.useMutation({
+    onSuccess: (newOpp: any) => {
+      utils.opportunity.list.invalidate();
+      if (opp) {
+        updateOpportunity(opp.id, { childOpportunityIds: [...((opp as any).childOpportunityIds || []), newOpp.id] } as any);
+      }
+    },
+  });
 
   // Approval workflow
   const { data: approvals = [] } = trpc.approval.getForEntity.useQuery(
@@ -247,6 +264,95 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
             </div>
             <h2 className="text-lg font-semibold text-foreground truncate">{opp.customerName}</h2>
             <p className="text-sm text-muted-foreground truncate">{opp.opportunityName}</p>
+
+            {/* Lifecycle Phase */}
+            <div className="flex items-center gap-0.5 mt-1">
+              {['opportunity', 'deal', 'engagement', 'delivery', 'closed'].map((phase, i) => {
+                const currentIdx = ['opportunity', 'deal', 'engagement', 'delivery', 'closed'].indexOf((opp as any).lifecyclePhase || 'opportunity');
+                const isActive = i === currentIdx;
+                const isPast = i < currentIdx;
+                const colors = ['#3b82f6', '#7c3aed', '#f59e0b', '#22c55e', '#10b981'];
+                return (
+                  <button key={phase} onClick={() => updateOpportunity(opp.id, { lifecyclePhase: phase } as any)}
+                    className="flex items-center gap-0.5" title={`Set as ${phase}`}>
+                    <div className={`w-2 h-2 rounded-full transition-all ${isActive ? 'scale-125' : ''}`}
+                      style={{ backgroundColor: isPast || isActive ? colors[i] : 'var(--g-line)' }} />
+                    {i < 4 && <div className="w-4 h-0.5" style={{ backgroundColor: isPast ? colors[i] : 'var(--g-line)' }} />}
+                  </button>
+                );
+              })}
+              <span className="text-[10px] text-muted-foreground ml-2 capitalize">{(opp as any).lifecyclePhase || 'opportunity'}</span>
+            </div>
+
+            {/* Lifecycle Actions */}
+            <div className="flex gap-1.5 mt-2">
+              <button onClick={() => setShowCreateContract(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/20 transition-colors">
+                <FileText className="h-3 w-3" /> Create Contract
+              </button>
+              <button onClick={() => {
+                const year = new Date().getFullYear();
+                const id = `OPP-${year}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+                createFollowOnMutation.mutate({
+                  id,
+                  customerName: opp.customerName,
+                  opportunityName: `${opp.opportunityName} — Follow-on`,
+                  status: 'Discovery',
+                  tcv: 0,
+                  dealDuration: opp.dealDuration,
+                  expectedCloseDate: new Date(Date.now() + 90*24*60*60*1000).toISOString(),
+                  startDate: new Date().toISOString(),
+                  primaryOwner: opp.primaryOwner,
+                  industry: opp.industry,
+                  region: opp.region,
+                  source: opp.source,
+                  salesPOCs: opp.salesPOCs || [],
+                  presalesPOCs: opp.presalesPOCs || [],
+                  customTags: [],
+                  conversationLog: '',
+                  activityLog: [],
+                  parentOpportunityId: opp.id,
+                  lifecyclePhase: 'opportunity',
+                } as any);
+              }}
+                disabled={createFollowOnMutation.isPending}
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 text-[10px] font-medium hover:bg-blue-500/20 transition-colors">
+                <Plus className="h-3 w-3" /> Follow-on Deal
+              </button>
+            </div>
+
+            {/* Create Contract Inline Form */}
+            {showCreateContract && (
+              <div className="p-3 rounded-lg bg-card border border-border space-y-2 mt-2">
+                <div className="g-section-label">Create Contract from Deal</div>
+                <select defaultValue="SOW" onChange={e => setContractType(e.target.value)}
+                  className="w-full px-2 py-1.5 text-xs bg-secondary border border-border rounded text-foreground">
+                  <option value="MSA">MSA</option>
+                  <option value="SOW">SOW</option>
+                  <option value="NDA">NDA</option>
+                </select>
+                <div className="flex gap-2">
+                  <button onClick={() => createContractMutation.mutate({
+                    opportunityId: opp.id,
+                    type: contractType || 'SOW',
+                    title: `${opp.customerName} — ${contractType || 'SOW'}`,
+                    value: opp.tcv || 0,
+                    startDate: new Date().toISOString(),
+                    endDate: new Date(Date.now() + 365*24*60*60*1000).toISOString(),
+                    engagementType: (opp as any).engagementType || opp.billingModel || 'Time & Material',
+                    status: 'draft',
+                  } as any)}
+                    disabled={createContractMutation.isPending}
+                    className="px-3 py-1.5 text-xs bg-[#7c3aed] text-white rounded-lg hover:bg-[#6d28d9] transition-colors disabled:opacity-50">
+                    {createContractMutation.isPending ? 'Creating...' : 'Create Contract'}
+                  </button>
+                  <button onClick={() => setShowCreateContract(false)}
+                    className="px-3 py-1.5 text-xs border border-border text-muted-foreground rounded-lg hover:bg-secondary transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 ml-4">
             {editing ? (
@@ -566,6 +672,42 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Linked Entities */}
+              <div className="space-y-2">
+                <div className="g-section-label">Linked Entities</div>
+
+                {/* Linked contracts */}
+                <Link href="/contracts" className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border text-xs hover:border-[#7c3aed]/30 transition-all">
+                  <FileText className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-foreground">View Contracts</span>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground ml-auto" />
+                </Link>
+
+                {/* Parent opportunity */}
+                {(opp as any).parentOpportunityId && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border text-xs w-full text-left">
+                    <ArrowRight className="h-3.5 w-3.5 text-blue-400 rotate-180" />
+                    <span className="text-foreground">Parent: {(opp as any).parentOpportunityId}</span>
+                  </div>
+                )}
+
+                {/* Child opportunities */}
+                {(opp as any).childOpportunityIds?.length > 0 && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border text-xs">
+                    <ArrowRight className="h-3.5 w-3.5 text-purple-400" />
+                    <span className="text-foreground">{(opp as any).childOpportunityIds.length} follow-on deal(s)</span>
+                  </div>
+                )}
+
+                {/* Converted from lead */}
+                {(opp as any).convertedFromLeadId && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border text-xs">
+                    <Target className="h-3.5 w-3.5 text-amber-400" />
+                    <span className="text-muted-foreground">Converted from lead</span>
+                  </div>
+                )}
               </div>
 
               {/* Tags */}
