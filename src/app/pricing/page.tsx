@@ -152,7 +152,7 @@ function PricingContent() {
       {/* KPI Summary */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'Total Contract Value', value: `$${(calculations.totalWithMargin/1000).toFixed(0)}k`, icon: DollarSign, color: '#7c3aed' },
+          { label: 'Total Contract Value', value: `$${(calculations.totalWithMargin/1000).toFixed(0)}k`, icon: DollarSign, color: '#5B4FE9' },
           { label: 'Monthly Run Rate', value: `$${(calculations.totalMonthlyCost/1000).toFixed(0)}k`, icon: Calculator, color: '#3b82f6' },
           { label: 'Blended Rate', value: `$${calculations.blendedRate.toFixed(0)}/hr`, icon: Percent, color: '#22c55e' },
           { label: 'Total Headcount', value: `${calculations.totalHeadcount}`, icon: Users, color: '#f59e0b' },
@@ -171,7 +171,7 @@ function PricingContent() {
       <div className="g-surface g-elevated overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--g-line)' }}>
           <span className="text-sm font-semibold text-foreground">Team Composition</span>
-          <button onClick={addLine} className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors">
+          <button onClick={addLine} className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-[#5B4FE9]/10 text-[#5B4FE9] hover:bg-[#5B4FE9]/20 transition-colors">
             <Plus className="h-3 w-3" /> Add Role
           </button>
         </div>
@@ -235,7 +235,7 @@ function PricingContent() {
             <tr className="border-t" style={{ borderColor: 'var(--g-line)' }}>
               <td colSpan={5} className="px-4 py-3 text-sm font-bold text-foreground">Total Contract Value</td>
               <td className="px-4 py-3 text-right g-metric font-bold text-foreground">${((calculations.totalWithMargin/duration)/1000).toFixed(1)}k/mo</td>
-              <td className="px-4 py-3 text-right g-metric font-bold text-[#7c3aed]" style={{ fontSize: '16px' }}>${(calculations.totalWithMargin/1000).toFixed(0)}k</td>
+              <td className="px-4 py-3 text-right g-metric font-bold text-[#5B4FE9]" style={{ fontSize: '16px' }}>${(calculations.totalWithMargin/1000).toFixed(0)}k</td>
               <td></td>
             </tr>
           </tfoot>
@@ -246,7 +246,7 @@ function PricingContent() {
       <div className="flex gap-3">
         {linkedOppId && (
           <button onClick={linkToOpp} disabled={updateOppMutation.isPending}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#7c3aed] text-white text-sm font-medium hover:bg-[#6d28d9] transition-colors disabled:opacity-50">
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#5B4FE9] text-white text-sm font-medium hover:bg-[#4A3ED4] transition-colors disabled:opacity-50">
             <Link2 className="h-4 w-4" /> Update Deal TCV (${(calculations.totalWithMargin/1000).toFixed(0)}k)
           </button>
         )}

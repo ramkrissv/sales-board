@@ -49,7 +49,7 @@ function AnalyticsContent() {
     return { stage, count: deals.length, tcv, convRate };
   });
   const maxFunnelCount = Math.max(...funnelData.map(f => f.count), 1);
-  const stageColors = ['#3b82f6', '#f59e0b', '#7c3aed', '#22c55e', '#10b981'];
+  const stageColors = ['#3b82f6', '#f59e0b', '#5B4FE9', '#22c55e', '#10b981'];
 
   // Business segmentation data
   const newBiz = opportunities.filter(o => o.clientType === 'New');
@@ -212,7 +212,7 @@ function AnalyticsContent() {
                 <span className="text-muted-foreground tabular-nums">{newBiz.length} ({Math.round(newBiz.length / totalCount * 100)}%)</span>
               </div>
               <div className="h-3 bg-card rounded-full overflow-hidden">
-                <div className="h-full bg-[#7c3aed] rounded-full transition-all" style={{ width: `${(newBiz.length / totalCount) * 100}%` }} />
+                <div className="h-full bg-[#5B4FE9] rounded-full transition-all" style={{ width: `${(newBiz.length / totalCount) * 100}%` }} />
               </div>
               <div className="text-[10px] text-muted-foreground mt-0.5">${(newBiz.reduce((s, o) => s + (o.tcv || 0), 0) / 1000).toFixed(0)}k TCV</div>
             </div>
@@ -255,9 +255,9 @@ function AnalyticsContent() {
               return (
                 <div key={month} className="flex flex-col items-center flex-1">
                   <div className="text-[10px] text-muted-foreground tabular-nums mb-1">${(data.tcv / 1000).toFixed(0)}k</div>
-                  <div className="w-full bg-[#7c3aed]/20 rounded-t-md transition-all flex items-end justify-center"
+                  <div className="w-full bg-[#5B4FE9]/20 rounded-t-md transition-all flex items-end justify-center"
                     style={{ height: `${barHeight}px` }}>
-                    <span className="text-[10px] text-[#7c3aed] font-medium mb-0.5">{data.count}</span>
+                    <span className="text-[10px] text-[#5B4FE9] font-medium mb-0.5">{data.count}</span>
                   </div>
                   <div className="text-[10px] text-muted-foreground mt-1">{label}</div>
                   {yearLabel && <div className="text-[9px] text-muted-foreground">{yearLabel}</div>}

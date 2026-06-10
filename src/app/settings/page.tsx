@@ -87,7 +87,7 @@ export default function SettingsPage() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors ${
               activeTab === tab.id
-                ? 'border-[#7c3aed] text-[#7c3aed]'
+                ? 'border-[#5B4FE9] text-[#5B4FE9]'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -104,13 +104,13 @@ export default function SettingsPage() {
             <div className="g-section-label">Default AI Model</div>
             <div className="space-y-2">
               {AVAILABLE_MODELS.map(model => (
-                <label key={model.model} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-[#7c3aed]/30 cursor-pointer transition-all">
+                <label key={model.model} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-[#5B4FE9]/30 cursor-pointer transition-all">
                   <input
                     type="radio"
                     name="model"
                     checked={currentModel === model.model}
                     onChange={() => handleModelChange(model.model)}
-                    className="accent-[#7c3aed]"
+                    className="accent-[#5B4FE9]"
                   />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-foreground">{model.displayName}</div>
@@ -133,7 +133,7 @@ export default function SettingsPage() {
                 <input
                   type="password"
                   defaultValue="sk-ant-api03-****"
-                  className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40"
+                  className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#5B4FE9]/40"
                   readOnly
                 />
                 <p className="text-[11px] text-muted-foreground mt-1">Configured via environment variable</p>
@@ -154,7 +154,7 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={guardrails.requireApproval}
                   onChange={e => handleGuardrailChange('requireApproval', e.target.checked)}
-                  className="accent-[#7c3aed] h-4 w-4"
+                  className="accent-[#5B4FE9] h-4 w-4"
                 />
               </label>
               <label className="flex items-center justify-between p-3 rounded-lg border border-border">
@@ -166,7 +166,7 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={guardrails.logActions}
                   onChange={e => handleGuardrailChange('logActions', e.target.checked)}
-                  className="accent-[#7c3aed] h-4 w-4"
+                  className="accent-[#5B4FE9] h-4 w-4"
                 />
               </label>
               <label className="flex items-center justify-between p-3 rounded-lg border border-border">
@@ -178,7 +178,7 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={guardrails.autoInvoke}
                   onChange={e => handleGuardrailChange('autoInvoke', e.target.checked)}
-                  className="accent-[#7c3aed] h-4 w-4"
+                  className="accent-[#5B4FE9] h-4 w-4"
                 />
               </label>
             </div>
@@ -213,7 +213,7 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={notifications[pref.key]}
                   onChange={e => handleNotificationChange(pref.key, e.target.checked)}
-                  className="accent-[#7c3aed] h-4 w-4"
+                  className="accent-[#5B4FE9] h-4 w-4"
                 />
               </label>
             ))}

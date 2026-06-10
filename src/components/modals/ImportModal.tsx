@@ -97,7 +97,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
       <div className="relative w-full max-w-2xl max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col g-surface rounded-2xl shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--g-line)' }}>
           <div className="flex items-center gap-2">
-            <Upload className="h-4 w-4 text-[#7c3aed]" />
+            <Upload className="h-4 w-4 text-[#5B4FE9]" />
             <h2 className="text-base font-semibold text-foreground">Import Opportunities</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground"><X className="h-4 w-4" /></button>
@@ -106,7 +106,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {step === 'upload' && (
             <>
-              <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-[#7c3aed]/30 transition-colors relative">
+              <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-[#5B4FE9]/30 transition-colors relative">
                 <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
                 <p className="text-sm text-foreground mb-1">Drop a CSV file or click to upload</p>
                 <p className="text-xs text-muted-foreground">Columns: Customer, Project, Stage, TCV, Owner, etc.</p>
@@ -137,7 +137,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setStep('upload')} className="px-3 py-1.5 text-xs border border-border rounded-lg text-muted-foreground">Back</button>
-                <button onClick={() => setStep('preview')} className="px-3 py-1.5 text-xs bg-[#7c3aed] text-white rounded-lg">Preview ({csvData.length} rows)</button>
+                <button onClick={() => setStep('preview')} className="px-3 py-1.5 text-xs bg-[#5B4FE9] text-white rounded-lg">Preview ({csvData.length} rows)</button>
               </div>
             </>
           )}
@@ -165,7 +165,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
               <div className="flex gap-2">
                 <button onClick={() => setStep('map')} className="px-3 py-1.5 text-xs border border-border rounded-lg text-muted-foreground">Back</button>
                 <button onClick={handleImport} disabled={importMutation.isPending}
-                  className="px-3 py-1.5 text-xs bg-[#7c3aed] text-white rounded-lg disabled:opacity-50">
+                  className="px-3 py-1.5 text-xs bg-[#5B4FE9] text-white rounded-lg disabled:opacity-50">
                   {importMutation.isPending ? <><Loader2 className="h-3 w-3 animate-spin inline mr-1" />Importing...</> : `Import ${csvData.length} Opportunities`}
                 </button>
               </div>
@@ -177,7 +177,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
               <CheckSquare className="h-10 w-10 text-emerald-400 mx-auto mb-3" />
               <p className="text-lg font-semibold text-foreground">{importCount} opportunities imported!</p>
               <p className="text-sm text-muted-foreground mt-1">They are now visible in your pipeline.</p>
-              <button onClick={onClose} className="mt-4 px-4 py-2 text-sm bg-[#7c3aed] text-white rounded-lg">Done</button>
+              <button onClick={onClose} className="mt-4 px-4 py-2 text-sm bg-[#5B4FE9] text-white rounded-lg">Done</button>
             </div>
           )}
         </div>

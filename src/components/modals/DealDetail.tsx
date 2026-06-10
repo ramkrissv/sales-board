@@ -246,7 +246,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
     { id: 'documents' as const, label: 'Documents' },
   ];
 
-  const inputClasses = 'w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#7B52FF]/20 focus:border-[#7B52FF]';
+  const inputClasses = 'w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#5B4FE9]/20 focus:border-[#5B4FE9]';
 
   const stageOptions: Status[] = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Lost', 'On Hold'];
 
@@ -271,7 +271,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                 const currentIdx = ['opportunity', 'deal', 'engagement', 'delivery', 'closed'].indexOf((opp as any).lifecyclePhase || 'opportunity');
                 const isActive = i === currentIdx;
                 const isPast = i < currentIdx;
-                const colors = ['#3b82f6', '#7c3aed', '#f59e0b', '#22c55e', '#10b981'];
+                const colors = ['#3b82f6', '#5B4FE9', '#f59e0b', '#22c55e', '#10b981'];
                 return (
                   <button key={phase} onClick={() => updateOpportunity(opp.id, { lifecyclePhase: phase } as any)}
                     className="flex items-center gap-0.5" title={`Set as ${phase}`}>
@@ -343,7 +343,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                     status: 'draft',
                   } as any)}
                     disabled={createContractMutation.isPending}
-                    className="px-3 py-1.5 text-xs bg-[#7c3aed] text-white rounded-lg hover:bg-[#6d28d9] transition-colors disabled:opacity-50">
+                    className="px-3 py-1.5 text-xs bg-[#5B4FE9] text-white rounded-lg hover:bg-[#4A3ED4] transition-colors disabled:opacity-50">
                     {createContractMutation.isPending ? 'Creating...' : 'Create Contract'}
                   </button>
                   <button onClick={() => setShowCreateContract(false)}
@@ -364,7 +364,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               <button onClick={() => setEditing(true)} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground"><Edit2 className="h-4 w-4" /></button>
             )}
             {analysisMutation.isPending && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#7B52FF]/10 text-[#7B52FF] text-xs font-medium">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#5B4FE9]/10 text-[#5B4FE9] text-xs font-medium">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Analyzing...
               </div>
@@ -406,19 +406,19 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
         {(analysis || analysisMutation.isPending) && (
           <div className="px-5 pt-4 pb-2">
             {analysisMutation.isPending && !analysis ? (
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-[#7B52FF]/5 border border-[#7B52FF]/20">
-                <Sparkles className="h-4 w-4 animate-spin text-[#7B52FF]" />
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-[#5B4FE9]/5 border border-[#5B4FE9]/20">
+                <Sparkles className="h-4 w-4 animate-spin text-[#5B4FE9]" />
                 <span className="text-sm text-muted-foreground">AI is analyzing this deal...</span>
               </div>
             ) : analysis && (
-              <div className="p-4 rounded-xl bg-[#7B52FF]/5 border border-[#7B52FF]/20 space-y-4">
+              <div className="p-4 rounded-xl bg-[#5B4FE9]/5 border border-[#5B4FE9]/20 space-y-4">
                 {/* Top row: Health ring + Win probability + summary */}
                 <div className="flex items-center gap-4">
                   <HealthRing score={analysis.healthScore} />
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="h-3.5 w-3.5 text-[#7B52FF]" />
-                      <span className="text-xs font-semibold text-[#7B52FF] uppercase tracking-wider">AI Deal Intelligence</span>
+                      <Sparkles className="h-3.5 w-3.5 text-[#5B4FE9]" />
+                      <span className="text-xs font-semibold text-[#5B4FE9] uppercase tracking-wider">AI Deal Intelligence</span>
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-1" />
                     </div>
                     <WinProbabilityBar probability={analysis.winProbability} />
@@ -482,7 +482,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleCreateActionTask(a.action); }}
                                 disabled={createTaskMutation.isPending}
-                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#7B52FF]/12 text-[#7B52FF] text-[10px] font-medium hover:bg-[#7B52FF]/20 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#5B4FE9]/12 text-[#5B4FE9] text-[10px] font-medium hover:bg-[#5B4FE9]/20 transition-colors disabled:opacity-50"
                               >
                                 {createTaskMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckSquare className="h-3 w-3" />}
                                 Task
@@ -567,7 +567,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               onClick={() => setActiveTab(tab.id)}
               className={`px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? 'border-[#7B52FF] text-[#7B52FF]'
+                  ? 'border-[#5B4FE9] text-[#5B4FE9]'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -679,7 +679,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                 <div className="g-section-label">Linked Entities</div>
 
                 {/* Linked contracts */}
-                <Link href="/contracts" className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border text-xs hover:border-[#7c3aed]/30 transition-all">
+                <Link href="/contracts" className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border text-xs hover:border-[#5B4FE9]/30 transition-all">
                   <FileText className="h-3.5 w-3.5 text-emerald-400" />
                   <span className="text-foreground">View Contracts</span>
                   <ArrowRight className="h-3 w-3 text-muted-foreground ml-auto" />
@@ -716,7 +716,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                   <div className="g-section-label mb-2">Tags</div>
                   <div className="flex flex-wrap gap-1.5">
                     {opp.customTags.map(tag => (
-                      <span key={tag} className="g-chip bg-[#7B52FF]/10 text-[#7B52FF] border border-[#7B52FF]/20">{tag}</span>
+                      <span key={tag} className="g-chip bg-[#5B4FE9]/10 text-[#5B4FE9] border border-[#5B4FE9]/20">{tag}</span>
                     ))}
                   </div>
                 </div>
@@ -756,7 +756,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                     <div className="space-y-1.5">
                       {activeWorkflows.map((wf: any) => (
                         <div key={wf._id} className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border text-xs">
-                          <GitBranch className="h-3 w-3 text-[#7c3aed]" />
+                          <GitBranch className="h-3 w-3 text-[#5B4FE9]" />
                           <span className="text-foreground">{wf.name}</span>
                           <span className="text-muted-foreground">&middot; {wf.actions?.length || 0} actions</span>
                           {wf.executionCount > 0 && <span className="text-muted-foreground">&middot; ran {wf.executionCount}x</span>}
@@ -807,7 +807,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                             {tmpl.required ? 'Required' : 'Optional'}
                           </span>
                           <span className="text-foreground">{tmpl.name}</span>
-                          {tmpl.aiGenerable && <span className="g-chip bg-[#7c3aed]/10 text-[#7c3aed]">AI</span>}
+                          {tmpl.aiGenerable && <span className="g-chip bg-[#5B4FE9]/10 text-[#5B4FE9]">AI</span>}
                         </div>
                       ))}
                     </div>
@@ -835,7 +835,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               {stakeholders.length === 0 && !showStakeholderForm && <div className="text-center py-8 text-muted-foreground text-sm">No stakeholders added yet.</div>}
               {stakeholders.map((s, i) => (
                 <div key={s.id || i} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
-                  <div className="w-9 h-9 rounded-full bg-[#7B52FF]/15 flex items-center justify-center text-[#7B52FF] text-xs font-bold flex-shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-[#5B4FE9]/15 flex items-center justify-center text-[#5B4FE9] text-xs font-bold flex-shrink-0">
                     {s.name.split(' ').map(n => n[0]).join('').slice(0,2)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -914,7 +914,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                     <button
                       onClick={handleCreateStakeholder}
                       disabled={!stakeholderForm.name || !stakeholderForm.title || createStakeholderMutation.isPending}
-                      className="px-3 py-1.5 text-xs font-medium bg-[#7B52FF] text-white rounded-lg hover:bg-[#6B42EF] disabled:opacity-50 transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium bg-[#5B4FE9] text-white rounded-lg hover:bg-[#4A3ED4] disabled:opacity-50 transition-colors"
                     >
                       {createStakeholderMutation.isPending ? 'Adding...' : 'Add Stakeholder'}
                     </button>
@@ -943,7 +943,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               {!showStakeholderForm && (
                 <button
                   onClick={() => setShowStakeholderForm(true)}
-                  className="flex items-center gap-2 w-full p-3 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-[#7B52FF]/40 transition-colors text-sm"
+                  className="flex items-center gap-2 w-full p-3 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-[#5B4FE9]/40 transition-colors text-sm"
                 >
                   <Plus className="h-4 w-4" />
                   Add Stakeholder
@@ -965,7 +965,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                     <button
                       onClick={() => handleToggleTaskStatus(t)}
                       disabled={updateTaskMutation.isPending}
-                      className={`w-4 h-4 rounded border-2 flex-shrink-0 transition-colors cursor-pointer ${t.status === 'complete' ? 'bg-green-500/20 border-green-500' : 'border-muted-foreground hover:border-[#7B52FF]'}`}
+                      className={`w-4 h-4 rounded border-2 flex-shrink-0 transition-colors cursor-pointer ${t.status === 'complete' ? 'bg-green-500/20 border-green-500' : 'border-muted-foreground hover:border-[#5B4FE9]'}`}
                     />
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm ${t.status === 'complete' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{t.name}</div>
@@ -1020,7 +1020,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                     <button
                       onClick={handleCreateTask}
                       disabled={!taskForm.name || !taskForm.owner || !taskForm.dueDate || createTaskMutation.isPending}
-                      className="px-3 py-1.5 text-xs font-medium bg-[#7B52FF] text-white rounded-lg hover:bg-[#6B42EF] disabled:opacity-50 transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium bg-[#5B4FE9] text-white rounded-lg hover:bg-[#4A3ED4] disabled:opacity-50 transition-colors"
                     >
                       {createTaskMutation.isPending ? 'Adding...' : 'Add Task'}
                     </button>
@@ -1041,7 +1041,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               {!showTaskForm && (
                 <button
                   onClick={() => setShowTaskForm(true)}
-                  className="flex items-center gap-2 w-full p-3 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-[#7B52FF]/40 transition-colors text-sm"
+                  className="flex items-center gap-2 w-full p-3 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-[#5B4FE9]/40 transition-colors text-sm"
                 >
                   <Plus className="h-4 w-4" />
                   Add Task
@@ -1072,7 +1072,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               ) : (
                 <div className="space-y-3">
                   <div className="text-center py-8 text-muted-foreground text-sm">No conversation log yet.</div>
-                  <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20 flex items-center gap-2 text-xs text-[#7c3aed]">
+                  <div className="p-3 rounded-lg bg-[#5B4FE9]/5 border border-[#5B4FE9]/20 flex items-center gap-2 text-xs text-[#5B4FE9]">
                     <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
                     <span>No conversation log yet. Use the &quot;Notes&quot; button to capture meeting intel — AI will extract insights automatically.</span>
                   </div>

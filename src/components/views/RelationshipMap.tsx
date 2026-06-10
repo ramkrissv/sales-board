@@ -128,7 +128,7 @@ export function RelationshipMap({ accountNodeId, accountName }: RelationshipMapP
   }, [nodes.length, edges]);
 
   const nodeColors: Record<string, { fill: string; stroke: string; icon: typeof Building2 }> = {
-    account: { fill: '#7c3aed20', stroke: '#7c3aed', icon: Building2 },
+    account: { fill: '#5B4FE920', stroke: '#5B4FE9', icon: Building2 },
     person: { fill: '#22c55e20', stroke: '#22c55e', icon: Users },
     opportunity: { fill: '#3b82f620', stroke: '#3b82f6', icon: Briefcase },
     user: { fill: '#f59e0b20', stroke: '#f59e0b', icon: Users },
@@ -138,7 +138,7 @@ export function RelationshipMap({ accountNodeId, accountName }: RelationshipMapP
   const relationshipColors: Record<string, string> = {
     HAS_STAKEHOLDER: '#22c55e',
     DECIDES: '#f59e0b',
-    CHAMPIONS: '#7c3aed',
+    CHAMPIONS: '#5B4FE9',
     EVALUATES: '#3b82f6',
     OWNS_OPPORTUNITY: '#f97316',
     BELONGS_TO_ACCOUNT: '#6366f1',
@@ -147,7 +147,7 @@ export function RelationshipMap({ accountNodeId, accountName }: RelationshipMapP
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground">
-        <Sparkles className="h-5 w-5 animate-spin text-[#7c3aed] mr-2" />
+        <Sparkles className="h-5 w-5 animate-spin text-[#5B4FE9] mr-2" />
         Loading relationship map...
       </div>
     );

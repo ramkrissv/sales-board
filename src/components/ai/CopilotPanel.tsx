@@ -157,8 +157,8 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: 'var(--g-line)' }}>
         <div className="relative">
-          <div className="w-8 h-8 rounded-lg bg-[#7B52FF]/20 flex items-center justify-center">
-            <Bot className="h-4 w-4 text-[#7B52FF]" />
+          <div className="w-8 h-8 rounded-lg bg-[#5B4FE9]/20 flex items-center justify-center">
+            <Bot className="h-4 w-4 text-[#5B4FE9]" />
           </div>
           <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 animate-pulse" style={{ borderColor: 'var(--g-bg)' }} />
         </div>
@@ -186,13 +186,13 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
         {messages.map((msg) => (
           <div key={msg.id} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
             <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-              msg.role === 'assistant' ? 'bg-[#7B52FF]/15 text-[#7B52FF]' : 'bg-secondary text-muted-foreground'
+              msg.role === 'assistant' ? 'bg-[#5B4FE9]/15 text-[#5B4FE9]' : 'bg-secondary text-muted-foreground'
             }`}>
               {msg.role === 'assistant' ? <Sparkles className="h-3.5 w-3.5" /> : <User className="h-3.5 w-3.5" />}
             </div>
             <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed ${
               msg.role === 'user'
-                ? 'bg-[#7B52FF] text-white rounded-tr-sm'
+                ? 'bg-[#5B4FE9] text-white rounded-tr-sm'
                 : 'bg-card border border-border text-foreground rounded-tl-sm'
             }`}>
               {msg.role === 'assistant' ? (
@@ -210,8 +210,8 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
 
         {isLoading && (
           <div className="flex gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#7B52FF]/15 flex items-center justify-center">
-              <Loader2 className="h-3.5 w-3.5 text-[#7B52FF] animate-spin" />
+            <div className="w-7 h-7 rounded-lg bg-[#5B4FE9]/15 flex items-center justify-center">
+              <Loader2 className="h-3.5 w-3.5 text-[#5B4FE9] animate-spin" />
             </div>
             <div className="px-3 py-2 rounded-xl bg-card border border-border text-sm text-muted-foreground rounded-tl-sm">
               {mode === 'agent' ? 'Agent running tools...' : 'Analyzing...'}
@@ -229,7 +229,7 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
               <button
                 key={q}
                 onClick={() => { setInput(q); }}
-                className="w-full text-left px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-foreground bg-card border border-border hover:border-[#7B52FF]/30 transition-all"
+                className="w-full text-left px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-foreground bg-card border border-border hover:border-[#5B4FE9]/30 transition-all"
               >
                 {q}
               </button>
@@ -247,9 +247,9 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
                   quickInvokeMutation.mutate({ action: a.action });
                 }}
                 disabled={quickInvokeMutation.isPending}
-                className="w-full text-left px-3 py-2.5 rounded-lg text-xs bg-card border border-border hover:border-[#7c3aed]/30 transition-all flex items-center gap-2"
+                className="w-full text-left px-3 py-2.5 rounded-lg text-xs bg-card border border-border hover:border-[#5B4FE9]/30 transition-all flex items-center gap-2"
               >
-                <a.icon className="h-3.5 w-3.5 text-[#7c3aed]" />
+                <a.icon className="h-3.5 w-3.5 text-[#5B4FE9]" />
                 <span className="text-foreground">{a.label}</span>
               </button>
             ))}
@@ -267,12 +267,12 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={mode === 'agent' ? 'Give the agent a goal...' : 'Ask about your pipeline...'}
-            className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7B52FF]/40"
+            className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#5B4FE9]/40"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className="p-2 rounded-lg bg-[#7B52FF] hover:bg-[#6B42EF] text-white transition-colors disabled:opacity-50"
+            className="p-2 rounded-lg bg-[#5B4FE9] hover:bg-[#4A3ED4] text-white transition-colors disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
           </button>

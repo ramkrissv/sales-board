@@ -31,7 +31,7 @@ export default function AgentsPage() {
     'hygiene-agent': Shield, 'forecast-agent': BarChart3,
   };
   const agentColors: Record<string, string> = {
-    'deal-coach': '#7c3aed', 'research-agent': '#3b82f6', 'outreach-agent': '#22c55e',
+    'deal-coach': '#5B4FE9', 'research-agent': '#3b82f6', 'outreach-agent': '#22c55e',
     'hygiene-agent': '#f59e0b', 'forecast-agent': '#06b6d4',
   };
 
@@ -60,7 +60,7 @@ export default function AgentsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <Bot className="h-5 w-5 text-[#7c3aed]" /> Agent Command Center
+            <Bot className="h-5 w-5 text-[#5B4FE9]" /> Agent Command Center
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {agents.filter(a => a.isActive).length} active agents · {agents.length} total · Real Claude tool-calling
@@ -83,9 +83,9 @@ export default function AgentsPage() {
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${agentColors[action.agent]}15` }}>
                   <action.icon className="h-4 w-4" style={{ color: agentColors[action.agent] }} />
                 </div>
-                {isRunning && <Loader2 className="h-3 w-3 animate-spin text-[#7c3aed] ml-auto" />}
+                {isRunning && <Loader2 className="h-3 w-3 animate-spin text-[#5B4FE9] ml-auto" />}
               </div>
-              <div className="text-xs font-semibold text-foreground group-hover:text-[#7c3aed] transition-colors">{action.label}</div>
+              <div className="text-xs font-semibold text-foreground group-hover:text-[#5B4FE9] transition-colors">{action.label}</div>
               <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{action.desc}</div>
             </button>
           ))}
@@ -98,10 +98,10 @@ export default function AgentsPage() {
           {isRunning ? (
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-[#7c3aed]/15 flex items-center justify-center">
-                  <Brain className="h-5 w-5 text-[#7c3aed] animate-pulse" />
+                <div className="w-10 h-10 rounded-xl bg-[#5B4FE9]/15 flex items-center justify-center">
+                  <Brain className="h-5 w-5 text-[#5B4FE9] animate-pulse" />
                 </div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#7c3aed] animate-ping" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#5B4FE9] animate-ping" />
               </div>
               <div>
                 <div className="text-sm font-semibold text-foreground">Agent is thinking...</div>
@@ -113,7 +113,7 @@ export default function AgentsPage() {
               {/* Result header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-[#7c3aed]" />
+                  <Sparkles className="h-4 w-4 text-[#5B4FE9]" />
                   <span className="text-sm font-semibold text-foreground">Agent: {runResult.agentId}</span>
                   <span className="g-chip bg-emerald-500/10 text-emerald-400">{runResult.toolCalls?.length || 0} tool calls</span>
                 </div>
@@ -126,7 +126,7 @@ export default function AgentsPage() {
                   {runResult.toolCalls.map((call: any, i: number) => {
                     const toolLabels: Record<string, { label: string; icon: any; color: string }> = {
                       list_opportunities: { label: 'Scanned pipeline', icon: Eye, color: '#3b82f6' },
-                      get_opportunity: { label: `Checked ${call.params?.opportunityId || 'deal'}`, icon: Target, color: '#7c3aed' },
+                      get_opportunity: { label: `Checked ${call.params?.opportunityId || 'deal'}`, icon: Target, color: '#5B4FE9' },
                       get_forecast: { label: 'Ran forecast', icon: BarChart3, color: '#06b6d4' },
                       create_task: { label: 'Created task', icon: CheckSquare, color: '#22c55e' },
                       complete_task: { label: 'Completed task', icon: CheckSquare, color: '#10b981' },
@@ -173,7 +173,7 @@ export default function AgentsPage() {
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${
                             isWarning ? 'bg-amber-500/15 text-amber-400' :
                             isPositive ? 'bg-emerald-500/15 text-emerald-400' :
-                            'bg-[#7c3aed]/10 text-[#7c3aed]'
+                            'bg-[#5B4FE9]/10 text-[#5B4FE9]'
                           }`}>
                             {trimmed.match(/^\d+/)?.[0]}
                           </div>
@@ -223,11 +223,11 @@ export default function AgentsPage() {
           <input value={customGoal} onChange={e => setCustomGoal(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && customGoal.trim() && handleRunAgent(selectedAgent?.id || 'deal-coach', customGoal)}
             placeholder="Describe what you want the agent to do..."
-            className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+            className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#5B4FE9]/40" />
           <button
             onClick={() => customGoal.trim() && handleRunAgent(selectedAgent?.id || 'deal-coach', customGoal)}
             disabled={isRunning || !customGoal.trim()}
-            className="px-4 py-2 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 transition-colors">
+            className="px-4 py-2 rounded-lg bg-[#5B4FE9] hover:bg-[#4A3ED4] text-white text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 transition-colors">
             {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
             Run
           </button>
@@ -240,12 +240,12 @@ export default function AgentsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {agents.map(agent => {
             const Icon = agentIcons[agent.id] || Bot;
-            const color = agentColors[agent.id] || '#7c3aed';
+            const color = agentColors[agent.id] || '#5B4FE9';
             const isSelected = selectedAgent?.id === agent.id;
 
             return (
               <div key={agent.id}
-                className={`p-4 rounded-xl g-surface g-elevated hover-lift transition-all ${isSelected ? '!border-[#7c3aed]/40 ring-1 ring-[#7c3aed]/10' : ''}`}>
+                className={`p-4 rounded-xl g-surface g-elevated hover-lift transition-all ${isSelected ? '!border-[#5B4FE9]/40 ring-1 ring-[#5B4FE9]/10' : ''}`}>
                 {/* Card header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -333,7 +333,7 @@ export default function AgentsPage() {
             { name: 'qualify_lead', cat: 'Leads' },
           ].map(tool => (
             <div key={tool.name} className="px-3 py-2 rounded-lg bg-card border border-border text-[10px]">
-              <span className="font-mono text-[#7c3aed]">{tool.name}</span>
+              <span className="font-mono text-[#5B4FE9]">{tool.name}</span>
               <span className="text-muted-foreground ml-1.5">· {tool.cat}</span>
             </div>
           ))}

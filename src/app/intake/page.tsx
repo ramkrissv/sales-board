@@ -14,7 +14,7 @@ import { VoiceRecorder } from '@/components/voice/VoiceRecorder';
 type Channel = 'voice' | 'teams_transcript' | 'teams_chat' | 'outlook_email' | 'desktop_notes';
 
 const channels = [
-  { id: 'voice' as Channel, label: 'Voice / Audio', icon: Mic, description: 'Upload voice note or recording', color: '#7c3aed' },
+  { id: 'voice' as Channel, label: 'Voice / Audio', icon: Mic, description: 'Upload voice note or recording', color: '#5B4FE9' },
   { id: 'teams_transcript' as Channel, label: 'Teams Meeting', icon: Video, description: 'Paste Teams meeting transcript', color: '#3b82f6' },
   { id: 'teams_chat' as Channel, label: 'Teams Chat', icon: MessageSquare, description: 'Paste Teams chat thread', color: '#06b6d4' },
   { id: 'outlook_email' as Channel, label: 'Outlook Email', icon: Mail, description: 'Paste email or thread', color: '#f59e0b' },
@@ -159,7 +159,7 @@ function IntakeContent() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-          <Globe className="h-5 w-5 text-[#7c3aed]" /> Signal
+          <Globe className="h-5 w-5 text-[#5B4FE9]" /> Signal
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Capture signals from any channel — AI routes them to deals — AI extracts and routes automatically
@@ -234,7 +234,7 @@ function IntakeContent() {
                 className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground resize-y font-mono" />}
 
               <button onClick={handleProcess} disabled={processMutation.isPending || !content.trim()}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors disabled:opacity-50 w-full justify-center">
+                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#5B4FE9] hover:bg-[#4A3ED4] text-white font-medium transition-colors disabled:opacity-50 w-full justify-center">
                 {processMutation.isPending ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> AI is processing your {channels.find(c => c.id === selectedChannel)?.label.toLowerCase()}...</>
                 ) : (
@@ -253,7 +253,7 @@ function IntakeContent() {
               <span className={`g-chip ${result.confidence >= 80 ? 'bg-emerald-500/10 text-emerald-400' : result.confidence >= 50 ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
                 {result.confidence}% confidence
               </span>
-              <span className="g-chip bg-[#7c3aed]/10 text-[#7c3aed] capitalize">{(result.intent || '').replace('_', ' ')}</span>
+              <span className="g-chip bg-[#5B4FE9]/10 text-[#5B4FE9] capitalize">{(result.intent || '').replace('_', ' ')}</span>
               {result.matchedDealName && (
                 <span className="g-chip bg-blue-500/10 text-blue-400 flex items-center gap-1">
                   <Target className="h-3 w-3" /> {result.matchedDealName}
@@ -265,9 +265,9 @@ function IntakeContent() {
             </div>
 
             {/* Summary */}
-            <div className="p-4 rounded-xl bg-[#7c3aed]/5 border border-[#7c3aed]/20">
+            <div className="p-4 rounded-xl bg-[#5B4FE9]/5 border border-[#5B4FE9]/20">
               <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-[#7c3aed]" />
+                <Sparkles className="h-4 w-4 text-[#5B4FE9]" />
                 <span className="text-sm font-semibold text-foreground">AI Summary</span>
               </div>
               <p className="text-sm text-foreground leading-relaxed">{result.summary}</p>
@@ -307,7 +307,7 @@ function IntakeContent() {
                 <div className="g-section-label mb-2">Key Insights</div>
                 {result.extractedData.keyInsights.map((insight: string, i: number) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-foreground mb-1">
-                    <Sparkles className="h-3 w-3 text-[#7c3aed] mt-0.5 flex-shrink-0" /> {insight}
+                    <Sparkles className="h-3 w-3 text-[#5B4FE9] mt-0.5 flex-shrink-0" /> {insight}
                   </div>
                 ))}
               </div>
@@ -323,7 +323,7 @@ function IntakeContent() {
                     <span className="text-foreground flex-1">{step}</span>
                     {result.matchedDealId && (
                       <button onClick={() => handleAction({ type: 'add_task', description: step })}
-                        className="px-2 py-0.5 rounded bg-[#7c3aed]/10 text-[#7c3aed] text-[10px] hover:bg-[#7c3aed]/20 flex-shrink-0">
+                        className="px-2 py-0.5 rounded bg-[#5B4FE9]/10 text-[#5B4FE9] text-[10px] hover:bg-[#5B4FE9]/20 flex-shrink-0">
                         + Task
                       </button>
                     )}
@@ -342,7 +342,7 @@ function IntakeContent() {
                     <button key={i} onClick={() => !isDone && handleAction(action, i)}
                       disabled={isDone}
                       className={`flex items-center gap-3 w-full p-3 rounded-lg text-left transition-all ${isDone ? 'bg-emerald-500/5 border border-emerald-500/20 opacity-70' : 'g-surface hover-glow'}`}>
-                      {isDone ? <CheckSquare className="h-4 w-4 text-emerald-400 flex-shrink-0" /> : <Zap className="h-4 w-4 text-[#7c3aed] flex-shrink-0" />}
+                      {isDone ? <CheckSquare className="h-4 w-4 text-emerald-400 flex-shrink-0" /> : <Zap className="h-4 w-4 text-[#5B4FE9] flex-shrink-0" />}
                       <div className="flex-1">
                         <div className={`text-xs font-medium capitalize ${isDone ? 'text-emerald-400 line-through' : 'text-foreground'}`}>{action.type.replace(/_/g, ' ')}</div>
                         <div className="text-[11px] text-muted-foreground">{action.description}</div>
@@ -368,7 +368,7 @@ function IntakeContent() {
                 New Intake
               </button>
               {result.matchedDealId && (
-                <Link href={`/deal-room`} className="flex-1 px-4 py-2 rounded-lg bg-[#7c3aed] text-white text-sm font-medium text-center hover:bg-[#6d28d9] transition-colors">
+                <Link href={`/deal-room`} className="flex-1 px-4 py-2 rounded-lg bg-[#5B4FE9] text-white text-sm font-medium text-center hover:bg-[#4A3ED4] transition-colors">
                   Open in Deal Room
                 </Link>
               )}

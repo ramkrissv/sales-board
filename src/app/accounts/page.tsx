@@ -310,7 +310,7 @@ function AccountRow({ account, expanded, onToggle, onEdit, onDelete, scoreIntent
             <button
               onClick={(e) => { e.stopPropagation(); scoreIntentMutation.mutate({ id: account._id }); }}
               disabled={scoreIntentMutation.isPending}
-              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors disabled:opacity-50">
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[#5B4FE9]/10 text-[#5B4FE9] hover:bg-[#5B4FE9]/20 transition-colors disabled:opacity-50">
               {scoreIntentMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
               Score
             </button>
@@ -340,18 +340,18 @@ function AccountRow({ account, expanded, onToggle, onEdit, onDelete, scoreIntent
             <div className="mt-4 space-y-5">
               {/* AI Account Brief */}
               {accountBriefMutation.isPending && (
-                <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20 mb-4">
+                <div className="p-3 rounded-lg bg-[#5B4FE9]/5 border border-[#5B4FE9]/20 mb-4">
                   <div className="flex items-center gap-2">
-                    <Loader2 className="h-3.5 w-3.5 text-[#7c3aed] animate-spin" />
-                    <span className="text-xs font-semibold text-[#7c3aed]">Generating AI Account Brief...</span>
+                    <Loader2 className="h-3.5 w-3.5 text-[#5B4FE9] animate-spin" />
+                    <span className="text-xs font-semibold text-[#5B4FE9]">Generating AI Account Brief...</span>
                   </div>
                 </div>
               )}
               {accountBrief && (
-                <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20 mb-4 reveal">
+                <div className="p-3 rounded-lg bg-[#5B4FE9]/5 border border-[#5B4FE9]/20 mb-4 reveal">
                   <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="h-3.5 w-3.5 text-[#7c3aed]" />
-                    <span className="text-xs font-semibold text-[#7c3aed]">AI Account Brief</span>
+                    <Sparkles className="h-3.5 w-3.5 text-[#5B4FE9]" />
+                    <span className="text-xs font-semibold text-[#5B4FE9]">AI Account Brief</span>
                   </div>
                   <p className="text-xs text-foreground leading-relaxed">{accountBrief}</p>
                 </div>

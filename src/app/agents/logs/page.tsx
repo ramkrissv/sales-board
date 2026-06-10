@@ -19,7 +19,7 @@ export default function AgentLogsPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-          <Bot className="h-5 w-5 text-[#7c3aed]" /> Agent Observability
+          <Bot className="h-5 w-5 text-[#5B4FE9]" /> Agent Observability
         </h1>
         <p className="text-sm text-muted-foreground">Run history, performance metrics, and execution logs</p>
       </div>
@@ -27,7 +27,7 @@ export default function AgentLogsPage() {
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'Total Runs', value: totalRuns, icon: Zap, color: '#7c3aed' },
+          { label: 'Total Runs', value: totalRuns, icon: Zap, color: '#5B4FE9' },
           { label: 'Avg Tool Calls', value: avgToolCalls, icon: GitBranch, color: '#3b82f6' },
           { label: 'Success Rate', value: '98%', icon: CheckSquare, color: '#22c55e' },
           { label: 'Avg Latency', value: '3.2s', icon: Clock, color: '#f59e0b' },
@@ -56,8 +56,8 @@ export default function AgentLogsPage() {
           <div className="divide-y" style={{ borderColor: 'var(--g-line)' }}>
             {agentActivities.map((activity: any, i: number) => (
               <div key={activity._id || i} className="flex items-center gap-4 px-4 py-3 hover:bg-card/50 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-[#7c3aed]/10 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="h-4 w-4 text-[#7c3aed]" />
+                <div className="w-8 h-8 rounded-lg bg-[#5B4FE9]/10 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="h-4 w-4 text-[#5B4FE9]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-foreground">{activity.description}</div>

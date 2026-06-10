@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Montserrat, JetBrains_Mono } from 'next/font/google';
+import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { TRPCProvider } from '@/lib/trpc/provider';
 import { AppShell } from '@/components/layout/AppShell';
@@ -10,7 +10,7 @@ const inter = Inter({
   variable: '--font-sans',
 });
 
-const montserrat = Montserrat({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   variable: '--font-display',
 });
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${montserrat.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <Providers>
           <TRPCProvider>
             <AppShell>
