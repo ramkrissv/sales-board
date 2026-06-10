@@ -24,6 +24,7 @@ const navGroups: { label: string; items: { icon: any; label: string; href: strin
     items: [
       { icon: Magnet, label: 'Leads', href: '/leads', badge: 12 },
       { icon: Kanban, label: 'Deals', href: '/pipeline' },
+      { icon: MessageCircle, label: 'Deal Room', href: '/deal-room' },
       { icon: Network, label: 'Accounts', href: '/accounts' },
       { icon: Users, label: 'Contacts', href: '/stakeholders' },
       { icon: CheckSquare, label: 'Tasks', href: '/tasks', badge: 5 },
