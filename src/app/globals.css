@@ -76,10 +76,10 @@
   h1, h2, h3 { font-family: var(--font-display); }
 }
 
-/* ─── Dot Grid Background ─── */
+/* ─── Dot Grid Background (exact match to Galent Agent Builder) ─── */
 .g-scene {
   background-image: radial-gradient(var(--g-dot) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-size: 16px 16px;
   background-color: var(--g-bg);
 }
 
