@@ -982,6 +982,10 @@ export async function seed() {
   });
   console.log('[seed] Admin user created (admin@galent.com).');
 
+  // 7. Seed engagement types
+  const { seedEngagementTypes } = await import('./seed-engagement-types');
+  await seedEngagementTypes();
+
   console.log('[seed] Seeding complete.');
   await mongoose.disconnect();
 }
