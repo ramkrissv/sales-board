@@ -17,6 +17,7 @@ import { notificationRouter } from './notification';
 import { workflowRouter } from './workflow';
 import { leadRouter } from './lead';
 import { activityRouter } from './activity';
+import { ontologyRouter } from './ontology';
 
 export const appRouter = router({
   opportunity: opportunityRouter,
@@ -37,6 +38,7 @@ export const appRouter = router({
   workflow: workflowRouter,
   lead: leadRouter,
   activity: activityRouter,
+  ontology: ontologyRouter,
 });
 
 export type AppRouter = typeof appRouter;

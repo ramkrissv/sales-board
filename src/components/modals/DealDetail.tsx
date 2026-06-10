@@ -105,6 +105,11 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const utils = trpc.useUtils();
   const { data: engagementTypes = [] } = trpc.engagementType.list.useQuery();
   const { data: workflows = [] } = trpc.workflow.list.useQuery();
+  const { data: stageTemplate } = trpc.ontology.getForStage.useQuery({
+    stage: opp?.status || 'Discovery',
+    engagementType: (opp as any)?.engagementType,
+    serviceLine: opp?.serviceLine,
+  }, { enabled: !!opp });
 
   const createStakeholderMutation = trpc.stakeholder.create.useMutation({
     onSuccess: () => {
@@ -530,6 +535,67 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                   </div>
                 ) : null;
               })()}
+
+              {/* Stage Ontology: Requirements & Artifacts */}
+              {stageTemplate && (
+                <div className="space-y-3">
+                  <div className="g-section-label">Stage: {opp.status} — Requirements &amp; Artifacts</div>
+
+                  {/* Gate Criteria */}
+                  {(stageTemplate as any).gateCriteria?.length > 0 && (
+                    <div className="p-3 rounded-lg bg-card border border-border space-y-1.5">
+                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Gate Criteria</div>
+                      {(stageTemplate as any).gateCriteria.map((gate: any, i: number) => {
+                        let met = false;
+                        if (gate.field === 'tcv') met = (opp.tcv || 0) > 0;
+                        else if (gate.field === 'margin') met = (opp.margin || 0) > 20;
+                        else if (gate.field === 'industry') met = !!opp.industry;
+                        else if (gate.field === 'billingModel') met = !!opp.billingModel || !!(opp as any).engagementType;
+                        else if (gate.field === 'customerStakeholders') met = (opp.customerStakeholders || []).length > 0;
+                        else if (gate.field === 'conversationLog') met = (opp.conversationLog || '').length > 50;
+
+                        return (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${met ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                              {met ? '\u2713' : '\u2717'}
+                            </div>
+                            <span className={met ? 'text-foreground' : 'text-muted-foreground'}>{gate.description}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Templates */}
+                  {(stageTemplate as any).templates?.length > 0 && (
+                    <div className="p-3 rounded-lg bg-card border border-border space-y-1.5">
+                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Stage Artifacts</div>
+                      {(stageTemplate as any).templates.map((tmpl: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          <span className={`g-chip ${tmpl.required ? 'bg-orange-500/10 text-orange-400' : 'bg-zinc-500/10 text-muted-foreground'}`}>
+                            {tmpl.required ? 'Required' : 'Optional'}
+                          </span>
+                          <span className="text-foreground">{tmpl.name}</span>
+                          {tmpl.aiGenerable && <span className="g-chip bg-[#7c3aed]/10 text-[#7c3aed]">AI</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Roles */}
+                  {(stageTemplate as any).roles?.length > 0 && (
+                    <div className="p-3 rounded-lg bg-card border border-border space-y-1.5">
+                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Key Roles</div>
+                      {(stageTemplate as any).roles.map((role: any, i: number) => (
+                        <div key={i} className="text-xs">
+                          <span className="font-medium text-foreground">{role.role}</span>
+                          <span className="text-muted-foreground"> — {role.responsibility}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
