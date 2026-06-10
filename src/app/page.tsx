@@ -6,16 +6,29 @@ import { useState, useEffect } from 'react';
 import {
   Sparkles, TrendingUp, AlertTriangle, Target, ChevronRight,
   Zap, ArrowRight, Clock, DollarSign, Users, CheckSquare,
-  Brain, Shield, Rocket, Eye
+  Brain, Shield, Rocket, Eye, FileText, Plus
 } from 'lucide-react';
 import Link from 'next/link';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 
+function getRelativeTime(date: Date): string {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
 function HomeContent() {
   const { filteredOpportunities: opportunities, isLoading } = useOpportunities();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const { data: activities = [] } = trpc.activity.list.useQuery();
 
   const pipelineMutation = trpc.ai.analyzePipeline.useMutation({
     onSuccess: (data) => setAiSummary(data.summary),
@@ -266,6 +279,39 @@ function HomeContent() {
                 </button>
               );
             })}
+        </div>
+      </div>
+
+      {/* Activity Feed */}
+      <div className="animate-flow-in animate-flow-in-delay-4">
+        <span className="g-section-label flex items-center gap-1.5 mb-3">
+          <Clock className="h-3 w-3" /> Activity Feed
+        </span>
+        <div className="space-y-1.5">
+          {activities.slice(0, 6).map((activity: any, i: number) => {
+            const icons: Record<string, { icon: any; color: string }> = {
+              'deal_created': { icon: Plus, color: 'text-emerald-400' },
+              'stage_change': { icon: ArrowRight, color: 'text-blue-400' },
+              'task_completed': { icon: CheckSquare, color: 'text-green-400' },
+              'ai_analysis': { icon: Sparkles, color: 'text-[#7c3aed]' },
+              'lead_qualified': { icon: Target, color: 'text-amber-400' },
+              'stakeholder_added': { icon: Users, color: 'text-cyan-400' },
+              'sow_generated': { icon: FileText, color: 'text-emerald-400' },
+            };
+            const config = icons[activity.type] || { icon: Zap, color: 'text-muted-foreground' };
+            const Icon = config.icon;
+            const timeAgo = getRelativeTime(new Date(activity.createdAt));
+
+            return (
+              <div key={activity._id || i} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-card/50 transition-colors">
+                <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${config.color}`} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs text-foreground">{activity.description}</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground flex-shrink-0">{timeAgo}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

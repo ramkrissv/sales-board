@@ -60,6 +60,57 @@ export const aiRouter = router({
     return { summary, generatedAt: new Date().toISOString() };
   }),
 
+  // Generate SOW document
+  generateSOW: protectedProcedure
+    .input(z.object({ opportunityId: z.string() }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const Opportunity = getOpportunityModel();
+      const Stakeholder = getStakeholderModel();
+
+      const opp = await Opportunity.findOne({ id: input.opportunityId }).lean();
+      if (!opp) throw new Error('Opportunity not found');
+
+      const stakeholders = await Stakeholder.find({ opportunityId: input.opportunityId }).lean();
+
+      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
+      const client = getAnthropicClient();
+
+      const response = await client.messages.create({
+        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: `Generate a professional Statement of Work (SOW) document for this engagement:
+
+Customer: ${(opp as any).customerName}
+Project: ${(opp as any).opportunityName}
+TCV: $${((opp as any).tcv || 0).toLocaleString()}
+Duration: ${(opp as any).dealDuration}
+Service Line: ${(opp as any).serviceLine || 'IT Services'}
+Billing Model: ${(opp as any).billingModel || 'Time & Material'}
+Engagement Type: ${(opp as any).engagementType || (opp as any).billingModel || 'Time & Material'}
+Industry: ${(opp as any).industry}
+Start Date: ${(opp as any).startDate}
+Key Stakeholders: ${stakeholders.map((s: any) => `${s.name} (${s.title})`).join(', ')}
+Context: ${(opp as any).conversationLog || 'No additional context'}
+
+Generate a complete SOW with these sections:
+1. Executive Summary
+2. Scope of Work
+3. Deliverables
+4. Timeline & Milestones
+5. Team & Resources
+6. Pricing & Payment Terms
+7. Assumptions & Dependencies
+8. Acceptance Criteria
+9. Change Management
+
+Format as clean markdown. Be specific to the project, not generic.` }],
+      });
+
+      const content = response.content[0].type === 'text' ? response.content[0].text : '';
+      return { content, generatedAt: new Date().toISOString(), opportunityId: input.opportunityId };
+    }),
+
   // Chat with Deal Coach (conversational)
   chat: protectedProcedure
     .input(
