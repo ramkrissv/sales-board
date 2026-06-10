@@ -24,6 +24,43 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const [analysis, setAnalysis] = useState<any>(null);
   const analysisMutation = trpc.ai.analyzeDeal.useMutation();
 
+  // Stakeholder form state
+  const [showStakeholderForm, setShowStakeholderForm] = useState(false);
+  const [stakeholderForm, setStakeholderForm] = useState({
+    name: '', title: '', email: '', phone: '', linkedInUrl: '',
+    isPrimaryContact: false, isDecisionMaker: false,
+  });
+
+  // Task form state
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskForm, setTaskForm] = useState({
+    name: '', owner: '', dueDate: '', priority: 'Medium' as 'Low' | 'Medium' | 'High' | 'Critical', notes: '',
+  });
+
+  const utils = trpc.useUtils();
+
+  const createStakeholderMutation = trpc.stakeholder.create.useMutation({
+    onSuccess: () => {
+      utils.opportunity.list.invalidate();
+      setStakeholderForm({ name: '', title: '', email: '', phone: '', linkedInUrl: '', isPrimaryContact: false, isDecisionMaker: false });
+      setShowStakeholderForm(false);
+    },
+  });
+
+  const createTaskMutation = trpc.task.create.useMutation({
+    onSuccess: () => {
+      utils.opportunity.list.invalidate();
+      setTaskForm({ name: '', owner: '', dueDate: '', priority: 'Medium', notes: '' });
+      setShowTaskForm(false);
+    },
+  });
+
+  const updateTaskMutation = trpc.task.update.useMutation({
+    onSuccess: () => {
+      utils.opportunity.list.invalidate();
+    },
+  });
+
   if (!opp) return null;
 
   const stakeholders = opp.customerStakeholders || [];
@@ -55,12 +92,38 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
     }
   };
 
+  const handleCreateStakeholder = () => {
+    if (!stakeholderForm.name || !stakeholderForm.title) return;
+    createStakeholderMutation.mutate({
+      opportunityId: opp.id,
+      ...stakeholderForm,
+    });
+  };
+
+  const handleCreateTask = () => {
+    if (!taskForm.name || !taskForm.owner || !taskForm.dueDate) return;
+    createTaskMutation.mutate({
+      opportunityId: opp.id,
+      ...taskForm,
+    });
+  };
+
+  const handleToggleTaskStatus = (task: any) => {
+    if (!task.id) return;
+    updateTaskMutation.mutate({
+      id: task.id,
+      status: task.status === 'complete' ? 'pending' : 'complete',
+    });
+  };
+
   const tabs = [
     { id: 'details' as const, label: 'Details' },
     { id: 'stakeholders' as const, label: `Stakeholders (${stakeholders.length})` },
     { id: 'tasks' as const, label: `Tasks (${completedTasks}/${tasks.length})` },
     { id: 'log' as const, label: 'Log' },
   ];
+
+  const inputClasses = 'w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#7B52FF]/20 focus:border-[#7B52FF]';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-8 pb-8">
@@ -165,11 +228,11 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-lg bg-card border border-border">
                   <div className="g-section-label mb-1">TCV</div>
-                  <div className="g-kpi text-foreground text-lg">${opp.tcv > 0 ? opp.tcv.toLocaleString() : '—'}</div>
+                  <div className="g-kpi text-foreground text-lg">${opp.tcv > 0 ? opp.tcv.toLocaleString() : '\u2014'}</div>
                 </div>
                 <div className="p-3 rounded-lg bg-card border border-border">
                   <div className="g-section-label mb-1">Margin</div>
-                  <div className="g-kpi text-foreground text-lg">{opp.margin ? `${opp.margin}%` : '—'}</div>
+                  <div className="g-kpi text-foreground text-lg">{opp.margin ? `${opp.margin}%` : '\u2014'}</div>
                 </div>
                 <div className="p-3 rounded-lg bg-card border border-border">
                   <div className="g-section-label mb-1">Close Date</div>
@@ -182,8 +245,8 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                 {[
                   { icon: Building2, label: 'Industry', value: opp.industry, field: 'industry' },
                   { icon: Globe, label: 'Region', value: opp.region, field: 'region' },
-                  { icon: Briefcase, label: 'Service Line', value: opp.serviceLine || '—', field: 'serviceLine' },
-                  { icon: DollarSign, label: 'Billing Model', value: opp.billingModel || '—', field: 'billingModel' },
+                  { icon: Briefcase, label: 'Service Line', value: opp.serviceLine || '\u2014', field: 'serviceLine' },
+                  { icon: DollarSign, label: 'Billing Model', value: opp.billingModel || '\u2014', field: 'billingModel' },
                   { icon: Clock, label: 'Duration', value: opp.dealDuration, field: 'dealDuration' },
                   { icon: Users, label: 'Owner', value: opp.primaryOwner, field: 'primaryOwner' },
                   { icon: Calendar, label: 'Start Date', value: format(new Date(opp.startDate), 'MMM d, yyyy'), field: 'startDate' },
@@ -227,7 +290,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                     {(opp.salesPOCs || []).map(poc => (
                       <div key={poc} className="text-sm text-foreground">{poc}</div>
                     ))}
-                    {(!opp.salesPOCs || opp.salesPOCs.length === 0) && <div className="text-sm text-muted-foreground">—</div>}
+                    {(!opp.salesPOCs || opp.salesPOCs.length === 0) && <div className="text-sm text-muted-foreground">{'\u2014'}</div>}
                   </div>
                 </div>
                 <div>
@@ -236,7 +299,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                     {(opp.presalesPOCs || []).map(poc => (
                       <div key={poc} className="text-sm text-foreground">{poc}</div>
                     ))}
-                    {(!opp.presalesPOCs || opp.presalesPOCs.length === 0) && <div className="text-sm text-muted-foreground">—</div>}
+                    {(!opp.presalesPOCs || opp.presalesPOCs.length === 0) && <div className="text-sm text-muted-foreground">{'\u2014'}</div>}
                   </div>
                 </div>
               </div>
@@ -245,7 +308,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
 
           {activeTab === 'stakeholders' && (
             <div className="space-y-3">
-              {stakeholders.length === 0 && <div className="text-center py-8 text-muted-foreground text-sm">No stakeholders added yet.</div>}
+              {stakeholders.length === 0 && !showStakeholderForm && <div className="text-center py-8 text-muted-foreground text-sm">No stakeholders added yet.</div>}
               {stakeholders.map((s, i) => (
                 <div key={s.id || i} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
                   <div className="w-9 h-9 rounded-full bg-[#7B52FF]/15 flex items-center justify-center text-[#7B52FF] text-xs font-bold flex-shrink-0">
@@ -265,12 +328,101 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                   </div>
                 </div>
               ))}
+
+              {/* Inline Stakeholder Form */}
+              {showStakeholderForm && (
+                <div className="p-4 rounded-lg bg-card border border-border space-y-3">
+                  <div className="g-section-label">New Stakeholder</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      className={inputClasses}
+                      placeholder="Name *"
+                      value={stakeholderForm.name}
+                      onChange={e => setStakeholderForm(f => ({ ...f, name: e.target.value }))}
+                    />
+                    <input
+                      className={inputClasses}
+                      placeholder="Title *"
+                      value={stakeholderForm.title}
+                      onChange={e => setStakeholderForm(f => ({ ...f, title: e.target.value }))}
+                    />
+                    <input
+                      className={inputClasses}
+                      placeholder="Email"
+                      type="email"
+                      value={stakeholderForm.email}
+                      onChange={e => setStakeholderForm(f => ({ ...f, email: e.target.value }))}
+                    />
+                    <input
+                      className={inputClasses}
+                      placeholder="Phone"
+                      value={stakeholderForm.phone}
+                      onChange={e => setStakeholderForm(f => ({ ...f, phone: e.target.value }))}
+                    />
+                  </div>
+                  <input
+                    className={inputClasses}
+                    placeholder="LinkedIn URL"
+                    value={stakeholderForm.linkedInUrl}
+                    onChange={e => setStakeholderForm(f => ({ ...f, linkedInUrl: e.target.value }))}
+                  />
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={stakeholderForm.isPrimaryContact}
+                        onChange={e => setStakeholderForm(f => ({ ...f, isPrimaryContact: e.target.checked }))}
+                        className="rounded border-border"
+                      />
+                      Primary Contact
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={stakeholderForm.isDecisionMaker}
+                        onChange={e => setStakeholderForm(f => ({ ...f, isDecisionMaker: e.target.checked }))}
+                        className="rounded border-border"
+                      />
+                      Decision Maker
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={handleCreateStakeholder}
+                      disabled={!stakeholderForm.name || !stakeholderForm.title || createStakeholderMutation.isPending}
+                      className="px-3 py-1.5 text-xs font-medium bg-[#7B52FF] text-white rounded-lg hover:bg-[#6B42EF] disabled:opacity-50 transition-colors"
+                    >
+                      {createStakeholderMutation.isPending ? 'Adding...' : 'Add Stakeholder'}
+                    </button>
+                    <button
+                      onClick={() => { setShowStakeholderForm(false); setStakeholderForm({ name: '', title: '', email: '', phone: '', linkedInUrl: '', isPrimaryContact: false, isDecisionMaker: false }); }}
+                      className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {createStakeholderMutation.isError && (
+                    <p className="text-xs text-red-400">{createStakeholderMutation.error.message}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Add Stakeholder Button */}
+              {!showStakeholderForm && (
+                <button
+                  onClick={() => setShowStakeholderForm(true)}
+                  className="flex items-center gap-2 w-full p-3 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-[#7B52FF]/40 transition-colors text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Stakeholder
+                </button>
+              )}
             </div>
           )}
 
           {activeTab === 'tasks' && (
             <div className="space-y-2">
-              {tasks.length === 0 && <div className="text-center py-8 text-muted-foreground text-sm">No tasks added yet.</div>}
+              {tasks.length === 0 && !showTaskForm && <div className="text-center py-8 text-muted-foreground text-sm">No tasks added yet.</div>}
               {tasks.map((t, i) => {
                 const isOverdue = t.status === 'pending' && new Date(t.dueDate) < new Date();
                 const priorityColors: Record<string, string> = {
@@ -278,7 +430,11 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                 };
                 return (
                   <div key={t.id || i} className={`flex items-center gap-3 p-3 rounded-lg bg-card border ${isOverdue ? 'border-red-500/30' : 'border-border'}`}>
-                    <div className={`w-4 h-4 rounded border-2 flex-shrink-0 ${t.status === 'complete' ? 'bg-green-500/20 border-green-500' : 'border-muted-foreground'}`} />
+                    <button
+                      onClick={() => handleToggleTaskStatus(t)}
+                      disabled={updateTaskMutation.isPending}
+                      className={`w-4 h-4 rounded border-2 flex-shrink-0 transition-colors cursor-pointer ${t.status === 'complete' ? 'bg-green-500/20 border-green-500' : 'border-muted-foreground hover:border-[#7B52FF]'}`}
+                    />
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm ${t.status === 'complete' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{t.name}</div>
                       <div className="text-xs text-muted-foreground">{t.owner} · {format(new Date(t.dueDate), 'MMM d')}</div>
@@ -287,6 +443,78 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                   </div>
                 );
               })}
+
+              {/* Inline Task Form */}
+              {showTaskForm && (
+                <div className="p-4 rounded-lg bg-card border border-border space-y-3">
+                  <div className="g-section-label">New Task</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      className={inputClasses}
+                      placeholder="Task name *"
+                      value={taskForm.name}
+                      onChange={e => setTaskForm(f => ({ ...f, name: e.target.value }))}
+                    />
+                    <input
+                      className={inputClasses}
+                      placeholder="Owner *"
+                      value={taskForm.owner}
+                      onChange={e => setTaskForm(f => ({ ...f, owner: e.target.value }))}
+                    />
+                    <input
+                      className={inputClasses}
+                      type="date"
+                      value={taskForm.dueDate}
+                      onChange={e => setTaskForm(f => ({ ...f, dueDate: e.target.value }))}
+                    />
+                    <select
+                      className={inputClasses}
+                      value={taskForm.priority}
+                      onChange={e => setTaskForm(f => ({ ...f, priority: e.target.value as any }))}
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Critical">Critical</option>
+                    </select>
+                  </div>
+                  <input
+                    className={inputClasses}
+                    placeholder="Notes (optional)"
+                    value={taskForm.notes}
+                    onChange={e => setTaskForm(f => ({ ...f, notes: e.target.value }))}
+                  />
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={handleCreateTask}
+                      disabled={!taskForm.name || !taskForm.owner || !taskForm.dueDate || createTaskMutation.isPending}
+                      className="px-3 py-1.5 text-xs font-medium bg-[#7B52FF] text-white rounded-lg hover:bg-[#6B42EF] disabled:opacity-50 transition-colors"
+                    >
+                      {createTaskMutation.isPending ? 'Adding...' : 'Add Task'}
+                    </button>
+                    <button
+                      onClick={() => { setShowTaskForm(false); setTaskForm({ name: '', owner: '', dueDate: '', priority: 'Medium', notes: '' }); }}
+                      className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {createTaskMutation.isError && (
+                    <p className="text-xs text-red-400">{createTaskMutation.error.message}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Add Task Button */}
+              {!showTaskForm && (
+                <button
+                  onClick={() => setShowTaskForm(true)}
+                  className="flex items-center gap-2 w-full p-3 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-[#7B52FF]/40 transition-colors text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Task
+                </button>
+              )}
             </div>
           )}
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
+import { FilterPanel } from '@/components/shared/FilterPanel';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import {
@@ -12,7 +13,7 @@ import Link from 'next/link';
 import { DealDetail } from '@/components/modals/DealDetail';
 
 function HomeContent() {
-  const { opportunities, isLoading } = useOpportunities();
+  const { filteredOpportunities: opportunities, isLoading } = useOpportunities();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -213,6 +214,7 @@ function HomeContent() {
 export default function HomePage() {
   return (
     <OpportunityProvider>
+      <FilterPanel />
       <HomeContent />
     </OpportunityProvider>
   );

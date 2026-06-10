@@ -1,6 +1,7 @@
 'use client';
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
+import { FilterPanel } from '@/components/shared/FilterPanel';
 import { isToday, isPast, isAfter, endOfWeek, addWeeks, startOfDay, isThisWeek } from 'date-fns';
 import { format } from 'date-fns';
 
@@ -62,6 +63,7 @@ function ScheduleContent() {
 export default function SchedulePage() {
   return (
     <OpportunityProvider>
+      <FilterPanel />
       <ScheduleContent />
     </OpportunityProvider>
   );

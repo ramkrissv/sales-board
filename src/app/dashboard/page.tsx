@@ -1,9 +1,10 @@
 'use client';
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
+import { FilterPanel } from '@/components/shared/FilterPanel';
 
 function AnalyticsContent() {
-  const { opportunities, isLoading } = useOpportunities();
+  const { filteredOpportunities: opportunities, isLoading } = useOpportunities();
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading analytics...</div>;
@@ -130,6 +131,7 @@ function AnalyticsContent() {
 export default function DashboardPage() {
   return (
     <OpportunityProvider>
+      <FilterPanel />
       <AnalyticsContent />
     </OpportunityProvider>
   );

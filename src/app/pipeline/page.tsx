@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { OpportunityProvider } from '@/lib/store';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { Sparkles } from 'lucide-react';
+import { FilterPanel } from '@/components/shared/FilterPanel';
 
 const KanbanBoard = dynamic(
   () => import('@/components/kanban/KanbanBoard').then(m => ({ default: m.KanbanBoard })),
@@ -23,6 +24,7 @@ export default function PipelinePage() {
 
   return (
     <OpportunityProvider>
+      <FilterPanel />
       <KanbanBoard onCardClick={setSelectedOppId} />
       {selectedOppId && (
         <DealDetail
