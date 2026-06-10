@@ -6,6 +6,34 @@ import { useState } from 'react';
 import { Sparkles, Send, Loader2, BarChart3, TrendingUp, Users, DollarSign } from 'lucide-react';
 import { GenUI, parseToGenUI } from '@/components/ai/GenUI';
 
+function renderMiniChart(text: string): React.ReactElement | null {
+  // Detect patterns like "Stage: Number" repeated
+  const patterns = text.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)\s*[:=]\s*(\d+)/g);
+  if (!patterns || patterns.length < 3) return null;
+
+  const data = patterns.map(p => {
+    const match = p.match(/(.+?)\s*[:=]\s*(\d+)/);
+    return match ? { label: match[1].trim(), value: parseInt(match[2]) } : null;
+  }).filter(Boolean) as { label: string; value: number }[];
+
+  if (data.length < 3) return null;
+  const max = Math.max(...data.map(d => d.value), 1);
+
+  return (
+    <div className="mt-3 p-3 rounded-lg bg-card border border-border">
+      <div className="flex items-end gap-2" style={{ height: '80px' }}>
+        {data.map((d, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+            <span className="text-[10px] font-bold text-foreground g-metric">{d.value}</span>
+            <div className="w-full rounded-t-md bg-[#7c3aed]/20" style={{ height: `${(d.value / max) * 60}px` }} />
+            <span className="text-[9px] text-muted-foreground truncate w-full text-center">{d.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AskContent() {
   const { opportunities } = useOpportunities();
   const [query, setQuery] = useState('');
@@ -75,11 +103,14 @@ function AskContent() {
                 : 'g-surface text-foreground rounded-tl-sm'
             }`}>
               {result.type === 'answer' ? (
-                <GenUI blocks={parseToGenUI(result.content, opportunities)} onAction={(action, data) => {
-                  if (action === 'open_deal' && data?.id) {
-                    // Handle opening deal
-                  }
-                }} />
+                <>
+                  <GenUI blocks={parseToGenUI(result.content, opportunities)} onAction={(action, data) => {
+                    if (action === 'open_deal' && data?.id) {
+                      // Handle opening deal
+                    }
+                  }} />
+                  {renderMiniChart(result.content)}
+                </>
               ) : (
                 <span className="whitespace-pre-wrap">{result.content}</span>
               )}
