@@ -23,7 +23,7 @@ const navGroups: { label: string; items: { icon: any; label: string; href: strin
     label: '',
     items: [
       { icon: Magnet, label: 'Leads', href: '/leads', badge: 12 },
-      { icon: Globe, label: 'Pulse', href: '/intake' },
+      { icon: Globe, label: 'Signal', href: '/intake' },
       { icon: Kanban, label: 'Deals', href: '/pipeline' },
       { icon: MessageCircle, label: 'Deal Room', href: '/deal-room' },
       { icon: Network, label: 'Accounts', href: '/accounts' },
