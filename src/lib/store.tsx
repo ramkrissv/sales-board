@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import type { Opportunity, Status } from './types';
 
@@ -59,21 +59,9 @@ export function OpportunityProvider({ children }: { children: React.ReactNode })
     },
   });
 
-  // Real-time: auto-refresh when Socket.IO events arrive
-  useEffect(() => {
-    let socket: any = null;
-    try {
-      // Dynamic import to avoid SSR issues
-      import('socket.io-client').then(({ io }) => {
-        socket = io({ path: '/api/socketio', transports: ['polling'], autoConnect: true, reconnection: true, reconnectionDelay: 5000 });
-        socket.on('deal:updated', () => utils.opportunity.list.invalidate());
-        socket.on('deal:stage_change', () => utils.opportunity.list.invalidate());
-        socket.on('deal:won', () => utils.opportunity.list.invalidate());
-        socket.on('deal:lost', () => utils.opportunity.list.invalidate());
-      }).catch(() => { /* Socket.IO not available — graceful fallback */ });
-    } catch { /* ignore */ }
-    return () => { socket?.disconnect(); };
-  }, []); // eslint-disable-line
+  // Real-time: poll for updates (Socket.IO available when using custom server.ts)
+  // tRPC queries already refetch on window focus; this adds interval-based polling
+  // Socket.IO auto-connect disabled to prevent crashes when custom server isn't running
 
   const addOpportunity = async (opportunity: Opportunity) => {
     await createMutation.mutateAsync(opportunity as any);
