@@ -3,8 +3,9 @@
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { trpc } from '@/lib/trpc/client';
 import { useState } from 'react';
-import { Sparkles, Send, Loader2, BarChart3, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { Sparkles, Send, Loader2, BarChart3, TrendingUp, Users, DollarSign, AlertTriangle, Target, Clock } from 'lucide-react';
 import { GenUI, parseToGenUI } from '@/components/ai/GenUI';
+import { DealDetail } from '@/components/modals/DealDetail';
 
 function renderMiniChart(text: string): React.ReactElement | null {
   // Detect patterns like "Stage: Number" repeated
@@ -38,6 +39,7 @@ function AskContent() {
   const { opportunities } = useOpportunities();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ type: string; content: string; timestamp: Date }[]>([]);
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   const chatMutation = trpc.ai.chat.useMutation({
     onSuccess: (data) => {
@@ -69,8 +71,10 @@ function AskContent() {
   const quickQuestions = [
     { icon: DollarSign, q: 'What is my total pipeline value by stage?', color: 'text-[#7c3aed]' },
     { icon: TrendingUp, q: 'Which deals are most likely to close this month?', color: 'text-emerald-400' },
+    { icon: AlertTriangle, q: 'Which deals are at risk and why?', color: 'text-red-400' },
     { icon: Users, q: 'Who are my top performing sales reps?', color: 'text-blue-400' },
-    { icon: BarChart3, q: 'What is the conversion rate between stages?', color: 'text-amber-400' },
+    { icon: Target, q: 'What is the weighted forecast for this quarter?', color: 'text-amber-400' },
+    { icon: Clock, q: 'Which deals have been stuck in the same stage for over 2 weeks?', color: 'text-orange-400' },
   ];
 
   return (
@@ -82,7 +86,7 @@ function AskContent() {
 
       {/* Quick questions */}
       {results.length === 0 && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {quickQuestions.map((qq, i) => (
             <button key={i} onClick={() => { setQuery(qq.q); }}
               className="p-4 rounded-xl g-surface g-elevated text-left hover:!border-[#7c3aed]/30 transition-all group">
@@ -106,7 +110,7 @@ function AskContent() {
                 <>
                   <GenUI blocks={parseToGenUI(result.content, opportunities)} onAction={(action, data) => {
                     if (action === 'open_deal' && data?.id) {
-                      // Handle opening deal
+                      setSelectedOppId(data.id);
                     }
                   }} />
                   {renderMiniChart(result.content)}
@@ -140,6 +144,8 @@ function AskContent() {
           </button>
         </div>
       </div>
+
+      {selectedOppId && <DealDetail opportunityId={selectedOppId} onClose={() => setSelectedOppId(null)} />}
     </div>
   );
 }

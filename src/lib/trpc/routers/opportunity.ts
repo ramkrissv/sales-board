@@ -8,6 +8,15 @@ import { Task } from '@/lib/db/models/task';
 import { ResourceLink } from '@/lib/db/models/resource-link';
 import mongoose from 'mongoose';
 
+async function createNotification(type: string, title: string, message: string) {
+  try {
+    const Notification = mongoose.models.Notification;
+    if (Notification) {
+      await Notification.create({ userId: 'default-user', type, title, message, read: false });
+    }
+  } catch { /* best-effort */ }
+}
+
 function mapId(doc: any) {
   if (!doc) return doc;
   const { _id, ...rest } = doc;
@@ -166,6 +175,9 @@ export const opportunityRouter = router({
         }
       } catch {}
 
+      // Create notification for new deal
+      await createNotification('deal_created', `New Deal: ${plain.customerName}`, `${plain.opportunityName} created with TCV $${((plain.tcv || 0) / 1000).toFixed(0)}k.`);
+
       return {
         ...plain,
         customerStakeholders: [],
@@ -250,6 +262,18 @@ export const opportunityRouter = router({
           }
         } catch {}
 
+        // Create notification for stage changes and won/lost
+        if (input.status && oldOpp && (oldOpp as any).status !== input.status) {
+          const name = (oppById as any)?.customerName || 'Deal';
+          if (input.status === 'Won') {
+            await createNotification('deal_won', `Deal Won: ${name}`, `${(oppById as any)?.opportunityName} has been marked as Won. Congratulations!`);
+          } else if (input.status === 'Lost') {
+            await createNotification('deal_lost', `Deal Lost: ${name}`, `${(oppById as any)?.opportunityName} has been marked as Lost.`);
+          } else {
+            await createNotification('deal_stage_change', `Stage Change: ${name}`, `${(oppById as any)?.opportunityName} moved from ${(oldOpp as any).status} to ${input.status}.`);
+          }
+        }
+
         return enrichOpportunity(oppById);
       }
 
@@ -281,6 +305,18 @@ export const opportunityRouter = router({
           });
         }
       } catch {}
+
+      // Create notification for stage changes and won/lost
+      if (input.status && oldOpp && (oldOpp as any).status !== input.status) {
+        const name = (opportunity as any)?.customerName || 'Deal';
+        if (input.status === 'Won') {
+          await createNotification('deal_won', `Deal Won: ${name}`, `${(opportunity as any)?.opportunityName} has been marked as Won. Congratulations!`);
+        } else if (input.status === 'Lost') {
+          await createNotification('deal_lost', `Deal Lost: ${name}`, `${(opportunity as any)?.opportunityName} has been marked as Lost.`);
+        } else {
+          await createNotification('deal_stage_change', `Stage Change: ${name}`, `${(opportunity as any)?.opportunityName} moved from ${(oldOpp as any).status} to ${input.status}.`);
+        }
+      }
 
       return enrichOpportunity(opportunity);
     }),

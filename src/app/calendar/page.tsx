@@ -1,6 +1,7 @@
 'use client';
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
+import { DealDetail } from '@/components/modals/DealDetail';
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import {
@@ -17,10 +18,11 @@ function CalendarContent() {
   const { opportunities } = useOpportunities();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   // Collect all events (deal close dates + task due dates)
   const events = useMemo(() => {
-    const evts: { date: Date; type: 'deal' | 'task'; title: string; subtitle: string }[] = [];
+    const evts: { date: Date; type: 'deal' | 'task'; title: string; subtitle: string; oppId?: string }[] = [];
 
     opportunities.forEach(opp => {
       // Deal close date
@@ -30,6 +32,7 @@ function CalendarContent() {
           type: 'deal',
           title: opp.customerName,
           subtitle: `${opp.status} · $${(opp.tcv / 1000).toFixed(0)}k`,
+          oppId: opp.id,
         });
       }
 
@@ -41,6 +44,7 @@ function CalendarContent() {
             type: 'task',
             title: task.name,
             subtitle: `${task.owner} · ${task.priority}`,
+            oppId: opp.id,
           });
         }
       });
@@ -182,9 +186,10 @@ function CalendarContent() {
           ) : (
             <div className="space-y-2">
               {selectedEvents.map((evt, i) => (
-                <div
+                <button
                   key={i}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border"
+                  onClick={() => evt.oppId && setSelectedOppId(evt.oppId)}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover-glow transition-all w-full text-left"
                 >
                   <div
                     className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -198,12 +203,13 @@ function CalendarContent() {
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
                     {evt.type}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           )}
         </div>
       )}
+      {selectedOppId && <DealDetail opportunityId={selectedOppId} onClose={() => setSelectedOppId(null)} />}
     </div>
   );
 }

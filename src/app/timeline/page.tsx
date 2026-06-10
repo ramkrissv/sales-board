@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
+import { DealDetail } from '@/components/modals/DealDetail';
 import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
 
 function TimelineContent() {
   const { opportunities, isLoading } = useOpportunities();
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading timeline...</div>;
@@ -54,19 +57,22 @@ function TimelineContent() {
               <div key={opp.id} className="flex items-center gap-3 h-8">
                 <div className="w-32 text-xs text-muted-foreground truncate flex-shrink-0">{opp.customerName}</div>
                 <div className="flex-1 relative h-6">
-                  <div
-                    className={`absolute h-full rounded-md ${statusColors[opp.status] || 'bg-slate-500/40'} flex items-center px-2 cursor-pointer hover:opacity-80 transition-opacity`}
+                  <button
+                    onClick={() => setSelectedOppId(opp.id)}
+                    className={`absolute h-full rounded-md ${statusColors[opp.status] || 'bg-slate-500/40'} flex items-center px-2 cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-all`}
                     style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
                     title={`${opp.opportunityName}\n${format(start, 'MMM d')} \u2192 ${format(end, 'MMM d')}`}
                   >
                     <span className="text-[10px] text-foreground truncate">{opp.opportunityName.slice(0, 30)}</span>
-                  </div>
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+
+      {selectedOppId && <DealDetail opportunityId={selectedOppId} onClose={() => setSelectedOppId(null)} />}
     </div>
   );
 }
