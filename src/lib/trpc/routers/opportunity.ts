@@ -12,7 +12,12 @@ async function createNotification(type: string, title: string, message: string) 
   try {
     const Notification = mongoose.models.Notification;
     if (Notification) {
-      await Notification.create({ userId: 'default-user', type, title, message, read: false });
+      const notif = await Notification.create({ userId: 'default-user', type, title, message, read: false });
+      // Emit real-time event if Socket.IO is available
+      try {
+        const { emitNotification } = await import('@/lib/realtime/socket-server');
+        emitNotification('default-user', { type, title, message, id: notif._id?.toString() });
+      } catch { /* Socket.IO not running — graceful fallback */ }
     }
   } catch { /* best-effort */ }
 }
@@ -235,6 +240,12 @@ export const opportunityRouter = router({
 
         // Fire workflows on stage change
         if (input.status && oldOpp && (oldOpp as any).status !== input.status) {
+          // Emit real-time stage change event
+          try {
+            const { emitStageChange } = await import('@/lib/realtime/socket-server');
+            emitStageChange(id, (oldOpp as any).status, input.status, (oldOpp as any).customerName);
+          } catch { /* Socket.IO not running */ }
+
           try {
             const { executeWorkflows } = await import('@/lib/workflow/engine');
             await executeWorkflows({

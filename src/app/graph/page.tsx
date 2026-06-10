@@ -4,13 +4,23 @@ import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { useState } from 'react';
 import { DealDetail } from '@/components/modals/DealDetail';
 import Link from 'next/link';
-import { Eye, ChevronRight, Users, DollarSign, Clock, AlertTriangle } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Eye, ChevronRight, Users, DollarSign, Clock, AlertTriangle, Kanban, Table as TableIcon, CalendarDays, TrendingUp } from 'lucide-react';
 
 const STAGES = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'];
 const STAGE_COLORS = ['#3b82f6', '#f59e0b', '#7c3aed', '#22c55e', '#10b981'];
 
+const VIEW_MODES = [
+  { id: 'kanban', label: 'Board', icon: Kanban, href: '/pipeline' },
+  { id: 'table', label: 'Table', icon: TableIcon, href: '/table' },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays, href: '/calendar' },
+  { id: 'timeline', label: 'Timeline', icon: TrendingUp, href: '/timeline' },
+  { id: 'graph', label: 'Graph', icon: Eye, href: '/graph' },
+];
+
 function GraphContent() {
   const { opportunities } = useOpportunities();
+  const pathname = usePathname();
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'graph' | 'sankey' | 'list'>('graph');
@@ -33,9 +43,25 @@ function GraphContent() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      {/* Pipeline view mode tabs */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 w-fit">
+        {VIEW_MODES.map(mode => {
+          const isActive = pathname === mode.href;
+          return (
+            <Link key={mode.id} href={mode.href}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                isActive ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'
+              }`}>
+              <mode.icon className={`h-3.5 w-3.5 ${isActive ? 'text-[#7c3aed]' : ''}`} />
+              {mode.label}
+            </Link>
+          );
+        })}
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Deal Flow Graph</h1>
+          <h1 className="text-xl font-semibold text-foreground font-display">Deal Flow Graph</h1>
           <p className="text-sm text-muted-foreground">{opportunities.filter(o => !['Won','Lost'].includes(o.status)).length} active deals flowing through pipeline</p>
         </div>
         <div className="flex gap-0.5 p-0.5 rounded-lg bg-secondary border border-border">
