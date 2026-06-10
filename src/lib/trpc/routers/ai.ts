@@ -208,20 +208,51 @@ Return ONLY valid JSON:
       const client = getAnthropicClient();
       const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514';
 
-      let contextPrompt = '';
+      // ALWAYS load full pipeline context
+      await connectDB();
+      const Opportunity = getOpportunityModel();
+      const Stakeholder = getStakeholderModel();
+      const Task = getTaskModel();
+      const allOpps = await Opportunity.find().lean();
+
+      const active = allOpps.filter((o: any) => !['Won', 'Lost'].includes(o.status));
+      const byStatus: Record<string, any[]> = {};
+      allOpps.forEach((o: any) => { if (!byStatus[o.status]) byStatus[o.status] = []; byStatus[o.status].push(o); });
+
+      const totalTcv = active.reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+      const negotiation = byStatus['Negotiation'] || [];
+      const overdueTasks = await Task.find({ status: 'pending', dueDate: { $lt: new Date() } }).lean();
+
+      let pipelineContext = `\n\nYOU HAVE FULL ACCESS TO THE PIPELINE DATA. Here is the current state:\n`;
+      pipelineContext += `Total: ${allOpps.length} deals ($${(totalTcv/1000).toFixed(0)}k pipeline)\n`;
+      pipelineContext += `By Stage: ${Object.entries(byStatus).map(([s, deals]) => `${s}: ${deals.length} ($${(deals.reduce((sum: number, d: any) => sum + (d.tcv || 0), 0)/1000).toFixed(0)}k)`).join(', ')}\n`;
+      pipelineContext += `Closing soon (Negotiation): ${negotiation.map((d: any) => `${d.customerName} $${((d.tcv||0)/1000).toFixed(0)}k`).join(', ') || 'None'}\n`;
+      pipelineContext += `Overdue tasks: ${overdueTasks.length}\n`;
+      pipelineContext += `\nTop deals by value:\n`;
+      [...allOpps].sort((a: any, b: any) => (b.tcv || 0) - (a.tcv || 0)).slice(0, 10).forEach((o: any) => {
+        pipelineContext += `- ${o.customerName}: ${o.opportunityName} | ${o.status} | $${((o.tcv||0)/1000).toFixed(0)}k | Owner: ${o.primaryOwner} | Close: ${o.expectedCloseDate}\n`;
+      });
+
+      // Add specific deal context if provided
+      let dealContext = '';
       if (input.context?.opportunityId) {
-        await connectDB();
-        const Opportunity = getOpportunityModel();
-        const opp = await Opportunity.findOne({ id: input.context.opportunityId }).lean();
+        const opp = allOpps.find((o: any) => o.id === input.context?.opportunityId);
         if (opp) {
-          contextPrompt = `\n\nCurrent deal context: ${(opp as any).customerName} - ${(opp as any).opportunityName} (${(opp as any).status}, $${((opp as any).tcv || 0).toLocaleString()})`;
+          const stakeholders = await Stakeholder.find({ opportunityId: input.context.opportunityId }).lean();
+          const tasks = await Task.find({ opportunityId: input.context.opportunityId }).lean();
+          dealContext = `\n\nCURRENT DEAL FOCUS: ${(opp as any).customerName} - ${(opp as any).opportunityName}
+Status: ${(opp as any).status} | TCV: $${((opp as any).tcv || 0).toLocaleString()} | Margin: ${(opp as any).margin || 'N/A'}%
+Owner: ${(opp as any).primaryOwner} | Close: ${(opp as any).expectedCloseDate} | Duration: ${(opp as any).dealDuration}
+Stakeholders: ${stakeholders.map((s: any) => `${s.name} (${s.title})${s.isDecisionMaker ? ' [DM]' : ''}`).join(', ') || 'None'}
+Tasks: ${tasks.length} total, ${tasks.filter((t: any) => t.status === 'complete').length} complete, ${tasks.filter((t: any) => t.status === 'pending' && new Date(t.dueDate) < new Date()).length} overdue
+Conversation: ${((opp as any).conversationLog || '').slice(0, 500)}`;
         }
       }
 
       const response = await client.messages.create({
         model,
-        max_tokens: 500,
-        system: `You are the Galent AI Deal Coach — a senior sales strategist embedded in a sales intelligence platform. You help sales reps with deal strategy, stakeholder engagement, competitive analysis, and pipeline management. Be specific, actionable, and concise. Always reference specific data points when available.${contextPrompt}`,
+        max_tokens: 800,
+        system: `You are the Galent AI Deal Coach with FULL ACCESS to the sales pipeline database. You know every deal, every stakeholder, every task. When asked questions, ALWAYS reference specific deal names, dollar amounts, owners, and dates from the data below. Never say you don't have access to data. Be specific, actionable, and concise. Give numbered action steps, not paragraphs.${pipelineContext}${dealContext}`,
         messages: [{ role: 'user', content: input.message }],
       });
 
