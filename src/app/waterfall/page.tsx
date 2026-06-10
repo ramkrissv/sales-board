@@ -52,7 +52,7 @@ function WaterfallContent() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Opening', value: `$${(openingPipeline/1e6).toFixed(1)}M`, color: '#7c3aed' },
           { label: 'New Added', value: `+$${(newPipeline/1000).toFixed(0)}k`, color: '#22c55e' },

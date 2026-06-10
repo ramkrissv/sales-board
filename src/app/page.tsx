@@ -335,7 +335,7 @@ function HomeContent() {
       </div>
 
       {/* Quick Navigation */}
-      <div className="grid grid-cols-4 gap-3 animate-flow-in animate-flow-in-delay-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-flow-in animate-flow-in-delay-4">
         {[
           { label: 'Deal Room', href: '/deal-room', icon: MessageCircle, desc: 'AI-guided deal management' },
           { label: 'Ask Galent', href: '/ask', icon: Sparkles, desc: 'Natural language pipeline queries' },

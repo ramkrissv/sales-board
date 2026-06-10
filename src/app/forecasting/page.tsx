@@ -116,14 +116,14 @@ export default function ForecastingPage() {
             <p className="text-sm text-muted-foreground">No active deals.</p>
           ) : (
             <div className="space-y-1">
-              <div className="grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground pb-2 border-b border-border">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground pb-2 border-b border-border">
                 <span>Owner</span>
                 <span className="text-right">Deals</span>
                 <span className="text-right">TCV</span>
                 <span className="text-right">Weighted</span>
               </div>
               {data.byOwner.map(row => (
-                <div key={row.owner} className="grid grid-cols-4 gap-2 py-2 border-b border-border/50">
+                <div key={row.owner} className="grid grid-cols-2 md:grid-cols-4 gap-2 py-2 border-b border-border/50">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-6 h-6 rounded-full bg-purple-600/20 flex items-center justify-center text-purple-400 text-[9px] font-bold shrink-0">
                       {row.owner.split(' ').map(n => n[0]).join('').slice(0, 2)}
@@ -192,7 +192,7 @@ export default function ForecastingPage() {
           <div className="p-5 rounded-xl g-surface g-elevated">
             <div className="text-sm font-medium text-foreground mb-4">Deals by Forecast Category</div>
             <div className="space-y-1">
-              <div className="grid grid-cols-6 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground pb-2 border-b border-border">
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground pb-2 border-b border-border">
                 <span>Customer</span>
                 <span>Opportunity</span>
                 <span className="text-right">TCV</span>
@@ -201,7 +201,7 @@ export default function ForecastingPage() {
                 <span>Category</span>
               </div>
               {(data.activeOpportunities || []).map((opp: any) => (
-                <div key={opp.id} className="grid grid-cols-6 gap-2 py-2 border-b border-border/50 items-center">
+                <div key={opp.id} className="grid grid-cols-3 md:grid-cols-6 gap-2 py-2 border-b border-border/50 items-center">
                   <span className="text-sm text-foreground truncate">{opp.customerName}</span>
                   <span className="text-sm text-muted-foreground truncate">{opp.opportunityName}</span>
                   <span className="text-sm text-foreground text-right">${(opp.tcv / 1000).toFixed(0)}k</span>
