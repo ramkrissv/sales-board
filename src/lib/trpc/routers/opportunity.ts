@@ -316,6 +316,33 @@ export const opportunityRouter = router({
         } else {
           await createNotification('deal_stage_change', `Stage Change: ${name}`, `${(opportunity as any)?.opportunityName} moved from ${(oldOpp as any).status} to ${input.status}.`);
         }
+
+        // ── Agentic auto-actions based on stage ──
+        try {
+          const Task = mongoose.models.Task || (await import('@/lib/db/models/task')).Task;
+          const oppName = (opportunity as any)?.opportunityName || '';
+          const custName = (opportunity as any)?.customerName || '';
+          const oppId = (opportunity as any)?.id || id;
+
+          if (input.status === 'Qualification') {
+            await Task.create({ opportunityId: oppId, name: `Identify decision maker for ${custName}`, owner: (opportunity as any)?.primaryOwner || 'Unassigned', dueDate: new Date(Date.now() + 7*86400000), priority: 'High', status: 'pending' });
+            await Task.create({ opportunityId: oppId, name: `Schedule discovery call with ${custName}`, owner: (opportunity as any)?.primaryOwner || 'Unassigned', dueDate: new Date(Date.now() + 3*86400000), priority: 'High', status: 'pending' });
+            await createNotification('ai_signal', `AI: Tasks auto-created for ${custName}`, `2 qualification tasks created: identify DM + schedule discovery call.`);
+          }
+          if (input.status === 'Proposal') {
+            await Task.create({ opportunityId: oppId, name: `Generate SOW for ${custName}`, owner: (opportunity as any)?.primaryOwner || 'Unassigned', dueDate: new Date(Date.now() + 5*86400000), priority: 'Critical', status: 'pending' });
+            await Task.create({ opportunityId: oppId, name: `Prepare pricing estimate for ${custName}`, owner: (opportunity as any)?.primaryOwner || 'Unassigned', dueDate: new Date(Date.now() + 5*86400000), priority: 'High', status: 'pending' });
+            await createNotification('ai_signal', `AI: Proposal tasks created for ${custName}`, `SOW generation and pricing estimate tasks auto-created. Open the deal to start.`);
+          }
+          if (input.status === 'Negotiation') {
+            await Task.create({ opportunityId: oppId, name: `Draft MSA/contract for ${custName}`, owner: (opportunity as any)?.primaryOwner || 'Unassigned', dueDate: new Date(Date.now() + 7*86400000), priority: 'Critical', status: 'pending' });
+            await createNotification('ai_signal', `AI: Contract task created for ${custName}`, `Draft MSA/contract task auto-created for the Negotiation stage.`);
+          }
+          if (input.status === 'Won') {
+            await Task.create({ opportunityId: oppId, name: `Schedule kickoff meeting for ${custName}`, owner: (opportunity as any)?.primaryOwner || 'Unassigned', dueDate: new Date(Date.now() + 3*86400000), priority: 'Critical', status: 'pending' });
+            await Task.create({ opportunityId: oppId, name: `Set up delivery workspace for ${custName}`, owner: (opportunity as any)?.primaryOwner || 'Unassigned', dueDate: new Date(Date.now() + 5*86400000), priority: 'High', status: 'pending' });
+          }
+        } catch (e) { console.error('Auto-task creation error:', e); }
       }
 
       return enrichOpportunity(opportunity);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import type { Opportunity, Status } from './types';
 
@@ -58,6 +58,22 @@ export function OpportunityProvider({ children }: { children: React.ReactNode })
       utils.opportunity.list.invalidate();
     },
   });
+
+  // Real-time: auto-refresh when Socket.IO events arrive
+  useEffect(() => {
+    let socket: any = null;
+    try {
+      // Dynamic import to avoid SSR issues
+      import('socket.io-client').then(({ io }) => {
+        socket = io({ path: '/api/socketio', transports: ['polling'], autoConnect: true, reconnection: true, reconnectionDelay: 5000 });
+        socket.on('deal:updated', () => utils.opportunity.list.invalidate());
+        socket.on('deal:stage_change', () => utils.opportunity.list.invalidate());
+        socket.on('deal:won', () => utils.opportunity.list.invalidate());
+        socket.on('deal:lost', () => utils.opportunity.list.invalidate());
+      }).catch(() => { /* Socket.IO not available — graceful fallback */ });
+    } catch { /* ignore */ }
+    return () => { socket?.disconnect(); };
+  }, []); // eslint-disable-line
 
   const addOpportunity = async (opportunity: Opportunity) => {
     await createMutation.mutateAsync(opportunity as any);
