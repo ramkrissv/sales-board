@@ -139,7 +139,14 @@ function HomeContent() {
               <span className="text-[10px] font-semibold text-orange-400 uppercase tracking-wider">AI Risk Alert</span>
             </div>
             <div className="text-sm font-medium text-foreground">{atRiskDeals[0].customerName}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">Missing decision maker or TCV</div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {atRiskDeals.slice(0, 2).map(d => {
+                const reasons: string[] = [];
+                if (!(d.customerStakeholders || []).some(s => s.isDecisionMaker)) reasons.push('no DM');
+                if (d.tcv === 0) reasons.push('$0 TCV');
+                return `${d.customerName}: ${reasons.join(', ')}`;
+              }).join(' \u00b7 ')}
+            </div>
             <div className="flex items-center gap-1 mt-2 text-xs text-orange-400 group-hover:gap-2 transition-all">
               <span>Fix now</span><ArrowRight className="h-3 w-3" />
             </div>
