@@ -3,7 +3,9 @@
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Kanban, Table as TableIcon, TrendingUp, Clock, Eye } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   format,
   startOfMonth,
@@ -14,8 +16,18 @@ import {
   subMonths,
 } from 'date-fns';
 
+const VIEW_MODES = [
+  { id: 'kanban', label: 'Board', icon: Kanban, href: '/pipeline' },
+  { id: 'table', label: 'Table', icon: TableIcon, href: '/table' },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays, href: '/calendar' },
+  { id: 'timeline', label: 'Timeline', icon: TrendingUp, href: '/timeline' },
+  { id: 'schedule', label: 'Schedule', icon: Clock, href: '/schedule' },
+  { id: 'graph', label: 'Graph', icon: Eye, href: '/graph' },
+];
+
 function CalendarContent() {
   const { opportunities } = useOpportunities();
+  const pathname = usePathname();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
@@ -67,6 +79,22 @@ function CalendarContent() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      {/* View Mode Tab Bar */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 w-fit mb-6">
+        {VIEW_MODES.map(mode => {
+          const isActive = pathname === mode.href;
+          return (
+            <Link key={mode.id} href={mode.href}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                isActive ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'
+              }`}>
+              <mode.icon className={`h-3.5 w-3.5 ${isActive ? 'text-[#7c3aed]' : ''}`} />
+              {mode.label}
+            </Link>
+          );
+        })}
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-5 w-5 text-muted-foreground" />

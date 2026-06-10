@@ -90,7 +90,7 @@ function StakeholdersContent() {
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium flex items-center gap-2 transition-colors"
+          className="px-4 py-2 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm font-medium flex items-center gap-2 transition-colors"
         >
           <Plus className="h-4 w-4" />
           Add Contact
@@ -118,7 +118,7 @@ function StakeholdersContent() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search people..."
-            className="w-full pl-9 pr-3 py-2 text-sm g-surface g-elevated rounded-lg text-slate-200 placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40"
+            className="w-full pl-9 pr-3 py-2 text-sm g-surface g-elevated rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40"
           />
         </div>
         <div className="flex gap-1">
@@ -127,7 +127,7 @@ function StakeholdersContent() {
               key={val}
               onClick={() => setRoleFilter(val as 'all' | 'decision_maker' | 'primary')}
               className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                roleFilter === val ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30' : 'text-muted-foreground hover:text-foreground border border-transparent'
+                roleFilter === val ? 'bg-[#7c3aed]/20 text-purple-400 border border-purple-500/30' : 'text-muted-foreground hover:text-foreground border border-transparent'
               }`}
             >
               {label}
@@ -141,7 +141,7 @@ function StakeholdersContent() {
           <div key={person._id || person.id || i} className="group p-4 rounded-xl g-surface g-elevated hover:border-purple-500/20 transition-all relative">
             <div className="flex items-start gap-3">
               <div
-                className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center text-purple-400 text-sm font-bold flex-shrink-0 cursor-pointer"
+                className="w-10 h-10 rounded-full bg-[#7c3aed]/20 flex items-center justify-center text-purple-400 text-sm font-bold flex-shrink-0 cursor-pointer"
                 onClick={() => setSelectedOppId(person.oppId)}
               >
                 {person.name.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
@@ -216,7 +216,7 @@ function StakeholdersContent() {
                 <p>No contacts yet. Add your first contact.</p>
                 <button
                   onClick={() => setShowAddForm(true)}
-                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors"
                 >
                   <Plus className="h-4 w-4" /> Add Contact
                 </button>
@@ -386,7 +386,7 @@ function AddContactForm({
         <button
           type="submit"
           disabled={isPending}
-          className="px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors disabled:opacity-50"
+          className="px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors disabled:opacity-50"
         >
           {isPending ? 'Adding...' : 'Add Contact'}
         </button>

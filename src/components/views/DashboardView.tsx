@@ -98,7 +98,7 @@ const CustomFunnel = ({ data, dataKey, formatter }: { data: any[], dataKey: stri
             
             {/* Value (Right) */}
             <div className="w-[20%] text-left pl-2">
-               <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate block">
+               <span className="text-xs font-bold text-slate-700 dark:text-foreground truncate block">
                  {formatter ? formatter(item[dataKey]) : item[dataKey]}
                </span>
             </div>

@@ -159,7 +159,7 @@ function ContractsContent() {
         </div>
         <button
           onClick={() => setShowNewForm(!showNewForm)}
-          className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium flex items-center gap-2 transition-colors"
+          className="px-4 py-2 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm font-medium flex items-center gap-2 transition-colors"
         >
           <Plus className="h-4 w-4" />
           New Contract
@@ -296,7 +296,7 @@ function ContractsContent() {
                 <p className="text-sm">No contracts yet. Create your first contract.</p>
                 <button
                   onClick={() => setShowNewForm(true)}
-                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors"
                 >
                   <Plus className="h-4 w-4" /> New Contract
                 </button>
@@ -701,7 +701,7 @@ function NewContractForm({ engagementTypes, opportunities, onClose }: { engageme
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors disabled:opacity-50"
+          className="px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors disabled:opacity-50"
         >
           {createMutation.isPending ? 'Creating...' : 'Create Contract'}
         </button>

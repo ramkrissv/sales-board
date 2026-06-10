@@ -11,17 +11,29 @@ import { format } from 'date-fns';
 import {
   Search, Download, Upload, ChevronDown, ChevronRight, ChevronUp,
   Sparkles, Users, CheckSquare, MoreHorizontal,
-  Loader2
+  Loader2, Kanban, Table as TableIcon, CalendarDays, TrendingUp, Clock, Eye
 } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 type GroupBy = 'none' | 'status' | 'primaryOwner' | 'industry' | 'region' | 'serviceLine' | 'engagementType';
 type BizFilter = 'all' | 'new' | 'existing' | 'product' | 'services' | 'hybrid';
 type SortField = 'customerName' | 'tcv' | 'margin' | 'expectedCloseDate' | 'status' | 'primaryOwner';
 type SortDir = 'asc' | 'desc';
 
+const VIEW_MODES = [
+  { id: 'kanban', label: 'Board', icon: Kanban, href: '/pipeline' },
+  { id: 'table', label: 'Table', icon: TableIcon, href: '/table' },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays, href: '/calendar' },
+  { id: 'timeline', label: 'Timeline', icon: TrendingUp, href: '/timeline' },
+  { id: 'schedule', label: 'Schedule', icon: Clock, href: '/schedule' },
+  { id: 'graph', label: 'Graph', icon: Eye, href: '/graph' },
+];
+
 function TableContent() {
   const { filteredOpportunities: opportunities, isLoading, updateOpportunity, filters, setFilters } = useOpportunities();
   const { data: session } = useSession();
+  const pathname = usePathname();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
   const [bizFilter, setBizFilter] = useState<BizFilter>('all');
@@ -140,6 +152,22 @@ function TableContent() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 px-2 sm:px-0">
+      {/* View Mode Tab Bar */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 w-fit mb-6">
+        {VIEW_MODES.map(mode => {
+          const isActive = pathname === mode.href;
+          return (
+            <Link key={mode.id} href={mode.href}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                isActive ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'
+              }`}>
+              <mode.icon className={`h-3.5 w-3.5 ${isActive ? 'text-[#7c3aed]' : ''}`} />
+              {mode.label}
+            </Link>
+          );
+        })}
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

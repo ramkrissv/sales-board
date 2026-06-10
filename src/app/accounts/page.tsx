@@ -117,7 +117,7 @@ export default function AccountsPage() {
         </div>
         <button
           onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyForm); }}
-          className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors"
         >
           <Plus className="h-4 w-4" /> New Account
         </button>
@@ -209,7 +209,7 @@ export default function AccountsPage() {
             <div className="flex justify-end gap-3">
               <button type="button" onClick={cancelForm} className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">Cancel</button>
               <button type="submit" disabled={createMutation.isPending || updateMutation.isPending}
-                className="px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors disabled:opacity-50">
+                className="px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors disabled:opacity-50">
                 {editingId ? 'Update Account' : 'Create Account'}
               </button>
             </div>
@@ -226,7 +226,7 @@ export default function AccountsPage() {
               <p className="text-sm">No accounts yet. Create your first account.</p>
               <button
                 onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyForm); }}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors"
               >
                 <Plus className="h-4 w-4" /> New Account
               </button>
@@ -286,7 +286,7 @@ function AccountRow({ account, expanded, onToggle, onEdit, onDelete, scoreIntent
     <div className="rounded-xl g-surface g-elevated overflow-hidden">
       {/* Summary row */}
       <button onClick={onToggle} className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-secondary/50 transition-colors">
-        <div className="w-10 h-10 rounded-lg bg-purple-600/20 flex items-center justify-center shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-[#7c3aed]/20 flex items-center justify-center shrink-0">
           <Building2 className="h-5 w-5 text-purple-400" />
         </div>
         <div className="flex-1 min-w-0">

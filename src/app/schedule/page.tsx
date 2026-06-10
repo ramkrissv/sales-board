@@ -6,9 +6,22 @@ import { FilterPanel } from '@/components/shared/FilterPanel';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { isToday, isPast, isAfter, endOfWeek, addWeeks, startOfDay, isThisWeek } from 'date-fns';
 import { format } from 'date-fns';
+import { Kanban, Table as TableIcon, CalendarDays, TrendingUp, Clock, Eye } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const VIEW_MODES = [
+  { id: 'kanban', label: 'Board', icon: Kanban, href: '/pipeline' },
+  { id: 'table', label: 'Table', icon: TableIcon, href: '/table' },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays, href: '/calendar' },
+  { id: 'timeline', label: 'Timeline', icon: TrendingUp, href: '/timeline' },
+  { id: 'schedule', label: 'Schedule', icon: Clock, href: '/schedule' },
+  { id: 'graph', label: 'Graph', icon: Eye, href: '/graph' },
+];
 
 function ScheduleContent() {
   const { opportunities, isLoading } = useOpportunities();
+  const pathname = usePathname();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -33,6 +46,22 @@ function ScheduleContent() {
       <div>
         <h1 className="text-xl font-semibold text-foreground">Schedule</h1>
         <p className="text-sm text-muted-foreground mt-1">Deals organized by close date</p>
+      </div>
+
+      {/* View Mode Tab Bar */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 w-fit mb-6">
+        {VIEW_MODES.map(mode => {
+          const isActive = pathname === mode.href;
+          return (
+            <Link key={mode.id} href={mode.href}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                isActive ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'
+              }`}>
+              <mode.icon className={`h-3.5 w-3.5 ${isActive ? 'text-[#7c3aed]' : ''}`} />
+              {mode.label}
+            </Link>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-3">

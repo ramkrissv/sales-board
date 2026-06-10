@@ -50,7 +50,7 @@ export default function UsersAdminPage() {
         </div>
         <button
           onClick={() => setShowInvite(!showInvite)}
-          className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
+          className="px-3 py-1.5 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
         >
           <UserPlus className="h-3.5 w-3.5" />
           Invite User
@@ -101,7 +101,7 @@ export default function UsersAdminPage() {
             <button
               onClick={handleCreate}
               disabled={createUser.isPending || !form.email}
-              className="px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium disabled:opacity-50 transition-colors"
+              className="px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium disabled:opacity-50 transition-colors"
             >
               {createUser.isPending ? 'Creating...' : 'Create User'}
             </button>
