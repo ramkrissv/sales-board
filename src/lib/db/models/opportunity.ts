@@ -127,5 +127,12 @@ const OpportunitySchema = new Schema<IOpportunity>(
   { timestamps: true }
 );
 
+OpportunitySchema.index({ status: 1 });
+OpportunitySchema.index({ primaryOwner: 1 });
+OpportunitySchema.index({ createdAt: -1 });
+OpportunitySchema.index({ industry: 1 });
+OpportunitySchema.index({ region: 1 });
+OpportunitySchema.index({ accountId: 1 });
+
 export const Opportunity =
   mongoose.models.Opportunity || mongoose.model<IOpportunity>('Opportunity', OpportunitySchema);

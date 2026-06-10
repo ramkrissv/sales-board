@@ -11,6 +11,7 @@ interface FilterState {
   region: string[];
   search: string;
   scope: 'my' | 'team' | 'org';
+  scopeOwner?: string;
 }
 
 interface OpportunityContextType {
@@ -81,8 +82,8 @@ export function OpportunityProvider({ children }: { children: React.ReactNode })
       if (filters.primaryOwner.length > 0 && !filters.primaryOwner.includes(opp.primaryOwner)) return false;
       if (filters.industry.length > 0 && !filters.industry.includes(opp.industry)) return false;
       if (filters.region.length > 0 && !filters.region.includes(opp.region)) return false;
-      if (filters.scope === 'my') {
-        if (opp.primaryOwner !== 'Sreeram' && opp.primaryOwner !== 'Admin') return false;
+      if (filters.scope === 'my' && filters.scopeOwner) {
+        if (opp.primaryOwner !== filters.scopeOwner) return false;
       }
       // 'team' shows all (in a real implementation, filter by team members)
       // 'org' shows everything

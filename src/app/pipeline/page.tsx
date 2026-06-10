@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { OpportunityProvider } from '@/lib/store';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { Sparkles } from 'lucide-react';
@@ -23,11 +24,12 @@ const KanbanBoard = dynamic(
 
 function PipelineScopeHeader() {
   const { filters, setFilters } = useOpportunities();
+  const { data: session } = useSession();
   return (
     <div className="flex items-center justify-end mb-4">
       <ScopeSwitch
         value={filters.scope || 'org'}
-        onChange={(scope) => setFilters(prev => ({ ...prev, scope }))}
+        onChange={(scope) => setFilters(prev => ({ ...prev, scope, scopeOwner: session?.user?.name || '' }))}
       />
     </div>
   );

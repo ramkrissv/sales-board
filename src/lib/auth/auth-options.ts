@@ -53,7 +53,7 @@ export const authOptions: NextAuthOptions = {
               email: credentials.email,
               firstName: credentials.email.split('@')[0],
               lastName: '',
-              role: 'admin',
+              role: 'rep',
             });
           }
           return {

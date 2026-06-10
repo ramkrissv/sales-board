@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 
 function AnalyticsContent() {
   const { filteredOpportunities: opportunities, isLoading, filters, setFilters } = useOpportunities();
+  const { data: session } = useSession();
   const [funnelView, setFunnelView] = useState<'funnel' | 'bar' | 'table'>('funnel');
 
   if (isLoading) {
@@ -79,7 +81,7 @@ function AnalyticsContent() {
         </div>
         <ScopeSwitch
           value={filters.scope || 'org'}
-          onChange={(scope) => setFilters(prev => ({ ...prev, scope }))}
+          onChange={(scope) => setFilters(prev => ({ ...prev, scope, scopeOwner: session?.user?.name || '' }))}
         />
       </div>
 

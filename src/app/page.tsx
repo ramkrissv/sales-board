@@ -3,6 +3,7 @@
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { trpc } from '@/lib/trpc/client';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   Sparkles, TrendingUp, AlertTriangle, Target, ChevronRight,
   Zap, ArrowRight, Clock, DollarSign, Users, CheckSquare,
@@ -27,6 +28,7 @@ function getRelativeTime(date: Date): string {
 
 function HomeContent() {
   const { filteredOpportunities: opportunities, isLoading, filters, setFilters } = useOpportunities();
+  const { data: session } = useSession();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const { data: activities = [] } = trpc.activity.list.useQuery();
@@ -80,7 +82,7 @@ function HomeContent() {
       <div className="flex items-center justify-end">
         <ScopeSwitch
           value={filters.scope || 'org'}
-          onChange={(scope) => setFilters(prev => ({ ...prev, scope }))}
+          onChange={(scope) => setFilters(prev => ({ ...prev, scope, scopeOwner: session?.user?.name || '' }))}
         />
       </div>
 

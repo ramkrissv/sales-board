@@ -148,6 +148,12 @@ export const opportunityRouter = router({
         });
       } catch (e) { console.error('Workflow execution error:', e); }
 
+      // Sync to knowledge graph
+      try {
+        const { GraphService } = await import('@/lib/graph/graph-service');
+        await GraphService.syncOpportunityToGraph(plain);
+      } catch (e) { console.error('Graph sync error:', e); }
+
       // Auto activity logging
       try {
         const Activity = mongoose.models.Activity;
