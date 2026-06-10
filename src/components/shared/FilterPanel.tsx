@@ -3,6 +3,7 @@
 import { useOpportunities } from '@/lib/store';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Filter, X, ChevronDown, Check } from 'lucide-react';
+import { SavedViews } from './SavedViews';
 
 const DIMENSIONS = [
   { key: 'status' as const, label: 'Status' },
@@ -80,19 +81,19 @@ export function FilterPanel() {
               onClick={() => setOpenDropdown(isOpen ? null : dim.key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                 selected.length > 0
-                  ? 'border-purple-500/40 bg-purple-500/10 text-purple-300'
-                  : 'border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300'
+                  ? 'border-purple-500/40 bg-purple-500/10 text-[#7c3aed]'
+                  : 'border-border bg-secondary text-muted-foreground hover:border-[#7c3aed]/30 hover:text-foreground'
               }`}
             >
               {dim.label}
               {selected.length > 0 && (
-                <span className="text-[10px] font-bold text-purple-400">({selected.length})</span>
+                <span className="text-[10px] font-bold text-[#7c3aed]">({selected.length})</span>
               )}
               <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
-              <div className="absolute top-full left-0 mt-1 z-50 min-w-[200px] max-h-[280px] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+              <div className="absolute top-full left-0 mt-1 z-50 min-w-[200px] max-h-[280px] overflow-y-auto rounded-lg border border-border bg-card shadow-xl">
                 {dimOptions.length === 0 ? (
                   <div className="px-3 py-2 text-xs text-muted-foreground">No options</div>
                 ) : (
@@ -102,16 +103,16 @@ export function FilterPanel() {
                       <button
                         key={opt}
                         onClick={() => toggleFilter(dim.key, opt)}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left hover:bg-zinc-800 transition-colors"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left hover:bg-secondary transition-colors"
                       >
                         <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
                           isSelected
                             ? 'bg-purple-600 border-purple-600'
-                            : 'border-zinc-600'
+                            : 'border-border'
                         }`}>
                           {isSelected && <Check className="h-3 w-3 text-white" />}
                         </div>
-                        <span className={isSelected ? 'text-foreground' : 'text-zinc-400'}>
+                        <span className={isSelected ? 'text-foreground' : 'text-muted-foreground'}>
                           {opt}
                         </span>
                       </button>
@@ -130,7 +131,7 @@ export function FilterPanel() {
         return selected.map(val => (
           <span
             key={`${dim.key}-${val}`}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/20"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-full bg-purple-500/15 text-[#7c3aed] border border-purple-500/20"
           >
             {val}
             <button

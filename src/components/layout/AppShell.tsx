@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import {
   Kanban, TrendingUp, CalendarClock, CalendarDays, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles, Magnet,
-  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield, GitBranch, MessageSquare,
+  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield, GitBranch, MessageSquare, Menu,
 } from 'lucide-react';
 import { NewDealModal } from '@/components/modals/NewDealModal';
 import { MeetingNotesModal } from '@/components/modals/MeetingNotesModal';
@@ -45,6 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [showNewDeal, setShowNewDeal] = useState(false);
   const [showMeetingNotes, setShowMeetingNotes] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const userInitials = session?.user?.name
     ? session.user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -60,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen g-scene text-foreground">
       {/* Thin icon sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-14 z-50 flex flex-col items-center py-3 gap-1"
+      <aside className="fixed left-0 top-0 bottom-0 w-14 z-50 hidden md:flex flex-col items-center py-3 gap-1"
         style={{ background: 'var(--g-bg)', borderRight: '1px solid var(--g-line)' }}>
         {/* Logo */}
         <Link href="/" className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-emerald-500 flex items-center justify-center mb-4">
@@ -124,35 +125,66 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
+      {/* Mobile drawer */}
+      {mobileMenuOpen && (
+        <>
+          <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)} />
+          <aside className="fixed left-0 top-0 bottom-0 w-64 z-50 md:hidden flex flex-col bg-card border-r" style={{ borderColor: 'var(--g-line)' }}>
+            <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--g-line)' }}>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-[#7c3aed]" />
+                <span className="text-sm font-bold text-foreground">Galent SalesPilot</span>
+              </div>
+            </div>
+            <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+              {navItems.map(item => {
+                const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+                return (
+                  <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </aside>
+        </>
+      )}
+
       {/* Main content */}
-      <div className={`ml-14 transition-all duration-300 ${copilotOpen ? 'mr-96' : ''}`}>
+      <div className={`md:ml-14 transition-all duration-300 ${copilotOpen ? 'mr-96' : ''}`}>
         {/* Top command bar */}
-        <header className="sticky top-0 z-40 h-12 g-glass flex items-center px-5 gap-4"
+        <header className="sticky top-0 z-40 h-12 g-glass flex items-center px-3 md:px-5 gap-2 md:gap-4"
           style={{ borderBottom: '1px solid rgba(var(--g-line-rgb), 0.4)' }}>
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground">
+            <Menu className="h-5 w-5" />
+          </button>
           <button
             onClick={() => setCopilotOpen(!copilotOpen)}
             className="flex-1 max-w-xl flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border text-sm text-muted-foreground hover:border-purple-500/30 hover:text-foreground transition-colors"
           >
             <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-            <span>Ask Galent anything about your pipeline...</span>
-            <kbd className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">&#x2318;K</kbd>
+            <span className="hidden sm:inline">Ask Galent anything about your pipeline...</span>
+            <span className="sm:hidden">Ask Galent...</span>
+            <kbd className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded hidden sm:inline">&#x2318;K</kbd>
           </button>
 
           <div className="flex items-center gap-2 ml-auto">
             <NotificationPopover />
             <button
               onClick={() => setShowMeetingNotes(true)}
-              className="px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground text-xs font-medium flex items-center gap-1.5 transition-colors"
+              className="px-2 md:px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground text-xs font-medium flex items-center gap-1.5 transition-colors"
             >
               <MessageSquare className="h-3.5 w-3.5" />
-              Notes
+              <span className="hidden md:inline">Notes</span>
             </button>
             <button
               onClick={() => setShowNewDeal(true)}
-              className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
+              className="px-2 md:px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
-              New Deal
+              <span className="hidden md:inline">New Deal</span>
             </button>
           </div>
         </header>

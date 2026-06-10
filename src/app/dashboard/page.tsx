@@ -63,7 +63,7 @@ function AnalyticsContent() {
   const maxForecastTcv = Math.max(...forecastMonths.map(([, d]) => d.tcv), 1);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8 px-2 sm:px-0">
       <div>
         <h1 className="text-xl font-semibold text-foreground">Pipeline Analytics</h1>
         <p className="text-sm text-muted-foreground mt-1">Performance across {opportunities.length} opportunities</p>

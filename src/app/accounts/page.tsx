@@ -6,6 +6,7 @@ import {
   Search, Plus, Pencil, Trash2, X, Building2, Globe, MapPin,
   Users, DollarSign, ChevronDown, ChevronUp,
 } from 'lucide-react';
+import { RelationshipMap } from '@/components/views/RelationshipMap';
 
 const ACCOUNT_TYPES = ['Strategic', 'Enterprise', 'Mid-Market', 'SMB'] as const;
 
@@ -361,6 +362,14 @@ function AccountRow({ account, expanded, onToggle, onEdit, onDelete }: {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Relationship Map */}
+              <div>
+                <RelationshipMap
+                  accountNodeId={`account:${(account.companyName || '').toLowerCase().replace(/\s+/g, '-')}`}
+                  accountName={account.companyName}
+                />
               </div>
 
               {/* Actions */}

@@ -134,7 +134,7 @@ function TableContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4">
+    <div className="max-w-7xl mx-auto space-y-4 px-2 sm:px-0">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
