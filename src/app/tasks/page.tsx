@@ -3,7 +3,7 @@
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { trpc } from '@/lib/trpc/client';
 import { useState } from 'react';
-import { CheckSquare, AlertTriangle, Search, Plus, Trash2, Loader2 } from 'lucide-react';
+import { CheckSquare, AlertTriangle, Search, Plus, Trash2, Loader2, Sparkles } from 'lucide-react';
 import { format, isPast } from 'date-fns';
 import { DealDetail } from '@/components/modals/DealDetail';
 
@@ -15,9 +15,19 @@ function TasksContent() {
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTask, setNewTask] = useState({ name: '', owner: '', dueDate: '', priority: 'Medium', oppId: '' });
+  const [completedTaskSuggestion, setCompletedTaskSuggestion] = useState<{ taskName: string; oppId: string; customerName: string } | null>(null);
 
   const toggleMutation = trpc.task.update.useMutation({
-    onSuccess: () => utils.opportunity.list.invalidate(),
+    onSuccess: (data, variables) => {
+      utils.opportunity.list.invalidate();
+      // If task was completed, show AI suggestion for what's next
+      if (variables.status === 'complete') {
+        const task = allTasks.find(t => t.id === variables.id);
+        if (task) {
+          setCompletedTaskSuggestion({ taskName: task.name, oppId: task.oppId, customerName: task.customerName });
+        }
+      }
+    },
   });
   const createMutation = trpc.task.create.useMutation({
     onSuccess: () => { utils.opportunity.list.invalidate(); setShowAddForm(false); setNewTask({ name: '', owner: '', dueDate: '', priority: 'Medium', oppId: '' }); },
@@ -228,6 +238,29 @@ function TasksContent() {
           </div>
         )}
       </div>
+
+      {/* AI Suggestion after task completion */}
+      {completedTaskSuggestion && (
+        <div className="p-3 rounded-xl bg-[#7c3aed]/5 border border-[#7c3aed]/20 flex items-start gap-3 animate-flow-in">
+          <Sparkles className="h-4 w-4 text-[#7c3aed] mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <div className="text-xs font-medium text-foreground">Completed: {completedTaskSuggestion.taskName}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              What&apos;s next for {completedTaskSuggestion.customerName}?
+            </div>
+            <div className="flex gap-1.5 mt-2">
+              <button onClick={() => { setSelectedOppId(completedTaskSuggestion.oppId); setCompletedTaskSuggestion(null); }}
+                className="px-2 py-1 text-[10px] rounded bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20">
+                Open Deal
+              </button>
+              <button onClick={() => setCompletedTaskSuggestion(null)}
+                className="px-2 py-1 text-[10px] rounded text-muted-foreground hover:text-foreground">
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Deal Detail Modal */}
       {selectedOppId && (

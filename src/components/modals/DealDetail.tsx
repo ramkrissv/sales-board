@@ -789,6 +789,14 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                 </div>
               )}
 
+              {/* AI Warning: No Decision Maker */}
+              {stakeholders.length > 0 && !stakeholders.some(s => s.isDecisionMaker) && (
+                <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 flex items-center gap-2 text-xs text-amber-400">
+                  <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>No decision maker identified. Deals without a DM have 40% lower win rates.</span>
+                </div>
+              )}
+
               {/* Add Stakeholder Button */}
               {!showStakeholderForm && (
                 <button
@@ -897,6 +905,21 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                   Add Task
                 </button>
               )}
+
+              {/* AI: All tasks complete */}
+              {tasks.length > 0 && tasks.every(t => t.status === 'complete') && (
+                <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-400">
+                  <CheckSquare className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>All tasks complete! Consider moving to the next stage or generating a SOW.</span>
+                </div>
+              )}
+              {/* AI: Overdue tasks warning */}
+              {tasks.filter(t => t.status === 'pending').length > 0 && tasks.some(t => t.status === 'pending' && new Date(t.dueDate) < new Date()) && (
+                <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
+                  <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>{tasks.filter(t => t.status === 'pending' && new Date(t.dueDate) < new Date()).length} overdue task{tasks.filter(t => t.status === 'pending' && new Date(t.dueDate) < new Date()).length > 1 ? 's' : ''} — these block deal progress.</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -905,7 +928,13 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               {opp.conversationLog ? (
                 <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{opp.conversationLog}</div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground text-sm">No conversation log yet.</div>
+                <div className="space-y-3">
+                  <div className="text-center py-8 text-muted-foreground text-sm">No conversation log yet.</div>
+                  <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20 flex items-center gap-2 text-xs text-[#7c3aed]">
+                    <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span>No conversation log yet. Use the &quot;Notes&quot; button to capture meeting intel — AI will extract insights automatically.</span>
+                  </div>
+                </div>
               )}
             </div>
           )}
