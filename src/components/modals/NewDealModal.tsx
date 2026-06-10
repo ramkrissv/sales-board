@@ -64,6 +64,8 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
   const [aiSuggestions, setAiSuggestions] = useState<any>(null);
   const [showAiPanel, setShowAiPanel] = useState(false);
 
+  const update = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
+
   // Auto-set classification when customer name matches existing accounts
   useEffect(() => {
     if (form.customerName && accounts.length > 0) {
@@ -171,8 +173,6 @@ Return as JSON: { industry, serviceLine, suggestedTcv, phase, tags, closeMonths,
       setError(err.message || 'Failed to create opportunity');
     }
   };
-
-  const update = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
