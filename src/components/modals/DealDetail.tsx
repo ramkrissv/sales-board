@@ -103,6 +103,20 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   });
 
   const utils = trpc.useUtils();
+
+  // Approval workflow
+  const { data: approvals = [] } = trpc.approval.getForEntity.useQuery(
+    { entityType: 'opportunity', entityId: opp?.id || '' },
+    { enabled: !!opp }
+  );
+  const pendingApproval = (approvals as any[]).find((a: any) => a.status === 'pending');
+  const requestApprovalMutation = trpc.approval.requestApproval.useMutation({
+    onSuccess: () => utils.approval.getForEntity.invalidate(),
+  });
+  const approveMutation = trpc.approval.approve.useMutation({
+    onSuccess: () => utils.approval.getForEntity.invalidate(),
+  });
+
   const { data: engagementTypes = [] } = trpc.engagementType.list.useQuery();
   const { data: workflows = [] } = trpc.workflow.list.useQuery();
   const { data: stageTemplate } = trpc.ontology.getForStage.useQuery({
@@ -256,6 +270,19 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               {sowMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
               SOW
             </button>
+            {opp.tcv >= 500000 && !pendingApproval && (
+              <button
+                onClick={() => requestApprovalMutation.mutate({
+                  entityType: 'opportunity', entityId: opp.id, entityName: `${opp.customerName} — ${opp.opportunityName}`,
+                  reason: `TCV $${opp.tcv.toLocaleString()} requires executive approval`,
+                  roles: opp.tcv >= 1000000 ? ['CSO', 'CFO', 'CEO'] : ['CSO', 'CFO'],
+                })}
+                disabled={requestApprovalMutation.isPending}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 text-xs font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+              >
+                <Shield className="h-3 w-3" /> Request Approval
+              </button>
+            )}
             <button
               onClick={() => setShowMeetingNotes(true)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition-colors"
@@ -422,6 +449,37 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
         <div className="flex-1 overflow-y-auto p-5">
           {activeTab === 'details' && (
             <div className="space-y-5">
+              {/* Approval Chain */}
+              {pendingApproval && (
+                <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 space-y-2">
+                  <div className="g-section-label text-amber-500">Approval Chain</div>
+                  {(pendingApproval as any).approvalChain.map((step: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                        step.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' :
+                        step.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                        'bg-amber-500/20 text-amber-500'
+                      }`}>
+                        {step.status === 'approved' ? '\u2713' : step.status === 'rejected' ? '\u2717' : i + 1}
+                      </span>
+                      <span className="font-medium text-foreground">{step.role}</span>
+                      <span className="text-muted-foreground">&mdash; {step.name}</span>
+                      {step.status === 'pending' && (
+                        <button onClick={() => approveMutation.mutate({ approvalId: (pendingApproval as any)._id, role: step.role })}
+                          className="ml-auto px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] hover:bg-emerald-500/20">
+                          Approve
+                        </button>
+                      )}
+                      {step.status !== 'pending' && (
+                        <span className={`ml-auto text-[10px] ${step.status === 'approved' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {step.status}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* KPI Row */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-lg bg-card border border-border">

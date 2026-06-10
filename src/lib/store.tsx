@@ -10,6 +10,7 @@ interface FilterState {
   industry: string[];
   region: string[];
   search: string;
+  scope: 'my' | 'team' | 'org';
 }
 
 interface OpportunityContextType {
@@ -33,6 +34,7 @@ export function OpportunityProvider({ children }: { children: React.ReactNode })
     industry: [],
     region: [],
     search: '',
+    scope: 'org',
   });
 
   const utils = trpc.useUtils();
@@ -79,6 +81,11 @@ export function OpportunityProvider({ children }: { children: React.ReactNode })
       if (filters.primaryOwner.length > 0 && !filters.primaryOwner.includes(opp.primaryOwner)) return false;
       if (filters.industry.length > 0 && !filters.industry.includes(opp.industry)) return false;
       if (filters.region.length > 0 && !filters.region.includes(opp.region)) return false;
+      if (filters.scope === 'my') {
+        if (opp.primaryOwner !== 'Sreeram' && opp.primaryOwner !== 'Admin') return false;
+      }
+      // 'team' shows all (in a real implementation, filter by team members)
+      // 'org' shows everything
       return true;
     });
   }, [opportunities, filters]);
