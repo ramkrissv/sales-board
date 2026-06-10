@@ -5,7 +5,7 @@
 
 @theme inline {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-display: 'Montserrat', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 
   --radius-sm: 0.375rem;
@@ -19,7 +19,7 @@
   --color-card-foreground: var(--g-fg);
   --color-popover: var(--g-card);
   --color-popover-foreground: var(--g-fg);
-  --color-primary: #5B4FE9;
+  --color-primary: #7c3aed;
   --color-primary-foreground: #ffffff;
   --color-secondary: var(--g-bg-2);
   --color-secondary-foreground: var(--g-fg);
@@ -30,19 +30,19 @@
   --color-destructive: #C73A3A;
   --color-border: var(--g-line);
   --color-input: var(--g-line);
-  --color-ring: #5B4FE9;
+  --color-ring: #7c3aed;
   --color-success: #178A4C;
   --color-warning: #B26A05;
 }
 
 /* ─── Light Mode (v3 Warm Canvas) ─── */
 :root {
-  --g-brand: #5B4FE9;
+  --g-brand: #7c3aed;
   --g-brand-deep: #2D2566;
   --g-brand-soft: #EFEDFE;
   --g-teal: #11A7A0;
   --g-teal-soft: #E3F5F4;
-  --g-bg: #F6F5F2;
+  --g-bg: #f4f4f8;
   --g-bg-2: #EFEEEB;
   --g-bg-3: #E4E3E0;
   --g-line: rgba(22,21,29,0.08);
@@ -63,7 +63,7 @@
 
 /* ─── Dark Mode (v3) ─── */
 .dark {
-  --g-bg: #0D0C14;
+  --g-bg: #09090b;
   --g-bg-2: #16151D;
   --g-bg-3: #1E1D28;
   --g-line: rgba(255,255,255,0.08);
@@ -94,7 +94,7 @@
 
 /* ─── AI Gradient Text ─── */
 .aigrad {
-  background: linear-gradient(120deg, var(--g-brand, #5B4FE9), var(--g-teal, #11A7A0));
+  background: linear-gradient(120deg, var(--g-brand, #7c3aed), var(--g-teal, #11A7A0));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -174,7 +174,7 @@
 .animate-pulse-live { animation: pulse-live 2s ease-in-out infinite; }
 
 /* ─── Focus (v3 brand) ─── */
-:focus-visible { outline: 2px solid #5B4FE9; outline-offset: 2px; }
+:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
 
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

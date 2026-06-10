@@ -111,7 +111,7 @@ export default function PresalesPage() {
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === tab.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
             <tab.icon className="h-3.5 w-3.5" />
             {tab.label}
-            {tab.badge && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#5B4FE9]/10 text-[#5B4FE9] text-[10px]">{tab.badge}</span>}
+            {tab.badge && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed] text-[10px]">{tab.badge}</span>}
           </button>
         ))}
       </div>
@@ -121,7 +121,7 @@ export default function PresalesPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-3">
             {[
-              { label: 'Active Pursuits', value: PURSUITS.length, icon: Target, color: '#5B4FE9' },
+              { label: 'Active Pursuits', value: PURSUITS.length, icon: Target, color: '#7c3aed' },
               { label: 'Pursuit Value', value: `$${(totalPursuitValue/1e6).toFixed(1)}M`, icon: DollarSign, color: '#22c55e' },
               { label: 'Avg Coverage', value: `${avgCoverage}%`, icon: BarChart3, color: '#3b82f6' },
               { label: 'Due This Week', value: PURSUITS.filter(p => true).length, icon: Clock, color: '#f59e0b' },
@@ -142,7 +142,7 @@ export default function PresalesPage() {
             <div className="space-y-2">
               {PURSUITS.map(p => (
                 <button key={p.id} onClick={() => { setSelectedPursuit(p); setActiveTab('pursuits'); }}
-                  className="flex items-center gap-3 w-full p-3 rounded-lg bg-card border border-border hover:border-[#5B4FE9]/20 text-left transition-all">
+                  className="flex items-center gap-3 w-full p-3 rounded-lg bg-card border border-border hover:border-[#7c3aed]/20 text-left transition-all">
                   <span className={`g-chip border ${typeColors[p.type] || ''}`}>{p.type}</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-semibold text-foreground">{p.client}</div>
@@ -172,7 +172,7 @@ export default function PresalesPage() {
       {activeTab === 'pursuits' && (
         <div className="space-y-4">
           {PURSUITS.map(p => (
-            <div key={p.id} className={`g-surface g-elevated p-5 transition-all ${selectedPursuit?.id === p.id ? '!border-[#5B4FE9]/40 ring-1 ring-[#5B4FE9]/10' : ''}`}>
+            <div key={p.id} className={`g-surface g-elevated p-5 transition-all ${selectedPursuit?.id === p.id ? '!border-[#7c3aed]/40 ring-1 ring-[#7c3aed]/10' : ''}`}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <span className={`g-chip border ${typeColors[p.type] || ''}`}>{p.type}</span>
@@ -206,7 +206,7 @@ export default function PresalesPage() {
               {/* Actions */}
               <div className="flex gap-2 mt-3">
                 <button onClick={() => { setSelectedPursuit(p); setActiveTab('studio'); }}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-[#5B4FE9]/10 text-[#5B4FE9] hover:bg-[#5B4FE9]/20 transition-colors font-medium">
+                  className="px-3 py-1.5 text-xs rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors font-medium">
                   Open Studio
                 </button>
                 <button onClick={() => { setSelectedPursuit(p); setActiveTab('solutioning'); }}
@@ -258,7 +258,7 @@ export default function PresalesPage() {
                       {sec.aiReady && (
                         <button onClick={() => handleAIDraft(sec.id, sec.title)}
                           disabled={chatMutation.isPending}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#5B4FE9]/10 text-[#5B4FE9] text-[10px] font-medium hover:bg-[#5B4FE9]/20 transition-colors disabled:opacity-50">
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#7c3aed]/10 text-[#7c3aed] text-[10px] font-medium hover:bg-[#7c3aed]/20 transition-colors disabled:opacity-50">
                           {chatMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                           AI Draft
                         </button>
@@ -300,9 +300,9 @@ export default function PresalesPage() {
                 </div>
               ))}
             </div>
-            <div className="mt-3 flex items-center justify-between p-3 rounded-lg bg-[#5B4FE9]/5 border border-[#5B4FE9]/20">
+            <div className="mt-3 flex items-center justify-between p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20">
               <span className="text-xs text-foreground font-medium">Total Estimated Effort</span>
-              <span className="text-sm font-bold text-[#5B4FE9] g-metric">56 person-weeks &middot; ~$890K</span>
+              <span className="text-sm font-bold text-[#7c3aed] g-metric">56 person-weeks &middot; ~$890K</span>
             </div>
           </div>
 
@@ -312,7 +312,7 @@ export default function PresalesPage() {
             <div className="space-y-2">
               {SA_BENCH.map(sa => (
                 <div key={sa.name} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
-                  <div className="w-8 h-8 rounded-full bg-[#5B4FE9]/10 flex items-center justify-center text-[#5B4FE9] text-xs font-bold">
+                  <div className="w-8 h-8 rounded-full bg-[#7c3aed]/10 flex items-center justify-center text-[#7c3aed] text-xs font-bold">
                     {sa.name.slice(0, 2)}
                   </div>
                   <div className="flex-1">
@@ -345,14 +345,14 @@ export default function PresalesPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold text-foreground">Templates & Assets</div>
-            <button className="px-3 py-1.5 text-xs rounded-lg bg-[#5B4FE9] text-white font-medium hover:bg-[#4A3ED4] transition-colors flex items-center gap-1">
+            <button className="px-3 py-1.5 text-xs rounded-lg bg-[#7c3aed] text-white font-medium hover:bg-[#6d28d9] transition-colors flex items-center gap-1">
               <Plus className="h-3 w-3" /> New Template
             </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {TEMPLATES.map((t, i) => (
               <div key={i} className="p-4 rounded-xl g-surface g-elevated hover-lift hover-glow text-center">
-                <FileText className="h-6 w-6 text-[#5B4FE9] mx-auto mb-2 opacity-60" />
+                <FileText className="h-6 w-6 text-[#7c3aed] mx-auto mb-2 opacity-60" />
                 <div className="text-xs font-semibold text-foreground">{t.title}</div>
                 <div className="flex items-center justify-center gap-2 mt-2">
                   <span className="g-chip bg-secondary text-muted-foreground">{t.type}</span>

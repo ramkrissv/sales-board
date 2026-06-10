@@ -171,7 +171,7 @@ function TableContent() {
           { id: 'hybrid' as BizFilter, label: 'Hybrid' },
         ]).map(tab => (
           <button key={tab.id} onClick={() => setBizFilter(tab.id)}
-            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${bizFilter === tab.id ? 'bg-[#5B4FE9]/20 text-[#5B4FE9] border border-[#5B4FE9]/30' : 'text-muted-foreground hover:text-foreground border border-transparent'}`}>
+            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${bizFilter === tab.id ? 'bg-[#7c3aed]/20 text-[#7c3aed] border border-[#7c3aed]/30' : 'text-muted-foreground hover:text-foreground border border-transparent'}`}>
             {tab.label}
           </button>
         ))}
@@ -196,7 +196,7 @@ function TableContent() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects..."
-          className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#5B4FE9]/40" />
+          className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40" />
       </div>
 
       {/* Table */}
@@ -252,7 +252,7 @@ function TableContent() {
                           <div className="flex items-center gap-2">
                             {expanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
                             <span className="text-sm font-medium text-foreground">{group.label}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5B4FE9]/10 text-[#5B4FE9]">{group.items.length}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#7c3aed]/10 text-[#7c3aed]">{group.items.length}</span>
                             <span className="text-xs text-muted-foreground ml-2">${(groupTcv / 1000).toFixed(0)}k TCV</span>
                             {groupAvgMargin > 0 && <span className="text-xs text-muted-foreground">&middot; {groupAvgMargin}% margin</span>}
                           </div>
@@ -271,14 +271,14 @@ function TableContent() {
                           style={{ borderColor: 'var(--g-line, hsl(var(--border)))' }}
                           onClick={() => setSelectedOppId(opp.id)}>
                           <td className="px-4 py-3">
-                            <div className="text-sm font-medium text-foreground group-hover/row:text-[#5B4FE9] transition-colors">{opp.customerName}</div>
+                            <div className="text-sm font-medium text-foreground group-hover/row:text-[#7c3aed] transition-colors">{opp.customerName}</div>
                             <div className="text-[11px] text-muted-foreground truncate max-w-[250px]">{opp.opportunityName}</div>
                           </td>
                           <td className="px-4 py-3" onClick={e => { e.stopPropagation(); setEditingStage(opp.id); }}>
                             {editingStage === opp.id ? (
                               <select value={opp.status} onChange={e => handleStageChange(opp.id, e.target.value)}
                                 onBlur={() => setEditingStage(null)} autoFocus
-                                className="px-2 py-1 text-xs bg-card border border-[#5B4FE9]/40 rounded text-foreground">
+                                className="px-2 py-1 text-xs bg-card border border-[#7c3aed]/40 rounded text-foreground">
                                 {statuses.map(s => <option key={s} value={s}>{s}</option>)}
                               </select>
                             ) : (
@@ -290,7 +290,7 @@ function TableContent() {
                           <td className="px-4 py-3">
                             <div className="flex gap-1 flex-wrap">
                               {opp.serviceLine && <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-500/10 text-muted-foreground">{opp.serviceLine === 'IT Services' ? 'ITS' : 'STF'}</span>}
-                              {opp.engagementType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5B4FE9]/10 text-[#5B4FE9]">{opp.engagementType}</span>}
+                              {opp.engagementType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#7c3aed]/10 text-[#7c3aed]">{opp.engagementType}</span>}
                             </div>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">{opp.primaryOwner}</td>

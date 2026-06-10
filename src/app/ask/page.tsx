@@ -39,7 +39,7 @@ function AskContent() {
 
   // Quick questions
   const quickQuestions = [
-    { icon: DollarSign, q: 'What is my total pipeline value by stage?', color: 'text-[#5B4FE9]' },
+    { icon: DollarSign, q: 'What is my total pipeline value by stage?', color: 'text-[#7c3aed]' },
     { icon: TrendingUp, q: 'Which deals are most likely to close this month?', color: 'text-emerald-400' },
     { icon: Users, q: 'Who are my top performing sales reps?', color: 'text-blue-400' },
     { icon: BarChart3, q: 'What is the conversion rate between stages?', color: 'text-amber-400' },
@@ -57,9 +57,9 @@ function AskContent() {
         <div className="grid grid-cols-2 gap-3">
           {quickQuestions.map((qq, i) => (
             <button key={i} onClick={() => { setQuery(qq.q); }}
-              className="p-4 rounded-xl g-surface g-elevated text-left hover:!border-[#5B4FE9]/30 transition-all group">
+              className="p-4 rounded-xl g-surface g-elevated text-left hover:!border-[#7c3aed]/30 transition-all group">
               <qq.icon className={`h-5 w-5 ${qq.color} mb-2`} />
-              <div className="text-sm text-foreground group-hover:text-[#5B4FE9] transition-colors">{qq.q}</div>
+              <div className="text-sm text-foreground group-hover:text-[#7c3aed] transition-colors">{qq.q}</div>
             </button>
           ))}
         </div>
@@ -71,7 +71,7 @@ function AskContent() {
           <div key={i} className={`flex ${result.type === 'question' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] px-4 py-3 rounded-xl text-sm leading-relaxed ${
               result.type === 'question'
-                ? 'bg-[#5B4FE9] text-white rounded-tr-sm'
+                ? 'bg-[#7c3aed] text-white rounded-tr-sm'
                 : 'g-surface text-foreground rounded-tl-sm'
             }`}>
               {result.type === 'answer' ? (
@@ -89,7 +89,7 @@ function AskContent() {
         {chatMutation.isPending && (
           <div className="flex justify-start">
             <div className="px-4 py-3 rounded-xl g-surface text-sm text-muted-foreground rounded-tl-sm flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-[#5B4FE9]" />
+              <Loader2 className="h-4 w-4 animate-spin text-[#7c3aed]" />
               Analyzing your pipeline...
             </div>
           </div>
@@ -104,7 +104,7 @@ function AskContent() {
             placeholder="Ask about your pipeline, deals, forecasting..."
             className="flex-1 px-3 py-2 text-sm bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none" />
           <button onClick={handleAsk} disabled={chatMutation.isPending || !query.trim()}
-            className="p-2 rounded-lg bg-[#5B4FE9] text-white disabled:opacity-50">
+            className="p-2 rounded-lg bg-[#7c3aed] text-white disabled:opacity-50">
             <Send className="h-4 w-4" />
           </button>
         </div>

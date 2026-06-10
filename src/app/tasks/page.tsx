@@ -110,7 +110,7 @@ function TasksContent() {
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#5B4FE9] hover:bg-[#4A3ED4] text-white text-xs font-medium transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-xs font-medium transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
           Add Task
@@ -123,24 +123,24 @@ function TasksContent() {
           <div className="g-section-label">New Task</div>
           <div className="grid grid-cols-2 gap-3">
             <input value={newTask.name} onChange={e => setNewTask(p => ({ ...p, name: e.target.value }))}
-              placeholder="Task name *" className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#5B4FE9]/40" />
+              placeholder="Task name *" className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40" />
             <input value={newTask.owner} onChange={e => setNewTask(p => ({ ...p, owner: e.target.value }))}
-              placeholder="Owner *" className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#5B4FE9]/40" />
+              placeholder="Owner *" className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40" />
             <input type="date" value={newTask.dueDate} onChange={e => setNewTask(p => ({ ...p, dueDate: e.target.value }))}
-              className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#5B4FE9]/40" />
+              className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
             <select value={newTask.priority} onChange={e => setNewTask(p => ({ ...p, priority: e.target.value }))}
-              className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#5B4FE9]/40">
+              className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40">
               {['Low', 'Medium', 'High', 'Critical'].map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
           <select value={newTask.oppId} onChange={e => setNewTask(p => ({ ...p, oppId: e.target.value }))}
-            className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#5B4FE9]/40">
+            className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40">
             <option value="">Select project *</option>
             {opportunities.map(o => <option key={o.id} value={o.id}>{o.customerName} — {o.opportunityName}</option>)}
           </select>
           <div className="flex gap-2">
             <button onClick={handleCreate} disabled={createMutation.isPending || !newTask.name || !newTask.oppId}
-              className="px-3 py-1.5 rounded-lg bg-[#5B4FE9] text-white text-xs font-medium disabled:opacity-50">
+              className="px-3 py-1.5 rounded-lg bg-[#7c3aed] text-white text-xs font-medium disabled:opacity-50">
               {createMutation.isPending ? 'Creating...' : 'Create Task'}
             </button>
             <button onClick={() => setShowAddForm(false)} className="px-3 py-1.5 rounded-lg border border-border text-muted-foreground text-xs">Cancel</button>
@@ -154,13 +154,13 @@ function TasksContent() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search tasks, projects, owners..."
-            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#5B4FE9]/40" />
+            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40" />
         </div>
         <div className="flex gap-1">
           {(['all', 'pending', 'overdue', 'complete'] as const).map(f => (
             <button key={f} onClick={() => setStatusFilter(f)}
               className={`px-3 py-1.5 text-xs rounded-lg capitalize transition-colors ${
-                statusFilter === f ? 'bg-[#5B4FE9]/20 text-[#5B4FE9] border border-[#5B4FE9]/30' : 'text-muted-foreground hover:text-foreground border border-transparent'
+                statusFilter === f ? 'bg-[#7c3aed]/20 text-[#7c3aed] border border-[#7c3aed]/30' : 'text-muted-foreground hover:text-foreground border border-transparent'
               }`}>
               {f}{f === 'overdue' && overdue.length > 0 ? ` (${overdue.length})` : ''}
             </button>
@@ -177,7 +177,7 @@ function TasksContent() {
             <div
               key={task.id || i}
               className={`flex items-center gap-4 p-3 rounded-xl g-surface transition-all group ${
-                isOverdue ? '!border-red-500/30' : 'hover:!border-[#5B4FE9]/20'
+                isOverdue ? '!border-red-500/30' : 'hover:!border-[#7c3aed]/20'
               }`}
             >
               {/* Checkbox — CLICKABLE */}
@@ -187,7 +187,7 @@ function TasksContent() {
                 className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                   task.status === 'complete'
                     ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 hover:bg-emerald-500/30'
-                    : 'border-zinc-600 hover:border-[#5B4FE9] hover:bg-[#5B4FE9]/10'
+                    : 'border-zinc-600 hover:border-[#7c3aed] hover:bg-[#7c3aed]/10'
                 } ${isToggling ? 'opacity-50' : ''}`}
               >
                 {isToggling ? (
@@ -205,7 +205,7 @@ function TasksContent() {
                 <div className="text-xs text-muted-foreground mt-0.5">
                   <button
                     onClick={() => setSelectedOppId(task.oppId)}
-                    className="text-[#5B4FE9] hover:text-[#4A3ED4] hover:underline transition-colors"
+                    className="text-[#7c3aed] hover:text-[#6d28d9] hover:underline transition-colors"
                   >
                     {task.customerName}
                   </button>
@@ -241,8 +241,8 @@ function TasksContent() {
 
       {/* AI Suggestion after task completion */}
       {completedTaskSuggestion && (
-        <div className="p-3 rounded-xl bg-[#5B4FE9]/5 border border-[#5B4FE9]/20 flex items-start gap-3 animate-flow-in">
-          <Sparkles className="h-4 w-4 text-[#5B4FE9] mt-0.5 flex-shrink-0" />
+        <div className="p-3 rounded-xl bg-[#7c3aed]/5 border border-[#7c3aed]/20 flex items-start gap-3 animate-flow-in">
+          <Sparkles className="h-4 w-4 text-[#7c3aed] mt-0.5 flex-shrink-0" />
           <div className="flex-1">
             <div className="text-xs font-medium text-foreground">Completed: {completedTaskSuggestion.taskName}</div>
             <div className="text-xs text-muted-foreground mt-0.5">
@@ -250,7 +250,7 @@ function TasksContent() {
             </div>
             <div className="flex gap-1.5 mt-2">
               <button onClick={() => { setSelectedOppId(completedTaskSuggestion.oppId); setCompletedTaskSuggestion(null); }}
-                className="px-2 py-1 text-[10px] rounded bg-[#5B4FE9]/10 text-[#5B4FE9] hover:bg-[#5B4FE9]/20">
+                className="px-2 py-1 text-[10px] rounded bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20">
                 Open Deal
               </button>
               <button onClick={() => setCompletedTaskSuggestion(null)}
