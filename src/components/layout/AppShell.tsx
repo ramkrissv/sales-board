@@ -16,16 +16,41 @@ import { MeetingNotesModal } from '@/components/modals/MeetingNotesModal';
 import { CopilotPanel } from '@/components/ai/CopilotPanel';
 import { NotificationPopover } from '@/components/shared/NotificationPopover';
 
-// 5 core nav items — end-to-end sales lifecycle
+// Grouped navigation — end-to-end sales lifecycle
 const navGroups = [
   {
-    label: 'Sales',
+    label: 'Pipeline',
     items: [
       { icon: LayoutDashboard, label: 'Command Center', href: '/' },
-      { icon: Magnet, label: 'Leads & Pipeline', href: '/leads' },
-      { icon: Kanban, label: 'Deal Room', href: '/pipeline' },
-      { icon: Sparkles, label: 'Intelligence', href: '/dashboard' },
-      { icon: Settings, label: 'Platform', href: '/settings' },
+      { icon: Magnet, label: 'Leads', href: '/leads' },
+      { icon: Kanban, label: 'Pipeline', href: '/pipeline' },
+      { icon: FileText, label: 'Contracts', href: '/contracts' },
+      { icon: Network, label: 'Accounts', href: '/accounts' },
+    ],
+  },
+  {
+    label: 'Views',
+    items: [
+      { icon: TableIcon, label: 'Table', href: '/table' },
+      { icon: CalendarDays, label: 'Calendar', href: '/calendar' },
+      { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
+      { icon: Users, label: 'Contacts', href: '/stakeholders' },
+    ],
+  },
+  {
+    label: 'Intelligence',
+    items: [
+      { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
+      { icon: Sparkles, label: 'Forecasting', href: '/forecasting' },
+      { icon: Bot, label: 'Agents', href: '/agents' },
+    ],
+  },
+  {
+    label: 'Platform',
+    items: [
+      { icon: Link2, label: 'Integrations', href: '/integrations' },
+      { icon: GitBranch, label: 'Workflows', href: '/workflows' },
+      { icon: Settings, label: 'Settings', href: '/settings' },
     ],
   },
 ];
@@ -87,7 +112,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col gap-0.5 overflow-y-auto">
           {navGroups.map((group, gi) => (
             <div key={group.label}>
-              {gi > 0 && <div className="mx-auto my-1.5 w-5 border-t" style={{ borderColor: 'var(--g-line)' }} />}
+              {gi > 0 && <div className="mx-2 my-2 border-t" style={{ borderColor: 'var(--g-line)' }} />}
+              <div className="px-3 mb-1">
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</span>
+              </div>
               {group.items.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
             return (
