@@ -13,6 +13,7 @@ import {
   GitBranch,
 } from 'lucide-react';
 import { MeetingNotesModal } from './MeetingNotesModal';
+import { DealLifecycle } from '@/components/views/DealLifecycle';
 import type { Status } from '@/lib/types';
 
 interface DealDetailProps {
@@ -449,6 +450,9 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
         <div className="flex-1 overflow-y-auto p-5">
           {activeTab === 'details' && (
             <div className="space-y-5">
+              {/* Deal Lifecycle Timeline */}
+              <DealLifecycle opportunity={opp} />
+
               {/* Approval Chain */}
               {pendingApproval && (
                 <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 space-y-2">

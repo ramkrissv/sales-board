@@ -7,6 +7,7 @@ import { KanbanCard } from './KanbanCard';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Link from 'next/link';
 
 interface KanbanColumnProps {
   status: Status;
@@ -52,7 +53,9 @@ export function KanbanColumn({ status, opportunities, onCardClick }: KanbanColum
               status === 'Lost' && "bg-slate-500",
               status === 'On Hold' && "bg-red-500",
             )} />
-            {status}
+            <Link href={`/pipeline/${encodeURIComponent(status)}`} className="hover:text-[#7c3aed] transition-colors">
+              {status}
+            </Link>
           </Badge>
           <span className="text-xs text-muted-foreground font-medium bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
             {opportunities.length}
