@@ -1,205 +1,233 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { trpc } from '@/lib/trpc/client';
 import {
   Sparkles, Kanban, Magnet, Users, FileText, CheckSquare,
   TrendingUp, Bot, Network, Settings, ArrowRight, Check,
   MessageSquare, Upload, Search, Shield, BarChart3,
   Target, Briefcase, Crown, Eye, Rocket, BookOpen,
-  ChevronDown, ChevronRight
+  ChevronDown, ChevronRight, Play, DollarSign, Zap,
+  Globe, Mail, Calendar, Home, Award, Star, CircleCheck
 } from 'lucide-react';
 
-type Role = 'ae' | 'sdr' | 'manager' | 'presales' | 'exec';
+// ── Interactive Feature Cards ──
+function FeatureCard({ icon: Icon, title, description, href, color, tag, stats }: {
+  icon: any; title: string; description: string; href: string; color: string; tag?: string; stats?: string;
+}) {
+  return (
+    <Link href={href} className="group p-5 rounded-xl g-surface g-elevated hover-glow transition-all text-left">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}15` }}>
+          <Icon className="h-5 w-5" style={{ color }} />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground group-hover:text-[#7c3aed] transition-colors">{title}</span>
+            {tag && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed] font-medium">{tag}</span>}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{description}</p>
+          {stats && <p className="text-[10px] text-muted-foreground mt-2 opacity-70">{stats}</p>}
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all shrink-0 mt-1" />
+      </div>
+    </Link>
+  );
+}
 
-const roles = [
-  { id: 'ae' as Role, title: 'Account Executive', icon: Briefcase, subtitle: 'Close deals and manage pipeline', color: '#7c3aed' },
-  { id: 'sdr' as Role, title: 'Sales Development Rep', icon: Magnet, subtitle: 'Generate and qualify leads', color: '#11A7A0' },
-  { id: 'manager' as Role, title: 'Sales Manager', icon: Crown, subtitle: 'Coach team and forecast revenue', color: '#B26A05' },
-  { id: 'presales' as Role, title: 'Presales / Solution Architect', icon: Target, subtitle: 'Technical qualification and proposals', color: '#178A4C' },
-  { id: 'exec' as Role, title: 'Executive (CSO/CFO/CEO)', icon: Eye, subtitle: 'Pipeline oversight and approvals', color: '#C73A3A' },
-];
+// ── Journey Step ──
+function JourneyStep({ number, title, description, features, isActive, onToggle }: {
+  number: number; title: string; description: string;
+  features: { icon: any; title: string; description: string; href: string; color: string; tag?: string; stats?: string }[];
+  isActive: boolean; onToggle: () => void;
+}) {
+  return (
+    <div className="relative">
+      {/* Step indicator */}
+      <button onClick={onToggle} className="flex items-center gap-4 w-full text-left group">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-bold text-sm transition-colors ${
+          isActive ? 'bg-[#7c3aed] text-white' : 'bg-secondary text-muted-foreground group-hover:bg-[#7c3aed]/10 group-hover:text-[#7c3aed]'
+        }`}>
+          {number}
+        </div>
+        <div className="flex-1">
+          <div className="text-base font-semibold text-foreground font-display">{title}</div>
+          <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+        </div>
+        {isActive ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+      </button>
 
-const guides: Record<Role, { section: string; steps: { title: string; description: string; action?: { label: string; href: string }; tips: string[] }[] }[]> = {
-  ae: [
-    {
-      section: 'Daily Workflow',
-      steps: [
-        { title: 'Check your Command Center', description: 'Start each day reviewing AI-prioritized deals, critical actions, and pipeline health.', action: { label: 'Open Command Center', href: '/' }, tips: ['AI automatically analyzes your pipeline', 'Focus on "Ready to Close" deals first', 'Check overdue tasks immediately'] },
-        { title: 'Work your Pipeline', description: 'Drag deals between stages on the Kanban board. The system checks gate criteria before each move.', action: { label: 'Open Pipeline', href: '/pipeline' }, tips: ['Gate criteria must be met to advance stages', 'Each drag shows a confirmation with requirements', 'Weighted values help prioritize high-probability deals'] },
-        { title: 'Capture Meeting Notes', description: 'After every client meeting, paste notes and let AI extract action items, stakeholder sentiments, and next steps.', action: { label: 'Try Meeting Notes', href: '/' }, tips: ['Click "Notes" in the top bar', 'Supports Teams, Zoom, and plain text', 'AI auto-updates the deal conversation log'] },
-        { title: 'Generate Documents', description: 'AI generates SOW, proposals, and pricing from deal context. One click, fully personalized.', action: { label: 'Open any deal → SOW button', href: '/pipeline' }, tips: ['Open a deal and click the green "SOW" button', 'Documents use real deal data and stakeholder context', 'Copy to clipboard for editing'] },
-      ],
-    },
-    {
-      section: 'Deal Management',
-      steps: [
-        { title: 'AI Deal Analysis', description: 'Every deal auto-analyzes when opened. See health score, win probability, risks, and recommended actions.', tips: ['Health ring shows 0-100 score', 'Click "Create Task" on any AI recommendation', 'Stage gate criteria shown in deal detail'] },
-        { title: 'Use the Deal Room', description: 'Open the Deal Room for conversational AI-guided deal management. Ask questions, get recommendations, and take actions on deals through natural language.', action: { label: 'Open Deal Room', href: '/deal-room' }, tips: ['AI has full context of all your deals', 'Ask about risks, next steps, or deal strategy', 'Lifecycle phases: Opportunity → Deal → Engagement → Contract'] },
-        { title: 'Generate Pricing', description: 'Build team compositions with 11 roles across 6 geo regions. Calculate blended rates, margins, and link pricing directly to deals.', action: { label: 'Open Pricing Engine', href: '/pricing' }, tips: ['11 roles: PM, Architect, Developer, QA, DevOps, etc.', '6 geo regions with rate multipliers (US 1.0x → India 0.35x)', 'Linked pricing updates deal TCV automatically'] },
-        { title: 'Manage Stakeholders', description: 'Track decision makers, champions, and contacts. The AI flags when key stakeholders are missing.', action: { label: 'View Contacts', href: '/stakeholders' }, tips: ['Toggle DM/Primary badges by clicking them', 'Add contacts from the deal detail "Stakeholders" tab', 'AI warns if no decision maker identified'] },
-        { title: 'Set Forecast Category', description: 'Mark each deal as Commit, Best Case, or Pipeline for accurate forecasting.', action: { label: 'View Forecast', href: '/forecasting' }, tips: ['Set category from the Forecasting page table', 'Commit = you will close this', 'Best Case = likely but not certain'] },
-      ],
-    },
-  ],
-  sdr: [
-    {
-      section: 'Lead Generation',
-      steps: [
-        { title: 'Use Signal to Capture Inputs', description: 'Capture leads from any channel — voice recordings, Teams messages, Outlook emails, or desktop notes. AI processes and extracts deal intelligence automatically.', action: { label: 'Open Signal', href: '/intake' }, tips: ['Supports voice, Teams, Outlook, and plain text', 'AI auto-extracts contacts, companies, and deal signals', 'Captured signals feed directly into the lead pipeline'] },
-        { title: 'Manage your Lead Pipeline', description: 'Track leads through Signal → Qualify → Enrich → Engage → Convert. AI assists at every stage.', action: { label: 'Open Leads', href: '/leads' }, tips: ['Click "AI Qualify" to score a lead', '"Draft Outreach" generates personalized emails', 'Convert qualified leads to deals with one click'] },
-        { title: 'AI Qualification', description: 'Let Claude score leads on ICP fit, budget signals, and timing. Leads scoring 60+ auto-advance.', tips: ['Scores include reasoning explanation', 'Review and adjust scores as needed', 'High-scoring leads should be prioritized'] },
-        { title: 'Draft Outreach', description: 'AI drafts personalized emails based on lead context, company data, and engagement signals.', tips: ['Review and edit before sending', 'Tone and source tags help customize', 'Track opens and replies'] },
-      ],
-    },
-    {
-      section: 'Handoff to AE',
-      steps: [
-        { title: 'Convert Leads to Deals', description: 'When a lead is qualified and engaged, convert to an opportunity with one click. All context transfers.', tips: ['Conversion creates the deal automatically', 'Lead contact becomes a stakeholder', 'AI score and context carry over'] },
-      ],
-    },
-  ],
-  manager: [
-    {
-      section: 'Team Oversight',
-      steps: [
-        { title: 'Use Scope Switcher', description: 'Toggle between My / Team / Org view on any page to see your team\'s deals.', tips: ['Scope affects all views simultaneously', 'Team view shows all direct reports', 'Org view shows entire pipeline'] },
-        { title: 'Review Forecasting', description: 'Check Commit vs Best Case vs Pipeline. Compare weighted forecast against quota.', action: { label: 'View Forecast', href: '/forecasting' }, tips: ['Commit total is what you report up', 'AI-weighted values are more accurate than stage multipliers', 'Set forecast categories for your deals'] },
-        { title: 'Monitor Pipeline Health', description: 'Dashboard shows funnel, conversion rates, business segmentation, and rep performance.', action: { label: 'View Dashboard', href: '/dashboard' }, tips: ['Sales funnel shows conversion rates between stages', 'Net New vs Existing shows business mix', 'Identify reps who need coaching from the by-owner section'] },
-        { title: 'Review Deal Graph', description: 'Visualize your pipeline as an SVG flow diagram. Switch between Graph, Sankey, and List views. Click any node to drill into deal details.', action: { label: 'Open Deal Graph', href: '/graph' }, tips: ['Graph view shows deal relationships and flow', 'Sankey view highlights value distribution across stages', 'Click any deal node to jump to its detail'] },
-        { title: 'Agent Analytics', description: 'Review AI agent execution metrics, activity timelines, and per-agent breakdowns. Understand how agents are being used across the team.', action: { label: 'View Agent Analytics', href: '/agents/logs' }, tips: ['See execution counts and success rates', 'Activity timeline shows agent usage over time', 'Agent breakdown identifies most-used capabilities'] },
-      ],
-    },
-    {
-      section: 'Coaching & Approvals',
-      steps: [
-        { title: 'Review AI Insights', description: 'The Command Center surfaces at-risk deals and AI recommendations. Use these for coaching conversations.', tips: ['Deals with no next step are stalled by definition', 'Time-in-stage red flags signal stuck deals', 'AI risk alerts indicate missing stakeholders or activity'] },
-        { title: 'Approve High-Value Deals', description: 'Deals above $500K require executive approval. Review and approve from the deal detail.', tips: ['Approval chain shows CSO → CFO → CEO progression', 'Add comments when approving or rejecting', 'Notifications fire when approval is requested'] },
-        { title: 'Manage Team', description: 'Invite users, assign roles, and manage team structure.', action: { label: 'User Management', href: '/admin/users' }, tips: ['Roles: Admin, Manager, Rep, SDR, Presales, Viewer', 'Each role has different permissions', 'Admins can change roles and delete users'] },
-      ],
-    },
-  ],
-  presales: [
-    {
-      section: 'Technical Support',
-      steps: [
-        { title: 'Review Deals in Proposal Stage', description: 'Focus on deals needing technical qualification, architecture, and POC support.', action: { label: 'View Pipeline', href: '/pipeline' }, tips: ['Filter by Proposal stage', 'Check stage artifacts required', 'SOW generation needs technical input'] },
-        { title: 'Use Ontology Templates', description: 'Each stage has required artifacts. The Proposal stage needs: SOW, Pricing Sheet, Technical Architecture.', tips: ['Open deal → Details tab → see "Stage Artifacts"', 'Required artifacts marked in orange', 'AI-generable artifacts can be auto-created'] },
-        { title: 'Use Presales OS', description: 'Manage pursuits (RFP/RFI/Proactive) with coverage scores, track solutioning efforts, and maintain templates and assets.', action: { label: 'Open Presales OS', href: '/presales' }, tips: ['Pursuits pipeline tracks RFP/RFI/Proactive opportunities', 'Coverage scores show pursuit readiness', 'Solutioning includes effort estimator and SA bench allocation'] },
-        { title: 'Use Proposal Studio', description: 'Build proposals with a 10-section editor. AI drafts each section from deal context — executive summary, technical approach, pricing, and more.', action: { label: 'Open Proposal Studio', href: '/presales' }, tips: ['10 proposal sections with per-section AI drafting', 'AI uses deal data, stakeholder context, and requirements', 'Export completed proposals for client delivery'] },
-      ],
-    },
-  ],
-  exec: [
-    {
-      section: 'Executive Overview',
-      steps: [
-        { title: 'Pipeline at a Glance', description: 'Command Center shows total pipeline, weighted forecast, win rate, and AI intelligence brief.', action: { label: 'Command Center', href: '/' }, tips: ['Use Org scope to see entire pipeline', 'AI brief auto-generates on page load', 'Pipeline lifecycle visual shows stage distribution'] },
-        { title: 'Forecast Review', description: 'Commit vs Best Case vs Pipeline with quarterly breakdown. Compare against quota.', action: { label: 'Forecast', href: '/forecasting' }, tips: ['Commit total is the number to report', 'AI-weighted values are more accurate', 'By-rep breakdown shows team performance'] },
-        { title: 'Approve Deals', description: 'High-value deals require your approval. Review context, AI analysis, and approve/reject.', tips: ['Deals >$500K need CSO+CFO approval', 'Deals >$1M need CEO approval', 'Approval chain visible in deal detail'] },
-      ],
-    },
-    {
-      section: 'Strategic Intelligence',
-      steps: [
-        { title: 'Ask Galent', description: 'Use natural language to query your pipeline. "What is our forecast for Q3?" "Which accounts are at risk?"', action: { label: 'Ask Galent', href: '/ask' }, tips: ['Full pipeline context included automatically', 'Try: "What is our win rate by industry?"', 'AI provides specific, data-driven answers'] },
-        { title: 'Review Account Health', description: 'Account 360 shows relationship maps, deal history, and expansion opportunities.', action: { label: 'Accounts', href: '/accounts' }, tips: ['Knowledge graph shows stakeholder relationships', 'Account health score aggregates deal health', 'Identify whitespace for expansion'] },
-      ],
-    },
-  ],
-};
+      {/* Features grid */}
+      {isActive && (
+        <div className="mt-4 ml-14 grid grid-cols-1 md:grid-cols-2 gap-3 animate-flow-in">
+          {features.map(f => <FeatureCard key={f.title} {...f} />)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function GuidePage() {
-  const [selectedRole, setSelectedRole] = useState<Role>('ae');
-  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Daily Workflow', 'Lead Generation', 'Team Oversight', 'Technical Support', 'Executive Overview']));
+  const router = useRouter();
+  const [activeStep, setActiveStep] = useState(0);
+  const [quickStart, setQuickStart] = useState(false);
 
-  const toggleStep = (id: string) => {
-    setCompletedSteps(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  };
-  const toggleSection = (s: string) => {
-    setExpandedSections(prev => { const n = new Set(prev); if (n.has(s)) n.delete(s); else n.add(s); return n; });
-  };
+  // Live pipeline stats for context
+  const { data: opportunities = [] } = trpc.opportunity.list.useQuery();
+  const activeDeals = (opportunities as any[]).filter((o: any) => !['Won', 'Lost'].includes(o.status));
+  const totalPipeline = activeDeals.reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+  const allTasks = (opportunities as any[]).flatMap((o: any) => o.subTasks || []);
+  const overdueTasks = allTasks.filter((t: any) => t.status === 'pending' && new Date(t.dueDate) < new Date());
 
-  const roleGuide = guides[selectedRole];
-  const totalSteps = roleGuide.reduce((s, g) => s + g.steps.length, 0);
-  const completedCount = roleGuide.reduce((s, g) => s + g.steps.filter(step => completedSteps.has(`${selectedRole}-${step.title}`)).length, 0);
+  const journeySteps = [
+    {
+      title: 'Prospecting & Lead Generation',
+      description: 'Capture leads from any channel, qualify with AI, and build your pipeline',
+      features: [
+        { icon: Magnet, title: 'Lead Management', description: 'AI-powered lead scoring, qualification, and enrichment. Leads flow: Signal → Qualify → Enrich → Engage → Convert.', href: '/leads', color: '#7c3aed', tag: 'AI', stats: `${(opportunities as any[]).length > 0 ? 'Pipeline active' : 'Start adding leads'}` },
+        { icon: Globe, title: 'Signal Intake', description: 'Capture intel from voice recordings, Teams transcripts, Outlook emails, or desktop notes. AI extracts deal signals automatically.', href: '/intake', color: '#11A7A0', tag: 'Omni-channel' },
+        { icon: Mail, title: 'Campaigns', description: 'Track outbound, ABM, and inbound campaigns with funnel analytics. Create, manage, and measure campaign performance.', href: '/campaigns', color: '#3b82f6' },
+        { icon: Network, title: 'Account Intelligence', description: 'Deep account research with AI-powered company analysis, relationship mapping, and expansion signals.', href: '/accounts', color: '#f59e0b', stats: 'AI enrichment + intent scoring' },
+      ],
+    },
+    {
+      title: 'Pipeline Management',
+      description: 'Manage your deals through stages with AI coaching, multiple views, and real-time insights',
+      features: [
+        { icon: Kanban, title: 'Pipeline Board', description: 'Drag-and-drop kanban with gate criteria, AI readiness analysis on every stage move, and weighted values.', href: '/pipeline', color: '#7c3aed', tag: 'Primary', stats: `${activeDeals.length} active deals · $${(totalPipeline / 1e6).toFixed(1)}M pipeline` },
+        { icon: MessageSquare, title: 'Deal Room', description: 'Conversational deal management. Add tasks, stakeholders, change stages — all through natural language with AI assistance.', href: '/deal-room', color: '#22c55e' },
+        { icon: CheckSquare, title: 'Tasks', description: 'AI auto-creates tasks when deals change stages. Track overdue items, set priorities, and link everything to deals.', href: '/tasks', color: '#ef4444', stats: overdueTasks.length > 0 ? `${overdueTasks.length} overdue tasks need attention` : 'All tasks on track' },
+        { icon: Users, title: 'Contacts & Intelligence', description: 'Auto-categorized contacts: Executive, Champion, Influencer, Gatekeeper. Slide-out intelligence panel for each person.', href: '/stakeholders', color: '#8b5cf6', tag: 'AI Categories' },
+      ],
+    },
+    {
+      title: 'Presales & Pricing',
+      description: 'Build proposals, estimate pricing, and generate SOW documents — all AI-assisted',
+      features: [
+        { icon: Target, title: 'Presales OS', description: 'Pursuit pipeline (RFP/RFI/Proactive), 10-section Proposal Studio with AI drafting, solutioning effort estimator, and templates.', href: '/presales', color: '#178A4C', tag: 'AI Studio' },
+        { icon: DollarSign, title: 'Pricing Engine', description: '11 roles × 6 geo regions with Galent rate cards. Build team compositions, calculate blended rates, margins, and export to CSV.', href: '/pricing', color: '#B26A05' },
+        { icon: FileText, title: 'Contracts', description: 'Full contract lifecycle: SOW, MSA, NDA, Change Orders. Approval chains, expiry tracking, and deal linking.', href: '/contracts', color: '#C73A3A' },
+      ],
+    },
+    {
+      title: 'Analytics & Forecasting',
+      description: 'Pipeline insights, revenue forecasting, and deal flow visualization',
+      features: [
+        { icon: BarChart3, title: 'Analytics Dashboard', description: 'Pipeline by stage, by owner, by industry. Sales funnel with conversion rates. Forecast by quarter.', href: '/dashboard', color: '#7c3aed' },
+        { icon: TrendingUp, title: 'Forecasting', description: 'Commit / Best Case / Pipeline categories. Weighted forecast, win rate tracking, rep-level breakdown.', href: '/forecasting', color: '#3b82f6' },
+        { icon: Eye, title: 'Deal Graph', description: 'Interactive pipeline visualization — graph, sankey, and list views. Click any node to drill into deal details.', href: '/graph', color: '#22c55e' },
+      ],
+    },
+    {
+      title: 'AI Agents & Automation',
+      description: '9 specialized AI agents + workflow automation + natural language queries',
+      features: [
+        { icon: Bot, title: 'AI Agent Fleet', description: '9 agents: Deal Coach, Research, Outreach Drafter, Pipeline Hygiene, Forecast, Intake Processor, Proposal Drafter, Account Intel, Competitive Intel.', href: '/agents', color: '#7c3aed', tag: '9 Agents', stats: 'Claude-powered with guardrails' },
+        { icon: Sparkles, title: 'Ask Galent', description: 'Natural language queries about your pipeline. "Which deals are at risk?" "What is our forecast for Q3?" AI responds with data.', href: '/ask', color: '#11A7A0' },
+        { icon: Zap, title: 'Workflows', description: 'Trigger → Condition → Action automation. Auto-runs on deal events, task overdue, lead qualification, and scheduled intervals.', href: '/workflows', color: '#f59e0b' },
+      ],
+    },
+  ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold text-foreground">Getting Started Guide</h1>
-        <p className="text-sm text-muted-foreground mt-1">Select your role for a personalized walkthrough</p>
-      </div>
-
-      {/* Role selector */}
-      <div className="grid grid-cols-5 gap-2">
-        {roles.map(role => (
-          <button key={role.id} onClick={() => setSelectedRole(role.id)}
-            className={`p-3 rounded-xl g-surface text-center transition-all ${selectedRole === role.id ? '!border-[#7c3aed]/40 ring-1 ring-[#7c3aed]/20' : 'hover:!border-[#7c3aed]/20'}`}>
-            <role.icon className="h-5 w-5 mx-auto mb-1.5" style={{ color: role.color }} />
-            <div className="text-xs font-semibold text-foreground">{role.title.split('/')[0].trim()}</div>
-            <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{role.subtitle}</div>
-          </button>
-        ))}
-      </div>
-
-      {/* Progress */}
-      <div className="flex items-center gap-3">
-        <div className="h-2 flex-1 rounded-full bg-card border border-border overflow-hidden">
-          <div className="h-full bg-[#7c3aed] rounded-full transition-all" style={{ width: `${(completedCount / totalSteps) * 100}%` }} />
+    <div className="max-w-4xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-3">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed] text-xs font-medium">
+          <BookOpen className="h-3.5 w-3.5" /> Interactive Platform Guide
         </div>
-        <span className="text-xs text-muted-foreground g-metric">{completedCount}/{totalSteps}</span>
+        <h1 className="text-3xl font-bold text-foreground font-display">Welcome to Galent SalesPilot</h1>
+        <p className="text-sm text-muted-foreground max-w-xl mx-auto">
+          AI-native sales intelligence platform. Follow the journey below — each step links to the actual feature so you can try it immediately.
+        </p>
       </div>
 
-      {/* Guide sections */}
-      {roleGuide.map(group => (
-        <div key={group.section} className="space-y-2">
-          <button onClick={() => toggleSection(group.section)} className="flex items-center gap-2 w-full text-left">
-            {expandedSections.has(group.section) ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-            <span className="g-section-label">{group.section}</span>
-          </button>
-
-          {expandedSections.has(group.section) && (
-            <div className="space-y-2 ml-6">
-              {group.steps.map((step, i) => {
-                const stepId = `${selectedRole}-${step.title}`;
-                const isComplete = completedSteps.has(stepId);
-                return (
-                  <div key={i} className={`g-surface g-elevated p-4 transition-all ${isComplete ? 'opacity-60' : ''}`}>
-                    <div className="flex items-start gap-3">
-                      <button onClick={() => toggleStep(stepId)}
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${isComplete ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#7c3aed]/10 text-[#7c3aed]'}`}>
-                        {isComplete ? <Check className="h-3 w-3" /> : <span className="text-[10px] font-bold">{i + 1}</span>}
-                      </button>
-                      <div className="flex-1">
-                        <h4 className={`text-sm font-semibold ${isComplete ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{step.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
-                        {!isComplete && (
-                          <>
-                            <div className="mt-2 space-y-0.5">
-                              {step.tips.map((tip, j) => (
-                                <div key={j} className="text-[11px] text-muted-foreground flex items-start gap-1">
-                                  <span className="text-[#7c3aed]">•</span> {tip}
-                                </div>
-                              ))}
-                            </div>
-                            {step.action && (
-                              <Link href={step.action.href} className="inline-flex items-center gap-1 mt-2 px-3 py-1 text-xs font-medium rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors">
-                                {step.action.label} <ArrowRight className="h-3 w-3" />
-                              </Link>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+      {/* Live stats banner */}
+      {(opportunities as any[]).length > 0 && (
+        <div className="grid grid-cols-4 gap-3 animate-flow-in">
+          {[
+            { label: 'Pipeline', value: `$${(totalPipeline / 1e6).toFixed(1)}M`, color: '#7c3aed' },
+            { label: 'Active Deals', value: String(activeDeals.length), color: '#22c55e' },
+            { label: 'Tasks', value: String(allTasks.length), color: '#3b82f6' },
+            { label: 'Overdue', value: String(overdueTasks.length), color: overdueTasks.length > 0 ? '#ef4444' : '#22c55e' },
+          ].map(stat => (
+            <div key={stat.label} className="p-3 rounded-xl g-surface text-center">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</div>
+              <div className="text-lg font-bold g-metric" style={{ color: stat.color }}>{stat.value}</div>
             </div>
-          )}
+          ))}
         </div>
-      ))}
+      )}
+
+      {/* Quick Start buttons */}
+      <div className="flex items-center gap-3 justify-center">
+        <Link href="/"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7c3aed] text-white text-sm font-medium hover:bg-[#6d28d9] transition-colors">
+          <Home className="h-4 w-4" /> Go to Command Center
+        </Link>
+        <Link href="/pipeline"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-secondary transition-colors">
+          <Kanban className="h-4 w-4" /> Open Pipeline
+        </Link>
+        <Link href="/ask"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-secondary transition-colors">
+          <Sparkles className="h-4 w-4 text-[#7c3aed]" /> Ask Galent
+        </Link>
+      </div>
+
+      {/* Journey Steps */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Sales Lifecycle Journey</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        <div className="space-y-4">
+          {journeySteps.map((step, i) => (
+            <div key={step.title}>
+              <JourneyStep
+                number={i + 1}
+                title={step.title}
+                description={step.description}
+                features={step.features}
+                isActive={activeStep === i}
+                onToggle={() => setActiveStep(activeStep === i ? -1 : i)}
+              />
+              {i < journeySteps.length - 1 && (
+                <div className="ml-5 h-6 border-l-2 border-dashed border-border" />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Platform capabilities summary */}
+      <div className="p-5 rounded-xl g-surface g-elevated">
+        <div className="text-sm font-semibold text-foreground mb-3 font-display">Platform Capabilities</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          {[
+            { label: '33 Routes', desc: 'Full-featured pages' },
+            { label: '9 AI Agents', desc: 'Claude-powered' },
+            { label: '21 tRPC Routers', desc: 'Type-safe API' },
+            { label: '8 Deal Tabs', desc: 'Single source of truth' },
+            { label: 'Real-time', desc: 'Socket.IO events' },
+            { label: '6 Pipeline Views', desc: 'Board/Table/Calendar...' },
+            { label: 'MCP Tools', desc: 'Agent-callable integrations' },
+            { label: '121 Tests', desc: 'Vitest suite' },
+          ].map(cap => (
+            <div key={cap.label} className="flex items-center gap-2">
+              <CircleCheck className="h-3.5 w-3.5 text-[var(--g-green)] shrink-0" />
+              <div>
+                <span className="font-medium text-foreground">{cap.label}</span>
+                <span className="text-muted-foreground ml-1">— {cap.desc}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
