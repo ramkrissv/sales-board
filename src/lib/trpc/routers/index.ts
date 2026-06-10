@@ -20,6 +20,7 @@ import { activityRouter } from './activity';
 import { ontologyRouter } from './ontology';
 import { approvalRouter } from './approval';
 import { harnessRouter } from './harness';
+import { campaignRouter } from './campaign';
 
 export const appRouter = router({
   opportunity: opportunityRouter,
@@ -43,6 +44,7 @@ export const appRouter = router({
   ontology: ontologyRouter,
   approval: approvalRouter,
   harness: harnessRouter,
+  campaign: campaignRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -61,18 +61,18 @@ function PricingContent() {
   const [margin, setMargin] = useState(28); // percent
   const [linkedOppId, setLinkedOppId] = useState('');
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: '1', role: 'Project Manager', count: 1, geo: 'us', baseRate: 175, hoursPerMonth: 160 },
-    { id: '2', role: 'Senior Developer', count: 2, geo: 'india', baseRate: 165, hoursPerMonth: 160 },
-    { id: '3', role: 'QA Engineer', count: 1, geo: 'india', baseRate: 120, hoursPerMonth: 160 },
+    { id: '1', role: 'Program Manager', count: 1, geo: 'us', baseRate: 130, hoursPerMonth: 160 },
+    { id: '2', role: 'Sr Full Stack Engineer', count: 2, geo: 'india', baseRate: 95, hoursPerMonth: 160 },
+    { id: '3', role: 'QA Engineer', count: 1, geo: 'india', baseRate: 80, hoursPerMonth: 160 },
   ]);
 
   const addLine = () => {
     setLineItems(prev => [...prev, {
       id: String(Date.now()),
-      role: 'Developer',
+      role: 'Sr Full Stack Engineer',
       count: 1,
       geo: 'india',
-      baseRate: 135,
+      baseRate: 95,
       hoursPerMonth: 160,
     }]);
   };
@@ -257,13 +257,31 @@ function PricingContent() {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         {linkedOppId && (
           <button onClick={linkToOpp} disabled={updateOppMutation.isPending}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#7c3aed] text-white text-sm font-medium hover:bg-[#6d28d9] transition-colors disabled:opacity-50">
             <Link2 className="h-4 w-4" /> Update Deal TCV (${(calculations.totalWithMargin/1000).toFixed(0)}k)
           </button>
         )}
+        <button onClick={() => {
+          const rows = [
+            ['Role', 'Count', 'Geo', 'Base Rate', 'Effective Rate', 'Monthly', 'Total'],
+            ...calculations.lines.map(l => [l.role, l.count, GEO_RATES[l.geo]?.label || l.geo, `$${l.baseRate}`, `$${l.effectiveRate.toFixed(0)}`, `$${l.monthlyTotal.toFixed(0)}`, `$${l.totalCost.toFixed(0)}`]),
+            [],
+            ['Subtotal', '', '', '', '', `$${calculations.totalMonthlyCost.toFixed(0)}`, `$${calculations.totalCost.toFixed(0)}`],
+            [`Margin (${margin}%)`, '', '', '', '', '', `$${calculations.marginAmount.toFixed(0)}`],
+            ['Total Contract Value', '', '', '', '', '', `$${calculations.totalWithMargin.toFixed(0)}`],
+          ];
+          const csv = rows.map(r => (r as any[]).join(',')).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href = url; a.download = 'pricing-estimate.csv'; a.click();
+          URL.revokeObjectURL(url);
+        }}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-sm text-foreground hover:bg-secondary transition-colors">
+          <Download className="h-4 w-4" /> Export CSV
+        </button>
       </div>
     </div>
   );

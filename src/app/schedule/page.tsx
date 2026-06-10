@@ -1,12 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
+import { DealDetail } from '@/components/modals/DealDetail';
 import { isToday, isPast, isAfter, endOfWeek, addWeeks, startOfDay, isThisWeek } from 'date-fns';
 import { format } from 'date-fns';
 
 function ScheduleContent() {
   const { opportunities, isLoading } = useOpportunities();
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading schedule...</div>;
@@ -40,14 +43,15 @@ function ScheduleContent() {
             </div>
             <div className="space-y-2">
               {bucket.items.map(opp => (
-                <div key={opp.id} className="p-2.5 rounded-lg bg-card border border-border hover:border-purple-500/20 transition-all">
+                <button key={opp.id} onClick={() => setSelectedOppId(opp.id)}
+                  className="w-full text-left p-2.5 rounded-lg bg-card border border-border hover:border-purple-500/20 hover-lift transition-all">
                   <div className="text-xs font-medium text-foreground truncate">{opp.customerName}</div>
                   <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{opp.opportunityName}</div>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-[10px] text-muted-foreground">{format(new Date(opp.expectedCloseDate), 'MMM d')}</span>
                     {opp.tcv > 0 && <span className="text-[10px] text-muted-foreground">${(opp.tcv/1000).toFixed(0)}k</span>}
                   </div>
-                </div>
+                </button>
               ))}
               {bucket.items.length === 0 && (
                 <div className="text-xs text-muted-foreground text-center py-4">No deals</div>
@@ -56,6 +60,8 @@ function ScheduleContent() {
           </div>
         ))}
       </div>
+
+      {selectedOppId && <DealDetail opportunityId={selectedOppId} onClose={() => setSelectedOppId(null)} />}
     </div>
   );
 }

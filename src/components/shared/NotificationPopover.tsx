@@ -26,6 +26,9 @@ function timeAgo(date: string | Date): string {
 
 const typeColors: Record<string, string> = {
   'deal_stage_change': 'bg-emerald-500',
+  'deal_created': 'bg-blue-500',
+  'deal_won': 'bg-emerald-400',
+  'deal_lost': 'bg-red-500',
   'overdue_task': 'bg-orange-500',
   'ai_signal': 'bg-purple-500',
   'contract_expiry': 'bg-red-500',
@@ -54,16 +57,16 @@ export function NotificationPopover() {
     <Popover>
       <PopoverTrigger asChild>
         <button className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-          <Bell className="h-4 w-4" />
+          <Bell className={`h-4 w-4 ${unreadCount > 0 ? 'animate-bounce-soft' : ''}`} />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full bg-purple-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5">
+            <span className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full bg-[#7c3aed] text-white text-[9px] font-bold flex items-center justify-center px-0.5 animate-pulse-live">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/50">
           <div className="font-semibold text-sm">Notifications</div>
           {unreadCount > 0 && (
             <Button
@@ -86,7 +89,7 @@ export function NotificationPopover() {
             {(notifications as any[]).map((notif: any) => (
               <div
                 key={notif._id}
-                className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors ${!notif.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                className={`p-4 hover:bg-secondary/50 cursor-pointer transition-colors ${!notif.read ? 'bg-[var(--g-brand-soft)]' : ''}`}
                 onClick={() => {
                   if (!notif.read) markRead.mutate({ id: notif._id });
                 }}

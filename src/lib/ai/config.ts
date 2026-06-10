@@ -16,14 +16,36 @@ export interface AIModelConfig {
 
 // Available models registry - extensible via UI
 export const AVAILABLE_MODELS: AIModelConfig[] = [
-  // Anthropic
+  // Anthropic — Claude 4.6 (latest)
+  {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-6-20250610',
+    displayName: 'Claude Sonnet 4.6',
+    maxTokens: 16384,
+    temperature: 0.7,
+    isDefault: true,
+  },
+  {
+    provider: 'anthropic',
+    model: 'claude-opus-4-6-20250610',
+    displayName: 'Claude Opus 4.6',
+    maxTokens: 16384,
+    temperature: 0.5,
+  },
+  {
+    provider: 'anthropic',
+    model: 'claude-haiku-4-5-20251001',
+    displayName: 'Claude Haiku 4.5',
+    maxTokens: 8192,
+    temperature: 0.8,
+  },
+  // Anthropic — Claude 4 (previous gen)
   {
     provider: 'anthropic',
     model: 'claude-sonnet-4-20250514',
     displayName: 'Claude Sonnet 4',
     maxTokens: 8192,
     temperature: 0.7,
-    isDefault: true,
   },
   {
     provider: 'anthropic',
@@ -31,13 +53,6 @@ export const AVAILABLE_MODELS: AIModelConfig[] = [
     displayName: 'Claude Opus 4',
     maxTokens: 8192,
     temperature: 0.5,
-  },
-  {
-    provider: 'anthropic',
-    model: 'claude-haiku-4-20250514',
-    displayName: 'Claude Haiku 4',
-    maxTokens: 4096,
-    temperature: 0.8,
   },
   // OpenAI (for future use)
   {
@@ -307,7 +322,7 @@ Be specific to the client and deal, never generic.`,
  */
 export function getDefaultModelConfig(): AIModelConfig {
   const provider = (process.env.AI_DEFAULT_PROVIDER || 'anthropic') as AIProvider;
-  const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514';
+  const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610';
 
   const found = AVAILABLE_MODELS.find((m) => m.provider === provider && m.model === model);
   return found || AVAILABLE_MODELS[0];
