@@ -1,35 +1,40 @@
 'use client';
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
-import { FilterPanel } from '@/components/shared/FilterPanel';
 import { trpc } from '@/lib/trpc/client';
-import { format } from 'date-fns';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  AlertTriangle, ArrowRight, TrendingUp, DollarSign,
-  Target, Clock, Sparkles, Zap, ChevronRight,
-  Users, CheckSquare, Kanban, Building2
+  Sparkles, TrendingUp, AlertTriangle, Target, ChevronRight,
+  Zap, ArrowRight, Clock, DollarSign, Users, CheckSquare,
+  Brain, Shield, Rocket, Eye
 } from 'lucide-react';
 import Link from 'next/link';
 import { DealDetail } from '@/components/modals/DealDetail';
-
-function formatCurrency(val: number) {
-  if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
-  if (val >= 1_000) return `$${(val / 1_000).toFixed(0)}K`;
-  return `$${val.toLocaleString()}`;
-}
+import { FilterPanel } from '@/components/shared/FilterPanel';
 
 function HomeContent() {
   const { filteredOpportunities: opportunities, isLoading } = useOpportunities();
-  const { data: accounts = [] } = trpc.account.list.useQuery();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+
+  const pipelineMutation = trpc.ai.analyzePipeline.useMutation({
+    onSuccess: (data) => setAiSummary(data.summary),
+  });
+
+  // Auto-trigger AI analysis on load
+  useEffect(() => {
+    if (!isLoading && opportunities.length > 0 && !aiSummary) {
+      pipelineMutation.mutate();
+    }
+  }, [isLoading, opportunities.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <Sparkles className="h-5 w-5 animate-pulse text-purple-400" />
-          <span>Loading your pipeline intelligence...</span>
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="h-10 w-64 bg-card rounded-lg animate-pulse" />
+        <div className="h-24 bg-card rounded-xl animate-pulse ai-glow" />
+        <div className="grid grid-cols-4 gap-3">
+          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-card rounded-xl animate-pulse" />)}
         </div>
       </div>
     );
@@ -39,237 +44,230 @@ function HomeContent() {
   const totalPipeline = activeDeals.reduce((sum, o) => sum + (o.tcv || 0), 0);
   const wonDeals = opportunities.filter(o => o.status === 'Won');
   const lostDeals = opportunities.filter(o => o.status === 'Lost');
-  const winRate = wonDeals.length + lostDeals.length > 0
-    ? Math.round((wonDeals.length / (wonDeals.length + lostDeals.length)) * 100)
-    : 0;
+  const winRate = wonDeals.length + lostDeals.length > 0 ? Math.round((wonDeals.length / (wonDeals.length + lostDeals.length)) * 100) : 0;
   const negotiationDeals = opportunities.filter(o => o.status === 'Negotiation');
-  const overdueTasks = opportunities.flatMap(o => o.subTasks || []).filter(t =>
-    t.status === 'pending' && new Date(t.dueDate) < new Date()
-  );
+  const allTasks = opportunities.flatMap(o => o.subTasks || []);
+  const overdueTasks = allTasks.filter(t => t.status === 'pending' && new Date(t.dueDate) < new Date());
+
+  // AI-detected signals
   const atRiskDeals = activeDeals.filter(o => {
     const stakeholders = o.customerStakeholders || [];
-    const hasDecisionMaker = stakeholders.some(s => s.isDecisionMaker);
-    return !hasDecisionMaker || o.tcv === 0;
+    return !stakeholders.some(s => s.isDecisionMaker) || o.tcv === 0;
+  });
+  const highValueDeals = activeDeals.filter(o => o.tcv >= 100000).sort((a, b) => b.tcv - a.tcv);
+  const closingSoonDeals = activeDeals.filter(o => {
+    const days = Math.ceil((new Date(o.expectedCloseDate).getTime() - Date.now()) / (1000*60*60*24));
+    return days >= 0 && days <= 30;
   });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      {/* Greeting */}
-      <div className="animate-flow-in">
-        <h1 className="text-2xl font-semibold text-foreground">
-          Good morning. <span className="text-purple-400">Here&apos;s your pipeline.</span>
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {activeDeals.length} active projects &middot; {atRiskDeals.length > 0 ? `${atRiskDeals.length} need attention` : 'All on track'} &middot; {negotiationDeals.length} ready to close
-        </p>
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* AI Insight Banner -- auto-generated, not on-demand */}
+      <div className="relative overflow-hidden rounded-xl ai-glow animate-flow-in" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.02), transparent)' }}>
+        <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
+          <Brain className="w-full h-full text-[#7c3aed]" />
+        </div>
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 rounded-lg bg-[#7c3aed]/20 flex items-center justify-center">
+              <Sparkles className="h-3.5 w-3.5 text-[#7c3aed]" />
+            </div>
+            <span className="text-xs font-semibold text-[#7c3aed] uppercase tracking-wider">AI Intelligence Brief</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-live ml-1" />
+          </div>
+          {pipelineMutation.isPending ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="h-4 w-4 animate-spin text-[#7c3aed]" />
+              Analyzing your pipeline...
+            </div>
+          ) : aiSummary ? (
+            <p className="text-sm text-foreground leading-relaxed">{aiSummary}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Loading AI insights...</p>
+          )}
+        </div>
       </div>
 
-      {/* Critical Actions — flowing cards */}
-      {(atRiskDeals.length > 0 || negotiationDeals.length > 0 || overdueTasks.length > 0) && (
-        <div className="space-y-3 animate-flow-in animate-flow-in-delay-1">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            <Zap className="h-3 w-3 text-purple-400" />
-            Critical Actions
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {negotiationDeals.length > 0 && (
-              <Link href="/pipeline" className="group p-4 rounded-xl bg-card border border-emerald-500/20 hover:border-emerald-500/40 transition-all">
-                <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider mb-2">Ready to Close</div>
-                <div className="text-sm text-foreground font-medium">{negotiationDeals.length} deals in Negotiation</div>
-                <div className="text-xs text-muted-foreground mt-1">{negotiationDeals.map(d => d.customerName).join(', ')}</div>
-                <div className="flex items-center gap-1 mt-3 text-xs text-emerald-400 group-hover:gap-2 transition-all">
-                  <span>Review deals</span><ArrowRight className="h-3 w-3" />
-                </div>
-              </Link>
-            )}
-            {atRiskDeals.length > 0 && (
-              <Link href="/pipeline" className="group p-4 rounded-xl bg-card border border-orange-500/20 hover:border-orange-500/40 transition-all">
-                <div className="text-[10px] font-semibold text-orange-400 uppercase tracking-wider mb-2">Needs Attention</div>
-                <div className="text-sm text-foreground font-medium">{atRiskDeals.length} deals at risk</div>
-                <div className="text-xs text-muted-foreground mt-1">Missing decision makers or TCV not set</div>
-                <div className="flex items-center gap-1 mt-3 text-xs text-orange-400 group-hover:gap-2 transition-all">
-                  <span>Fix now</span><ArrowRight className="h-3 w-3" />
-                </div>
-              </Link>
-            )}
-            {overdueTasks.length > 0 && (
-              <Link href="/tasks" className="group p-4 rounded-xl bg-card border border-red-500/20 hover:border-red-500/40 transition-all">
-                <div className="text-[10px] font-semibold text-red-400 uppercase tracking-wider mb-2">Overdue</div>
-                <div className="text-sm text-foreground font-medium">{overdueTasks.length} overdue tasks</div>
-                <div className="text-xs text-muted-foreground mt-1">Across {new Set(overdueTasks.map(t => t.owner)).size} owners</div>
-                <div className="flex items-center gap-1 mt-3 text-xs text-red-400 group-hover:gap-2 transition-all">
-                  <span>View tasks</span><ArrowRight className="h-3 w-3" />
-                </div>
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Smart Action Cards -- AI-detected, one-click executable */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-flow-in animate-flow-in-delay-1">
+        {/* Ready to close */}
+        {negotiationDeals.length > 0 && (
+          <button onClick={() => setSelectedOppId(negotiationDeals[0].id)} className="group p-4 rounded-xl g-surface g-elevated text-left transition-all hover:!border-emerald-500/40">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-5 h-5 rounded-md bg-emerald-500/15 flex items-center justify-center">
+                <Rocket className="h-3 w-3 text-emerald-400" />
+              </div>
+              <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">Ready to Close</span>
+            </div>
+            <div className="text-sm font-medium text-foreground">{negotiationDeals[0].customerName}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{negotiationDeals.length} deal{negotiationDeals.length > 1 ? 's' : ''} in negotiation</div>
+            <div className="flex items-center gap-1 mt-2 text-xs text-emerald-400 group-hover:gap-2 transition-all">
+              <span>Review &amp; close</span><ArrowRight className="h-3 w-3" />
+            </div>
+          </button>
+        )}
 
-      {/* KPIs — clean flowing row */}
+        {/* At risk */}
+        {atRiskDeals.length > 0 && (
+          <button onClick={() => setSelectedOppId(atRiskDeals[0].id)} className="group p-4 rounded-xl g-surface g-elevated text-left transition-all hover:!border-orange-500/40">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-5 h-5 rounded-md bg-orange-500/15 flex items-center justify-center">
+                <Shield className="h-3 w-3 text-orange-400" />
+              </div>
+              <span className="text-[10px] font-semibold text-orange-400 uppercase tracking-wider">AI Risk Alert</span>
+            </div>
+            <div className="text-sm font-medium text-foreground">{atRiskDeals[0].customerName}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">Missing decision maker or TCV</div>
+            <div className="flex items-center gap-1 mt-2 text-xs text-orange-400 group-hover:gap-2 transition-all">
+              <span>Fix now</span><ArrowRight className="h-3 w-3" />
+            </div>
+          </button>
+        )}
+
+        {/* Overdue tasks */}
+        {overdueTasks.length > 0 && (
+          <Link href="/tasks" className="group p-4 rounded-xl g-surface g-elevated text-left transition-all hover:!border-red-500/40">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-5 h-5 rounded-md bg-red-500/15 flex items-center justify-center">
+                <AlertTriangle className="h-3 w-3 text-red-400" />
+              </div>
+              <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wider">Overdue</span>
+            </div>
+            <div className="text-sm font-medium text-foreground">{overdueTasks.length} overdue task{overdueTasks.length > 1 ? 's' : ''}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{overdueTasks[0]?.name}</div>
+            <div className="flex items-center gap-1 mt-2 text-xs text-red-400 group-hover:gap-2 transition-all">
+              <span>View tasks</span><ArrowRight className="h-3 w-3" />
+            </div>
+          </Link>
+        )}
+      </div>
+
+      {/* KPI Row with visual indicators */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-flow-in animate-flow-in-delay-2">
         {[
-          { label: 'Pipeline Value', value: `$${(totalPipeline / 1000000).toFixed(1)}M`, icon: DollarSign, color: 'text-purple-400' },
-          { label: 'Win Rate', value: `${winRate}%`, icon: Target, color: 'text-emerald-400' },
-          { label: 'Active Deals', value: `${activeDeals.length}`, icon: TrendingUp, color: 'text-blue-400' },
-          { label: 'Closing This Month', value: `${negotiationDeals.length}`, icon: Clock, color: 'text-amber-400' },
-        ].map((kpi) => (
+          { label: 'Pipeline', value: `$${(totalPipeline/1e6).toFixed(1)}M`, icon: DollarSign, color: '#7c3aed', sub: `${activeDeals.length} active` },
+          { label: 'Win Rate', value: `${winRate}%`, icon: Target, color: '#22c55e', sub: `${wonDeals.length}W / ${lostDeals.length}L` },
+          { label: 'Closing Soon', value: `${closingSoonDeals.length}`, icon: Clock, color: '#f59e0b', sub: 'within 30 days' },
+          { label: 'At Risk', value: `${atRiskDeals.length}`, icon: AlertTriangle, color: '#ef4444', sub: 'need attention' },
+        ].map(kpi => (
           <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated">
             <div className="flex items-center gap-2 mb-2">
-              <kpi.icon className={`h-3.5 w-3.5 ${kpi.color}`} />
+              <kpi.icon className="h-3.5 w-3.5" style={{ color: kpi.color }} />
               <span className="g-section-label">{kpi.label}</span>
             </div>
-            <div className="g-kpi text-foreground">{kpi.value}</div>
+            <div className="g-kpi text-foreground" style={{ fontSize: '24px' }}>{kpi.value}</div>
+            <div className="text-[11px] text-muted-foreground mt-1">{kpi.sub}</div>
           </div>
         ))}
       </div>
 
-      {/* Pipeline flow — mini kanban preview */}
+      {/* Pipeline Lifecycle Visual -- animated stage flow */}
       <div className="animate-flow-in animate-flow-in-delay-3">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            <Kanban className="h-3 w-3 text-purple-400" />
-            Pipeline Flow
-          </div>
-          <Link href="/pipeline" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1">
+          <span className="g-section-label flex items-center gap-1.5">
+            <Eye className="h-3 w-3" /> Pipeline Lifecycle
+          </span>
+          <Link href="/pipeline" className="text-xs text-[#7c3aed] hover:underline flex items-center gap-1">
             Open Pipeline <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'].map((stage) => {
+        <div className="flex items-center gap-1">
+          {['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'].map((stage, i) => {
             const stageDeals = opportunities.filter(o => o.status === stage);
-            const stageTcv = stageDeals.reduce((sum, o) => sum + (o.tcv || 0), 0);
-            const colors: Record<string, string> = {
-              'Discovery': 'border-blue-500/30 text-blue-400',
-              'Qualification': 'border-amber-500/30 text-amber-400',
-              'Proposal': 'border-purple-500/30 text-purple-400',
-              'Negotiation': 'border-emerald-500/30 text-emerald-400',
-              'Won': 'border-green-500/30 text-green-400',
-            };
+            const stageTcv = stageDeals.reduce((s, o) => s + (o.tcv || 0), 0);
+            const maxDeals = Math.max(...['Discovery','Qualification','Proposal','Negotiation','Won'].map(s => opportunities.filter(o => o.status === s).length), 1);
+            const height = Math.max(40, (stageDeals.length / maxDeals) * 120);
+            const colors = ['#3b82f6', '#f59e0b', '#7c3aed', '#22c55e', '#10b981'];
             return (
-              <div key={stage} className={`flex-1 min-w-[140px] p-3 rounded-xl bg-card border ${colors[stage]?.split(' ')[0] || 'border-border'}`}>
-                <div className={`text-[10px] font-semibold uppercase tracking-wider ${colors[stage]?.split(' ')[1] || 'text-muted-foreground'}`}>
-                  {stage}
+              <div key={stage} className="flex-1 flex flex-col items-center gap-1">
+                <div
+                  className="w-full rounded-lg transition-all duration-500 flex items-end justify-center pb-2 relative overflow-hidden"
+                  style={{ height: `${height}px`, backgroundColor: `${colors[i]}15`, border: `1px solid ${colors[i]}30` }}
+                >
+                  <span className="g-kpi text-foreground" style={{ fontSize: '18px', color: colors[i] }}>{stageDeals.length}</span>
+                  {/* Animated fill line at bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-lg" style={{ backgroundColor: colors[i], opacity: 0.6 }} />
                 </div>
-                <div className="text-lg font-semibold text-foreground mt-1">{stageDeals.length}</div>
-                <div className="text-[11px] text-muted-foreground">${(stageTcv / 1000).toFixed(0)}k</div>
+                <span className="text-[10px] text-muted-foreground font-medium">{stage}</span>
+                <span className="text-[10px] text-muted-foreground">${(stageTcv/1000).toFixed(0)}k</span>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Recent deals — flowing list */}
+      {/* AI-Prioritized Deal Feed -- not just "recent", but AI-ranked */}
       <div className="animate-flow-in animate-flow-in-delay-4">
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-          <Clock className="h-3 w-3 text-purple-400" />
-          Recent Projects
-        </div>
+        <span className="g-section-label flex items-center gap-1.5 mb-3">
+          <Sparkles className="h-3 w-3" /> AI-Prioritized Deals
+        </span>
         <div className="space-y-2">
-          {opportunities.slice(0, 8).map((opp) => {
-            const statusColors: Record<string, string> = {
-              'Discovery': 'bg-blue-500/20 text-blue-400',
-              'Qualification': 'bg-amber-500/20 text-amber-400',
-              'Proposal': 'bg-purple-500/20 text-purple-400',
-              'Negotiation': 'bg-emerald-500/20 text-emerald-400',
-              'Won': 'bg-green-500/20 text-green-400',
-              'Lost': 'bg-slate-500/20 text-muted-foreground',
-              'On Hold': 'bg-orange-500/20 text-orange-400',
-            };
-            return (
-              <button
-                key={opp.id}
-                onClick={() => setSelectedOppId(opp.id)}
-                className="flex items-center gap-4 p-3 rounded-xl g-surface g-elevated hover:border-purple-500/30 transition-all group w-full text-left"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-foreground group-hover:text-purple-300 transition-colors truncate">
-                    {opp.customerName}
+          {/* Sort by: negotiation first, then high-value, then at-risk, then rest */}
+          {[...opportunities]
+            .sort((a, b) => {
+              const priority = (o: typeof a) => {
+                if (o.status === 'Negotiation') return 0;
+                if (o.tcv >= 100000) return 1;
+                if (atRiskDeals.some(r => r.id === o.id)) return 2;
+                return 3;
+              };
+              return priority(a) - priority(b);
+            })
+            .slice(0, 8)
+            .map(opp => {
+              const isAtRisk = atRiskDeals.some(r => r.id === opp.id);
+              const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
+                'Discovery': { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-500' },
+                'Qualification': { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-500' },
+                'Proposal': { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-500' },
+                'Negotiation': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-500' },
+                'Won': { bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-500' },
+                'Lost': { bg: 'bg-zinc-500/10', text: 'text-zinc-400', dot: 'bg-zinc-500' },
+                'On Hold': { bg: 'bg-orange-500/10', text: 'text-orange-400', dot: 'bg-orange-500' },
+              };
+              const sc = statusColors[opp.status] || statusColors['Discovery'];
+              const tasks = opp.subTasks || [];
+              const completedTasks = tasks.filter(t => t.status === 'complete').length;
+
+              return (
+                <button
+                  key={opp.id}
+                  onClick={() => setSelectedOppId(opp.id)}
+                  className="flex items-center gap-4 p-3 rounded-xl g-surface g-elevated w-full text-left transition-all group hover:!border-[#7c3aed]/20"
+                >
+                  {/* Status dot */}
+                  <div className="flex flex-col items-center gap-1 w-6 flex-shrink-0">
+                    <div className={`w-2.5 h-2.5 rounded-full ${sc.dot} ${opp.status === 'Negotiation' ? 'animate-pulse-live' : ''}`} />
+                    {isAtRisk && <AlertTriangle className="h-3 w-3 text-orange-400" />}
                   </div>
-                  <div className="text-xs text-muted-foreground truncate">{opp.opportunityName}</div>
-                </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  {opp.tcv > 0 && (
-                    <span className="text-sm font-medium text-foreground">${(opp.tcv / 1000).toFixed(0)}k</span>
-                  )}
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[opp.status] || 'bg-slate-500/20 text-muted-foreground'}`}>
-                    {opp.status}
-                  </span>
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Users className="h-3 w-3" />
-                    {(opp.customerStakeholders || []).length}
+
+                  {/* Deal info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-foreground group-hover:text-[#7c3aed] transition-colors truncate">
+                      {opp.customerName}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">{opp.opportunityName}</div>
                   </div>
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <CheckSquare className="h-3 w-3" />
-                    {(opp.subTasks || []).filter(t => t.status === 'complete').length}/{(opp.subTasks || []).length}
+
+                  {/* Visual metrics */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {opp.tcv > 0 && <span className="g-metric text-sm font-semibold text-foreground">${(opp.tcv/1000).toFixed(0)}k</span>}
+                    <span className={`g-chip ${sc.bg} ${sc.text}`}>{opp.status}</span>
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <CheckSquare className="h-3 w-3" />
+                      <span className="g-metric">{completedTasks}/{tasks.length}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span className="g-metric">{(opp.customerStakeholders || []).length}</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-[#7c3aed] transition-colors" />
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-purple-400 transition-colors" />
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
         </div>
       </div>
-
-      {/* Top Accounts */}
-      {accounts.length > 0 && (
-        <div className="animate-flow-in animate-flow-in-delay-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              <Building2 className="h-3 w-3 text-purple-400" />
-              Top Accounts
-            </div>
-            <Link href="/accounts" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1">
-              View All <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {(() => {
-              const accountsWithStats = accounts.map((acc: any) => {
-                const accOpps = opportunities.filter(o => {
-                  const customerMatch = o.customerName?.toLowerCase() === acc.companyName?.toLowerCase();
-                  const accountIdMatch = (o as any).accountId === (acc._id?.toString() || acc.id);
-                  return customerMatch || accountIdMatch;
-                });
-                return {
-                  ...acc,
-                  dealCount: accOpps.length,
-                  totalTcv: accOpps.reduce((sum: number, o: any) => sum + (o.tcv || 0), 0),
-                };
-              });
-              return accountsWithStats
-                .sort((a: any, b: any) => b.dealCount - a.dealCount)
-                .slice(0, 5)
-                .map((acc: any) => (
-                  <Link
-                    key={acc._id || acc.id}
-                    href="/accounts"
-                    className="p-4 rounded-xl g-surface g-elevated hover:border-purple-500/30 transition-all group"
-                  >
-                    <div className="text-sm font-medium text-foreground group-hover:text-purple-300 transition-colors truncate">
-                      {acc.companyName}
-                    </div>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                      <span>{acc.dealCount} deal{acc.dealCount !== 1 ? 's' : ''}</span>
-                      {acc.totalTcv > 0 && (
-                        <>
-                          <span>&middot;</span>
-                          <span className="text-foreground font-medium">{formatCurrency(acc.totalTcv)}</span>
-                        </>
-                      )}
-                      {acc.industry && (
-                        <>
-                          <span>&middot;</span>
-                          <span>{acc.industry}</span>
-                        </>
-                      )}
-                    </div>
-                  </Link>
-                ));
-            })()}
-          </div>
-        </div>
-      )}
 
       {/* Deal Detail Modal */}
       {selectedOppId && (

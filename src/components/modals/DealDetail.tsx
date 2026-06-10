@@ -3,16 +3,61 @@
 import { useOpportunities } from '@/lib/store';
 import { trpc } from '@/lib/trpc/client';
 import { format } from 'date-fns';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   X, DollarSign, Calendar, Users, CheckSquare, Percent,
   Globe, Briefcase, Tag, ExternalLink, Edit2, Save, Plus,
   Trash2, ChevronRight, Clock, Building2, Loader2, Sparkles,
+  AlertTriangle, Zap, ArrowRight, Shield, TrendingUp,
+  Mail, CalendarPlus, ArrowUpRight,
 } from 'lucide-react';
+import type { Status } from '@/lib/types';
 
 interface DealDetailProps {
   opportunityId: string;
   onClose: () => void;
+}
+
+// Health Score Ring - SVG circle showing score 0-100 with color gradient
+function HealthRing({ score }: { score: number }) {
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="relative w-16 h-16 flex-shrink-0">
+      <svg width="64" height="64" className="transform -rotate-90">
+        <circle cx="32" cy="32" r={radius} stroke="var(--g-line, #333)" strokeWidth="4" fill="none" />
+        <circle cx="32" cy="32" r={radius} stroke={color} strokeWidth="4" fill="none"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          strokeLinecap="round" className="transition-all duration-1000" />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="g-metric text-sm font-bold text-foreground">{score}</span>
+      </div>
+    </div>
+  );
+}
+
+// Win Probability Bar - animated progress bar
+function WinProbabilityBar({ probability }: { probability: number }) {
+  const color = probability >= 70 ? '#22c55e' : probability >= 40 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="flex-1">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[11px] text-muted-foreground">Win Probability</span>
+        <span className="g-metric text-sm font-bold text-foreground">{probability}%</span>
+      </div>
+      <div className="h-2 rounded-full bg-secondary overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-1000 ease-out"
+          style={{ width: `${probability}%`, backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
@@ -22,7 +67,17 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [analysis, setAnalysis] = useState<any>(null);
+  const [showStageSelector, setShowStageSelector] = useState(false);
   const analysisMutation = trpc.ai.analyzeDeal.useMutation();
+
+  // Auto-analyze on open
+  useEffect(() => {
+    if (opp?.id && !analysis) {
+      analysisMutation.mutate({ opportunityId: opp.id }, {
+        onSuccess: (data) => setAnalysis(data),
+      });
+    }
+  }, [opp?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Stakeholder form state
   const [showStakeholderForm, setShowStakeholderForm] = useState(false);
@@ -117,6 +172,24 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
     });
   };
 
+  const handleStageChange = async (newStage: Status) => {
+    await updateOpportunity(opp.id, { status: newStage });
+    setShowStageSelector(false);
+  };
+
+  const handleCreateActionTask = (actionText: string) => {
+    const today = new Date();
+    const dueDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    createTaskMutation.mutate({
+      opportunityId: opp.id,
+      name: actionText,
+      owner: opp.primaryOwner || 'Unassigned',
+      dueDate: dueDate.toISOString().split('T')[0],
+      priority: 'High',
+      notes: 'Auto-created from AI recommendation',
+    });
+  };
+
   const tabs = [
     { id: 'details' as const, label: 'Details' },
     { id: 'stakeholders' as const, label: `Stakeholders (${stakeholders.length})` },
@@ -125,6 +198,8 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   ];
 
   const inputClasses = 'w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#7B52FF]/20 focus:border-[#7B52FF]';
+
+  const stageOptions: Status[] = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Lost', 'On Hold'];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-8 pb-8">
@@ -150,18 +225,146 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
             ) : (
               <button onClick={() => setEditing(true)} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground"><Edit2 className="h-4 w-4" /></button>
             )}
-            <button
-              onClick={() => analysisMutation.mutate({ opportunityId: opp.id }, { onSuccess: (data) => setAnalysis(data) })}
-              disabled={analysisMutation.isPending}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#7B52FF]/10 text-[#7B52FF] text-xs font-medium hover:bg-[#7B52FF]/20 transition-colors disabled:opacity-50"
-            >
-              {analysisMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-              AI Analyze
-            </button>
+            {analysisMutation.isPending && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#7B52FF]/10 text-[#7B52FF] text-xs font-medium">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Analyzing...
+              </div>
+            )}
             <button onClick={handleDelete} className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400"><Trash2 className="h-4 w-4" /></button>
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground"><X className="h-4 w-4" /></button>
           </div>
         </div>
+
+        {/* AI Analysis Card - always visible when available, visual layout */}
+        {(analysis || analysisMutation.isPending) && (
+          <div className="px-5 pt-4 pb-2">
+            {analysisMutation.isPending && !analysis ? (
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-[#7B52FF]/5 border border-[#7B52FF]/20">
+                <Sparkles className="h-4 w-4 animate-spin text-[#7B52FF]" />
+                <span className="text-sm text-muted-foreground">AI is analyzing this deal...</span>
+              </div>
+            ) : analysis && (
+              <div className="p-4 rounded-xl bg-[#7B52FF]/5 border border-[#7B52FF]/20 space-y-4">
+                {/* Top row: Health ring + Win probability + summary */}
+                <div className="flex items-center gap-4">
+                  <HealthRing score={analysis.healthScore} />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-3.5 w-3.5 text-[#7B52FF]" />
+                      <span className="text-xs font-semibold text-[#7B52FF] uppercase tracking-wider">AI Deal Intelligence</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-1" />
+                    </div>
+                    <WinProbabilityBar probability={analysis.winProbability} />
+                  </div>
+                </div>
+
+                {/* Summary */}
+                {analysis.summary && (
+                  <p className="text-sm text-foreground leading-relaxed">{analysis.summary}</p>
+                )}
+
+                {/* Risk signals as colored badges */}
+                {analysis.risks?.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="g-section-label flex items-center gap-1.5">
+                      <Shield className="h-3 w-3" /> Risk Signals
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {analysis.risks.map((r: any, i: number) => {
+                        const severityStyles: Record<string, string> = {
+                          critical: 'bg-red-500/15 text-red-400 border border-red-500/30',
+                          high: 'bg-orange-500/15 text-orange-400 border border-orange-500/30',
+                          medium: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',
+                          low: 'bg-blue-500/15 text-blue-400 border border-blue-500/30',
+                        };
+                        return (
+                          <span key={i} className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${severityStyles[r.severity] || severityStyles.medium}`}>
+                            <AlertTriangle className="h-3 w-3" />
+                            {r.message}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommended actions as clickable buttons */}
+                {analysis.actions?.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="g-section-label flex items-center gap-1.5">
+                      <Zap className="h-3 w-3" /> Recommended Actions
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {analysis.actions.map((a: any, i: number) => {
+                        const priorityStyles: Record<string, string> = {
+                          high: 'border-orange-500/30 hover:border-orange-500/50',
+                          medium: 'border-amber-500/30 hover:border-amber-500/50',
+                          low: 'border-blue-500/30 hover:border-blue-500/50',
+                          critical: 'border-red-500/30 hover:border-red-500/50',
+                        };
+                        const borderStyle = priorityStyles[a.priority] || priorityStyles.medium;
+
+                        return (
+                          <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg bg-card border ${borderStyle} transition-all`}>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-foreground">{a.action}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">{a.reason}</div>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {/* Create task from action */}
+                              <button
+                                onClick={() => handleCreateActionTask(a.action)}
+                                disabled={createTaskMutation.isPending}
+                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#7B52FF]/10 text-[#7B52FF] text-[10px] font-medium hover:bg-[#7B52FF]/20 transition-colors"
+                                title="Create as task"
+                              >
+                                <CalendarPlus className="h-3 w-3" />
+                                Task
+                              </button>
+                              {/* Update stage if action mentions it */}
+                              {(a.action.toLowerCase().includes('stage') || a.action.toLowerCase().includes('move') || a.action.toLowerCase().includes('advance')) && (
+                                <button
+                                  onClick={() => setShowStageSelector(true)}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/20 transition-colors"
+                                  title="Change deal stage"
+                                >
+                                  <ArrowUpRight className="h-3 w-3" />
+                                  Stage
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Stage selector dropdown */}
+                {showStageSelector && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-card border border-border">
+                    <span className="text-xs text-muted-foreground">Move to:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {stageOptions.filter(s => s !== opp.status).map(stage => (
+                        <button
+                          key={stage}
+                          onClick={() => handleStageChange(stage)}
+                          className={`g-chip border ${statusColors[stage] || ''} hover:opacity-80 transition-opacity cursor-pointer`}
+                        >
+                          {stage}
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => setShowStageSelector(false)} className="ml-auto text-muted-foreground hover:text-foreground">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-0 px-5 border-b" style={{ borderColor: 'var(--g-line)' }}>
@@ -184,47 +387,6 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
         <div className="flex-1 overflow-y-auto p-5">
           {activeTab === 'details' && (
             <div className="space-y-5">
-              {/* AI Analysis Results */}
-              {analysis && (
-                <div className="p-4 rounded-xl bg-[#7B52FF]/5 border border-[#7B52FF]/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-[#7B52FF]" />
-                      <span className="text-sm font-medium text-foreground">AI Analysis</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-xs"><span className="text-muted-foreground">Health:</span> <span className="g-metric font-bold text-foreground">{analysis.healthScore}/100</span></div>
-                      <div className="text-xs"><span className="text-muted-foreground">Win:</span> <span className="g-metric font-bold text-foreground">{analysis.winProbability}%</span></div>
-                    </div>
-                  </div>
-                  <p className="text-sm text-foreground leading-relaxed">{analysis.summary}</p>
-                  {analysis.risks?.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="g-section-label">Risks</div>
-                      {analysis.risks.map((r: any, i: number) => (
-                        <div key={i} className="flex items-start gap-2 text-xs">
-                          <span className={`g-chip ${r.severity === 'critical' ? 'bg-red-500/10 text-red-400' : r.severity === 'high' ? 'bg-orange-500/10 text-orange-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                            {r.severity}
-                          </span>
-                          <span className="text-foreground">{r.message}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {analysis.actions?.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="g-section-label">Recommended Actions</div>
-                      {analysis.actions.map((a: any, i: number) => (
-                        <div key={i} className="flex items-start gap-2 text-xs">
-                          <span className="g-chip bg-[#7B52FF]/10 text-[#7B52FF]">{a.priority}</span>
-                          <div><span className="text-foreground font-medium">{a.action}</span> <span className="text-muted-foreground">-- {a.reason}</span></div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* KPI Row */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-lg bg-card border border-border">
