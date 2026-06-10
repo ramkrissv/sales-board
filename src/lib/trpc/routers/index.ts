@@ -13,6 +13,7 @@ import { engagementTypeRouter } from './engagement-type';
 import { settingsRouter } from './settings';
 import { forecastRouter } from './forecast';
 import { integrationRouter } from './integration';
+import { notificationRouter } from './notification';
 
 export const appRouter = router({
   opportunity: opportunityRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   settings: settingsRouter,
   forecast: forecastRouter,
   integration: integrationRouter,
+  notification: notificationRouter,
 });
 
 export type AppRouter = typeof appRouter;

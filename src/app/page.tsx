@@ -52,7 +52,7 @@ function HomeContent() {
           Good morning. <span className="text-purple-400">Here&apos;s your pipeline.</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {activeDeals.length} active deals &middot; {atRiskDeals.length > 0 ? `${atRiskDeals.length} need attention` : 'All on track'} &middot; {negotiationDeals.length} ready to close
+          {activeDeals.length} active projects &middot; {atRiskDeals.length > 0 ? `${atRiskDeals.length} need attention` : 'All on track'} &middot; {negotiationDeals.length} ready to close
         </p>
       </div>
 
@@ -155,7 +155,7 @@ function HomeContent() {
       <div className="animate-flow-in animate-flow-in-delay-4">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
           <Clock className="h-3 w-3 text-purple-400" />
-          Recent Opportunities
+          Recent Projects
         </div>
         <div className="space-y-2">
           {opportunities.slice(0, 8).map((opp) => {

@@ -55,7 +55,7 @@ function TableContent() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                {['Customer', 'Opportunity', 'Status', 'TCV', 'Margin', 'Owner', 'Close Date'].map(h => (
+                {['Customer', 'Project Name', 'Status', 'TCV', 'Margin', 'Owner', 'Close Date'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[11px] text-muted-foreground uppercase tracking-wider font-medium">{h}</th>
                 ))}
               </tr>

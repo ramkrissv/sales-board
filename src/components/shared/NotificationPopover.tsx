@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Check, Clock, MessageSquare, AlertTriangle } from "lucide-react";
+import { Bell } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -8,108 +8,100 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, subMinutes, subHours } from "date-fns";
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { trpc } from '@/lib/trpc/client';
 
-interface Notification {
-  id: string;
-  title: string;
-  description: string;
-  time: Date;
-  read: boolean;
-  type: 'info' | 'warning' | 'success';
+function timeAgo(date: string | Date): string {
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now.getTime() - then.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDays = Math.floor(diffHr / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    title: 'Task Overdue',
-    description: 'Technical Discovery Call for Acme Corp was due yesterday.',
-    time: subHours(new Date(), 2),
-    read: false,
-    type: 'warning'
-  },
-  {
-    id: '2',
-    title: 'New Comment',
-    description: 'Sreeram mentioned you in "Enterprise AI Testing Platform".',
-    time: subHours(new Date(), 5),
-    read: false,
-    type: 'info'
-  },
-  {
-    id: '3',
-    title: 'Deal Won!',
-    description: 'Retail Giants Co deal has been closed successfully.',
-    time: subHours(new Date(), 24),
-    read: true,
-    type: 'success'
-  },
-  {
-    id: '4',
-    title: 'Status Update',
-    description: 'TechFlow Inc moved to Discovery stage.',
-    time: subHours(new Date(), 48),
-    read: true,
-    type: 'info'
-  }
-];
+const typeColors: Record<string, string> = {
+  'deal_stage_change': 'bg-emerald-500',
+  'overdue_task': 'bg-orange-500',
+  'ai_signal': 'bg-purple-500',
+  'contract_expiry': 'bg-red-500',
+  'deal_assignment': 'bg-blue-500',
+  'system': 'bg-zinc-400',
+};
 
 export function NotificationPopover() {
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const markRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
+  const utils = trpc.useUtils();
+  const { data: notifications = [] } = trpc.notification.list.useQuery();
+  const { data: unreadCount = 0 } = trpc.notification.getUnreadCount.useQuery();
+  const markRead = trpc.notification.markRead.useMutation({
+    onSuccess: () => {
+      utils.notification.list.invalidate();
+      utils.notification.getUnreadCount.invalidate();
+    },
+  });
+  const markAllRead = trpc.notification.markAllRead.useMutation({
+    onSuccess: () => {
+      utils.notification.list.invalidate();
+      utils.notification.getUnreadCount.invalidate();
+    },
+  });
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+        <button className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+          <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-600 ring-2 ring-white dark:ring-slate-950" />
+            <span className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full bg-purple-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
           )}
-        </Button>
+        </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="font-semibold">Notifications</div>
+          <div className="font-semibold text-sm">Notifications</div>
           {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" className="h-auto px-2 text-xs" onClick={markAllRead}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto px-2 text-xs"
+              onClick={() => markAllRead.mutate()}
+            >
               Mark all read
             </Button>
           )}
         </div>
         <ScrollArea className="h-[300px]">
           <div className="divide-y">
-            {notifications.map((notification) => (
-              <div 
-                key={notification.id} 
-                className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors ${!notification.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
-                onClick={() => markRead(notification.id)}
+            {(notifications as any[]).length === 0 && (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No notifications yet.
+              </div>
+            )}
+            {(notifications as any[]).map((notif: any) => (
+              <div
+                key={notif._id}
+                className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors ${!notif.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                onClick={() => {
+                  if (!notif.read) markRead.mutate({ id: notif._id });
+                }}
               >
                 <div className="flex gap-3 items-start">
-                  <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${
-                    notification.type === 'warning' ? 'bg-orange-500' :
-                    notification.type === 'success' ? 'bg-green-500' :
-                    'bg-blue-500'
-                  }`} />
-                  <div className="space-y-1">
-                    <p className={`text-sm leading-none ${!notification.read ? 'font-semibold' : 'font-medium'}`}>
-                      {notification.title}
+                  <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${notif.read ? 'bg-transparent' : (typeColors[notif.type] || 'bg-zinc-400')}`} />
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <p className={`text-sm leading-none ${!notif.read ? 'font-semibold' : 'font-medium'}`}>
+                      {notif.title}
                     </p>
                     <p className="text-xs text-muted-foreground line-clamp-2">
-                      {notification.description}
+                      {notif.message}
                     </p>
                     <p className="text-[10px] text-muted-foreground pt-1">
-                      {format(notification.time, 'MMM d, h:mm a')}
+                      {notif.createdAt ? timeAgo(notif.createdAt) : ''}
                     </p>
                   </div>
                 </div>
@@ -117,11 +109,6 @@ export function NotificationPopover() {
             ))}
           </div>
         </ScrollArea>
-        <div className="p-2 border-t text-center">
-          <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
-            View all notifications
-          </Button>
-        </div>
       </PopoverContent>
     </Popover>
   );

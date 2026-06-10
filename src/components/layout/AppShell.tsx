@@ -9,24 +9,26 @@ import { cn } from '@/lib/utils';
 import {
   Kanban, TrendingUp, CalendarClock, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles,
-  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText,
+  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield,
 } from 'lucide-react';
 import { NewDealModal } from '@/components/modals/NewDealModal';
 import { CopilotPanel } from '@/components/ai/CopilotPanel';
+import { NotificationPopover } from '@/components/shared/NotificationPopover';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Home', href: '/' },
-  { icon: Kanban, label: 'Pipeline', href: '/pipeline' },
+  { icon: Kanban, label: 'Projects', href: '/pipeline' },
   { icon: TrendingUp, label: 'Timeline', href: '/timeline' },
   { icon: CalendarClock, label: 'Schedule', href: '/schedule' },
   { icon: TableIcon, label: 'Table', href: '/table' },
   { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
-  { icon: Users, label: 'Stakeholders', href: '/stakeholders' },
+  { icon: Users, label: 'Contacts', href: '/stakeholders' },
   { icon: FileText, label: 'Contracts', href: '/contracts' },
   { icon: Network, label: 'Accounts', href: '/accounts' },
   { icon: Sparkles, label: 'Forecasting', href: '/forecasting' },
   { icon: Bot, label: 'Agents', href: '/agents' },
   { icon: Link2, label: 'Integrations', href: '/integrations' },
+  { icon: Shield, label: 'Users', href: '/admin/users' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -132,10 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="flex items-center gap-2 ml-auto">
-            <button className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-              <Bell className="h-4 w-4" />
-              <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-purple-500 rounded-full" />
-            </button>
+            <NotificationPopover />
             <button
               onClick={() => setShowNewDeal(true)}
               className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
