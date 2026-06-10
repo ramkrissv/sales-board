@@ -3,315 +3,273 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import {
-  FileText, FolderOpen, Users, Sparkles, Plus, Send, Loader2,
-  Download, Eye, Calendar, User, CheckCircle2, Clock, AlertCircle,
-  FileSearch, Presentation, Shield, BarChart3
+  FileSearch, FileText, Sparkles, Loader2, Plus, ChevronRight,
+  Target, Clock, Users, DollarSign, BarChart3, ArrowRight,
+  Zap, CheckSquare, AlertTriangle, Code, Layers, BookOpen,
+  Mic, Upload, Clipboard
 } from 'lucide-react';
 
-type RFPStatus = 'draft' | 'in_progress' | 'submitted' | 'won' | 'lost';
-type TabKey = 'rfp' | 'artifacts' | 'bench' | 'drafter';
-
-interface RFP {
-  id: string;
-  title: string;
-  customer: string;
-  dueDate: string;
-  status: RFPStatus;
-  assignedTo: string;
-  type: 'RFP' | 'RFI';
-}
-
-const statusConfig: Record<RFPStatus, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-  draft: { label: 'Draft', color: 'bg-zinc-500/10 text-zinc-400', icon: FileText },
-  in_progress: { label: 'In Progress', color: 'bg-blue-500/10 text-blue-400', icon: Clock },
-  submitted: { label: 'Submitted', color: 'bg-amber-500/10 text-amber-400', icon: AlertCircle },
-  won: { label: 'Won', color: 'bg-emerald-500/10 text-emerald-400', icon: CheckCircle2 },
-  lost: { label: 'Lost', color: 'bg-red-500/10 text-red-400', icon: AlertCircle },
-};
-
-const artifactTypeColors: Record<string, string> = {
-  Technical: 'bg-blue-500/10 text-blue-400',
-  Commercial: 'bg-emerald-500/10 text-emerald-400',
-  Industry: 'bg-amber-500/10 text-amber-400',
-  Product: 'bg-purple-500/10 text-purple-400',
-};
-
-const tabs: { key: TabKey; label: string; icon: typeof FileSearch }[] = [
-  { key: 'rfp', label: 'RFP Tracker', icon: FileSearch },
-  { key: 'artifacts', label: 'Artifacts', icon: FolderOpen },
-  { key: 'bench', label: 'SA Bench', icon: Users },
-  { key: 'drafter', label: 'AI Drafter', icon: Sparkles },
+// Pursuit data
+const PURSUITS = [
+  { id: 'P1', client: 'Jack Henry', name: 'Core banking ITSM — 124-req RFP', type: 'RFP', due: 'Jul 18', coverage: 86, sa: 'Sreeram + Ram', value: 2400000, status: 'Drafting', region: 'NA', reqs: 124, answered: 107 },
+  { id: 'P2', client: 'Fannie Mae', name: 'GenAI platform — proactive proposal', type: 'Proactive', due: 'Jun 20', coverage: 92, sa: 'Sreeram + Ram', value: 1200000, status: 'In Review', region: 'NA', reqs: 45, answered: 41 },
+  { id: 'P3', client: 'Transurban', name: 'AIOps managed operations RFI', type: 'RFI', due: 'Jul 02', coverage: 64, sa: 'Sreeram + Rehan', value: 900000, status: 'Parsing', region: 'APAC', reqs: 89, answered: 57 },
+  { id: 'P4', client: 'TernStack', name: 'Inference governance pilot', type: 'Proactive', due: 'Jun 28', coverage: 71, sa: 'Sreeram', value: 400000, status: 'Solutioning', region: 'India', reqs: 32, answered: 23 },
 ];
 
+const PROPOSAL_SECTIONS = [
+  { id: 's1', title: 'Executive Summary', status: 'complete', aiReady: true },
+  { id: 's2', title: 'Company Overview & Qualifications', status: 'complete', aiReady: true },
+  { id: 's3', title: 'Understanding of Requirements', status: 'draft', aiReady: true },
+  { id: 's4', title: 'Proposed Solution Architecture', status: 'draft', aiReady: true },
+  { id: 's5', title: 'Implementation Approach', status: 'pending', aiReady: true },
+  { id: 's6', title: 'Team & Resource Plan', status: 'pending', aiReady: true },
+  { id: 's7', title: 'Timeline & Milestones', status: 'pending', aiReady: true },
+  { id: 's8', title: 'Pricing & Commercial Terms', status: 'pending', aiReady: false },
+  { id: 's9', title: 'Case Studies & References', status: 'pending', aiReady: true },
+  { id: 's10', title: 'Compliance & Security', status: 'pending', aiReady: true },
+];
+
+const SA_BENCH = [
+  { name: 'Sreeram', assignments: 3, availability: 'Busy', skills: ['AI/ML', 'Cloud', 'Architecture'], utilization: 95 },
+  { name: 'Ram', assignments: 2, availability: 'Available', skills: ['Data', 'Analytics', 'AI'], utilization: 60 },
+  { name: 'Rehan', assignments: 1, availability: 'Available', skills: ['DevSecOps', 'QA', 'Automation'], utilization: 40 },
+  { name: 'Vijay', assignments: 2, availability: 'Partial', skills: ['Java', 'Architecture', 'Legacy'], utilization: 75 },
+];
+
+const TEMPLATES = [
+  { title: 'AI Platform Capability Deck', type: 'Product', uses: 12 },
+  { title: 'Cloud Migration Playbook', type: 'Technical', uses: 8 },
+  { title: 'Healthcare Industry Brief', type: 'Industry', uses: 5 },
+  { title: 'QA CoE Reference Architecture', type: 'Technical', uses: 7 },
+  { title: 'Managed Services Pricing Template', type: 'Commercial', uses: 15 },
+  { title: 'Financial Services Case Study', type: 'Case Study', uses: 9 },
+  { title: 'Security & Compliance Matrix', type: 'Compliance', uses: 11 },
+  { title: 'Team Composition Template', type: 'Commercial', uses: 14 },
+];
+
+type Tab = 'command' | 'pursuits' | 'studio' | 'solutioning' | 'templates';
+
 export default function PresalesPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>('rfp');
-  const [showNewRFP, setShowNewRFP] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('command');
+  const [selectedPursuit, setSelectedPursuit] = useState<typeof PURSUITS[0] | null>(null);
+  const [studioContent, setStudioContent] = useState<Record<string, string>>({});
+  const [rfpInput, setRfpInput] = useState('');
 
-  const [rfps, setRfps] = useState<RFP[]>([
-    { id: '1', title: 'Cloud Migration Assessment', customer: 'Wells Fargo', dueDate: '2026-07-15', status: 'in_progress', assignedTo: 'Sreeram', type: 'RFP' },
-    { id: '2', title: 'AI Platform POC Requirements', customer: 'Fannie Mae', dueDate: '2026-07-01', status: 'draft', assignedTo: 'Ram', type: 'RFI' },
-    { id: '3', title: 'DevSecOps Pipeline Setup', customer: 'Brightspeed', dueDate: '2026-06-25', status: 'submitted', assignedTo: 'Rehan', type: 'RFP' },
-  ]);
+  const chatMutation = trpc.ai.chat.useMutation();
 
-  const artifacts = [
-    { title: 'AI Platform Capability Deck', type: 'Product', updatedAt: '2026-06-01' },
-    { title: 'Cloud Migration Playbook', type: 'Technical', updatedAt: '2026-05-15' },
-    { title: 'Healthcare Industry Solution Brief', type: 'Industry', updatedAt: '2026-05-20' },
-    { title: 'QA CoE Reference Architecture', type: 'Technical', updatedAt: '2026-04-10' },
-    { title: 'Managed Services Pricing Template', type: 'Commercial', updatedAt: '2026-06-05' },
-    { title: 'Financial Services Case Study', type: 'Industry', updatedAt: '2026-05-01' },
+  const tabs = [
+    { id: 'command' as Tab, label: 'Command', icon: Target },
+    { id: 'pursuits' as Tab, label: 'Pursuits', icon: BarChart3, badge: PURSUITS.length },
+    { id: 'studio' as Tab, label: 'Studio', icon: FileText },
+    { id: 'solutioning' as Tab, label: 'Solutioning', icon: Code },
+    { id: 'templates' as Tab, label: 'Templates', icon: BookOpen },
   ];
 
-  const saBench = [
-    { name: 'Sreeram', assignments: 3, availability: 'Busy' as const, skills: ['AI/ML', 'Cloud', 'Architecture'] },
-    { name: 'Ram', assignments: 2, availability: 'Available' as const, skills: ['Data', 'Analytics', 'AI'] },
-    { name: 'Rehan Hanif', assignments: 1, availability: 'Available' as const, skills: ['DevSecOps', 'QA', 'Automation'] },
-    { name: 'Vijay', assignments: 2, availability: 'Partial' as const, skills: ['Java', 'Architecture', 'Legacy'] },
-  ];
+  const totalPursuitValue = PURSUITS.reduce((s, p) => s + p.value, 0);
+  const avgCoverage = Math.round(PURSUITS.reduce((s, p) => s + p.coverage, 0) / PURSUITS.length);
 
-  // New RFP form state
-  const [newTitle, setNewTitle] = useState('');
-  const [newCustomer, setNewCustomer] = useState('');
-  const [newDueDate, setNewDueDate] = useState('');
-  const [newType, setNewType] = useState<'RFP' | 'RFI'>('RFP');
-  const [newAssignedTo, setNewAssignedTo] = useState('');
-
-  // AI Drafter state
-  const [rfpRequirements, setRfpRequirements] = useState('');
-  const [draftResponse, setDraftResponse] = useState('');
-
-  const chatMutation = trpc.ai.chat.useMutation({
-    onSuccess: (data) => {
-      setDraftResponse(data.response);
-    },
-    onError: (error) => {
-      setDraftResponse(`Error: ${error.message}`);
-    },
-  });
-
-  const handleAddRFP = () => {
-    if (!newTitle.trim() || !newCustomer.trim()) return;
-    const rfp: RFP = {
-      id: String(Date.now()),
-      title: newTitle.trim(),
-      customer: newCustomer.trim(),
-      dueDate: newDueDate || '2026-08-01',
-      status: 'draft',
-      assignedTo: newAssignedTo || 'Unassigned',
-      type: newType,
-    };
-    setRfps(prev => [...prev, rfp]);
-    setNewTitle('');
-    setNewCustomer('');
-    setNewDueDate('');
-    setNewAssignedTo('');
-    setShowNewRFP(false);
-  };
-
-  const handleDraftResponse = () => {
-    if (!rfpRequirements.trim()) return;
-    setDraftResponse('');
+  const handleAIDraft = (sectionId: string, sectionTitle: string) => {
+    const pursuit = selectedPursuit || PURSUITS[0];
     chatMutation.mutate({
-      message: `You are helping draft a presales RFP/RFI response. Based on the following requirements, draft a professional, specific, and compelling response. Be concise and action-oriented.\n\nREQUIREMENTS:\n${rfpRequirements}`,
-      context: { page: 'presales-drafter' },
+      message: `Draft the "${sectionTitle}" section for a proposal to ${pursuit.client} for "${pursuit.name}". Make it professional, specific to their requirements, and about 200 words. Format with clear paragraphs.`,
+      context: { page: 'presales-studio' },
+    }, {
+      onSuccess: (data) => {
+        setStudioContent(prev => ({ ...prev, [sectionId]: data.response }));
+      },
     });
   };
 
-  const availabilityColor = (a: string) => {
-    if (a === 'Available') return 'bg-emerald-500/10 text-emerald-400';
-    if (a === 'Partial') return 'bg-amber-500/10 text-amber-400';
-    return 'bg-red-500/10 text-red-400';
+  const statusColors: Record<string, string> = {
+    'Parsing': 'bg-blue-500/10 text-blue-400',
+    'Solutioning': 'bg-purple-500/10 text-purple-400',
+    'Drafting': 'bg-amber-500/10 text-amber-400',
+    'In Review': 'bg-emerald-500/10 text-emerald-400',
+    'Submitted': 'bg-green-500/10 text-green-400',
+  };
+
+  const typeColors: Record<string, string> = {
+    'RFP': 'bg-red-500/10 text-red-400 border-red-500/20',
+    'RFI': 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    'Proactive': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Presales Portal</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          RFP tracking, artifacts library, SA bench, and AI-assisted response drafting.
-        </p>
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Presales OS</h1>
+          <p className="text-sm text-muted-foreground">RFP intake &rarr; Solutioning &rarr; Proposal &rarr; Pricing &rarr; Submit</p>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-lg bg-secondary w-fit">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-md transition-all ${
-              activeTab === tab.key
-                ? 'bg-card shadow-sm text-foreground font-medium'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <tab.icon className="h-4 w-4" />
+      <div className="flex gap-0.5 p-0.5 rounded-lg bg-secondary border border-border w-fit">
+        {tabs.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === tab.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+            <tab.icon className="h-3.5 w-3.5" />
             {tab.label}
+            {tab.badge && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed] text-[10px]">{tab.badge}</span>}
           </button>
         ))}
       </div>
 
-      {/* RFP Tracker Tab */}
-      {activeTab === 'rfp' && (
+      {/* COMMAND TAB */}
+      {activeTab === 'command' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">RFP/RFI Tracker</h2>
-            <button
-              onClick={() => setShowNewRFP(!showNewRFP)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#7c3aed] text-white text-sm font-medium hover:bg-[#6d28d9] transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              New RFP
-            </button>
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: 'Active Pursuits', value: PURSUITS.length, icon: Target, color: '#7c3aed' },
+              { label: 'Pursuit Value', value: `$${(totalPursuitValue/1e6).toFixed(1)}M`, icon: DollarSign, color: '#22c55e' },
+              { label: 'Avg Coverage', value: `${avgCoverage}%`, icon: BarChart3, color: '#3b82f6' },
+              { label: 'Due This Week', value: PURSUITS.filter(p => true).length, icon: Clock, color: '#f59e0b' },
+            ].map(kpi => (
+              <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated hover-lift">
+                <div className="flex items-center gap-2 mb-1">
+                  <kpi.icon className="h-3.5 w-3.5" style={{ color: kpi.color }} />
+                  <span className="g-section-label">{kpi.label}</span>
+                </div>
+                <div className="g-kpi text-foreground" style={{ fontSize: '20px' }}>{kpi.value}</div>
+              </div>
+            ))}
           </div>
 
-          {/* New RFP Form */}
-          {showNewRFP && (
-            <div className="g-surface g-elevated p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Add New RFP/RFI</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  placeholder="Title"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40"
-                />
-                <input
-                  type="text"
-                  placeholder="Customer"
-                  value={newCustomer}
-                  onChange={(e) => setNewCustomer(e.target.value)}
-                  className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40"
-                />
-                <input
-                  type="date"
-                  placeholder="Due Date"
-                  value={newDueDate}
-                  onChange={(e) => setNewDueDate(e.target.value)}
-                  className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40"
-                />
-                <input
-                  type="text"
-                  placeholder="Assign to SA"
-                  value={newAssignedTo}
-                  onChange={(e) => setNewAssignedTo(e.target.value)}
-                  className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40"
-                />
-                <select
-                  value={newType}
-                  onChange={(e) => setNewType(e.target.value as 'RFP' | 'RFI')}
-                  className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40"
-                >
-                  <option value="RFP">RFP</option>
-                  <option value="RFI">RFI</option>
-                </select>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleAddRFP}
-                    className="px-4 py-2 rounded-lg bg-[#7c3aed] text-white text-sm font-medium hover:bg-[#6d28d9] transition-colors"
-                  >
-                    Add
-                  </button>
-                  <button
-                    onClick={() => setShowNewRFP(false)}
-                    className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-foreground transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
+          {/* Today's priorities */}
+          <div className="g-surface g-elevated p-4">
+            <div className="g-section-label mb-3 flex items-center gap-1.5"><Zap className="h-3 w-3" /> Today in Presales</div>
+            <div className="space-y-2">
+              {PURSUITS.map(p => (
+                <button key={p.id} onClick={() => { setSelectedPursuit(p); setActiveTab('pursuits'); }}
+                  className="flex items-center gap-3 w-full p-3 rounded-lg bg-card border border-border hover:border-[#7c3aed]/20 text-left transition-all">
+                  <span className={`g-chip border ${typeColors[p.type] || ''}`}>{p.type}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-foreground">{p.client}</div>
+                    <div className="text-[10px] text-muted-foreground truncate">{p.name}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-16">
+                      <div className="flex justify-between text-[9px] mb-0.5">
+                        <span className="text-muted-foreground">Coverage</span>
+                        <span className={`font-bold ${p.coverage >= 80 ? 'text-emerald-400' : p.coverage >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{p.coverage}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${p.coverage}%`, backgroundColor: p.coverage >= 80 ? '#22c55e' : p.coverage >= 60 ? '#f59e0b' : '#ef4444' }} />
+                      </div>
+                    </div>
+                    <span className={`g-chip ${statusColors[p.status] || ''}`}>{p.status}</span>
+                    <span className="text-xs text-muted-foreground">Due {p.due}</span>
+                  </div>
+                </button>
+              ))}
             </div>
-          )}
-
-          {/* RFP Table */}
-          <div className="g-surface g-elevated overflow-hidden rounded-xl">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b" style={{ borderColor: 'var(--g-line)' }}>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Title</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Customer</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Due Date</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Assigned SA</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rfps.map((rfp) => {
-                  const sc = statusConfig[rfp.status];
-                  const StatusIcon = sc.icon;
-                  const isOverdue = new Date(rfp.dueDate) < new Date() && rfp.status !== 'won' && rfp.status !== 'lost' && rfp.status !== 'submitted';
-                  return (
-                    <tr key={rfp.id} className="border-b last:border-b-0 hover:bg-secondary/50 transition-colors" style={{ borderColor: 'var(--g-line)' }}>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-[#7c3aed]/10 text-[#7c3aed]">
-                          {rfp.type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-foreground">{rfp.title}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{rfp.customer}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-400' : 'text-muted-foreground'}`}>
-                          <Calendar className="h-3 w-3" />
-                          {rfp.dueDate}
-                          {isOverdue && <span className="text-[10px] font-medium text-red-400 ml-1">OVERDUE</span>}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${sc.color}`}>
-                          <StatusIcon className="h-3 w-3" />
-                          {sc.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="flex items-center gap-1.5 text-sm text-foreground">
-                          <User className="h-3 w-3 text-muted-foreground" />
-                          {rfp.assignedTo}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
           </div>
         </div>
       )}
 
-      {/* Artifacts Tab */}
-      {activeTab === 'artifacts' && (
+      {/* PURSUITS TAB */}
+      {activeTab === 'pursuits' && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Presales Artifacts Library</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {artifacts.map((artifact, i) => {
-              const typeColor = artifactTypeColors[artifact.type] || 'bg-zinc-500/10 text-zinc-400';
-              const TypeIcon = artifact.type === 'Technical' ? Shield
-                : artifact.type === 'Commercial' ? BarChart3
-                : artifact.type === 'Industry' ? Presentation
-                : Sparkles;
-              return (
-                <div key={i} className="g-surface g-elevated p-4 space-y-3 hover:border-[#7c3aed]/20 transition-colors" style={{ borderRadius: '0.75rem' }}>
-                  <div className="flex items-start justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-[#7c3aed]/10 flex items-center justify-center flex-shrink-0">
-                      <TypeIcon className="h-5 w-5 text-[#7c3aed]" />
-                    </div>
-                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${typeColor}`}>
-                      {artifact.type}
-                    </span>
-                  </div>
+          {PURSUITS.map(p => (
+            <div key={p.id} className={`g-surface g-elevated p-5 transition-all ${selectedPursuit?.id === p.id ? '!border-[#7c3aed]/40 ring-1 ring-[#7c3aed]/10' : ''}`}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <span className={`g-chip border ${typeColors[p.type] || ''}`}>{p.type}</span>
                   <div>
-                    <h3 className="text-sm font-semibold text-foreground">{artifact.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Updated {artifact.updatedAt}</p>
+                    <div className="text-sm font-semibold text-foreground">{p.client}</div>
+                    <div className="text-xs text-muted-foreground">{p.name}</div>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-secondary text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      <Eye className="h-3 w-3" /> View
-                    </button>
-                    <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-secondary text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      <Download className="h-3 w-3" /> Download
-                    </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="g-metric text-sm font-bold text-foreground">${(p.value/1000).toFixed(0)}k</span>
+                  <span className={`g-chip ${statusColors[p.status] || ''}`}>{p.status}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-3 mb-3">
+                <div className="text-xs"><span className="text-muted-foreground">Due:</span> <span className="text-foreground">{p.due}</span></div>
+                <div className="text-xs"><span className="text-muted-foreground">SA:</span> <span className="text-foreground">{p.sa}</span></div>
+                <div className="text-xs"><span className="text-muted-foreground">Region:</span> <span className="text-foreground">{p.region}</span></div>
+                <div className="text-xs"><span className="text-muted-foreground">Requirements:</span> <span className="text-foreground">{p.answered}/{p.reqs} answered</span></div>
+              </div>
+
+              {/* Coverage bar */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">Coverage</span>
+                <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${p.coverage}%`, backgroundColor: p.coverage >= 80 ? '#22c55e' : p.coverage >= 60 ? '#f59e0b' : '#ef4444' }} />
+                </div>
+                <span className={`text-xs font-bold ${p.coverage >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>{p.coverage}%</span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => { setSelectedPursuit(p); setActiveTab('studio'); }}
+                  className="px-3 py-1.5 text-xs rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors font-medium">
+                  Open Studio
+                </button>
+                <button onClick={() => { setSelectedPursuit(p); setActiveTab('solutioning'); }}
+                  className="px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
+                  Solutioning
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* STUDIO TAB */}
+      {activeTab === 'studio' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-foreground">Proposal Studio</div>
+              <div className="text-xs text-muted-foreground">{selectedPursuit ? `${selectedPursuit.client} — ${selectedPursuit.name}` : 'Select a pursuit first'}</div>
+            </div>
+            <div className="flex gap-2">
+              <select className="px-3 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground"
+                value={selectedPursuit?.id || ''} onChange={e => setSelectedPursuit(PURSUITS.find(p => p.id === e.target.value) || null)}>
+                <option value="">Select pursuit</option>
+                {PURSUITS.map(p => <option key={p.id} value={p.id}>{p.client} — {p.type}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Sections */}
+          <div className="space-y-2">
+            {PROPOSAL_SECTIONS.map((sec, i) => {
+              const sectionStatus: Record<string, string> = {
+                complete: 'bg-emerald-500/10 text-emerald-400',
+                draft: 'bg-amber-500/10 text-amber-400',
+                pending: 'bg-secondary text-muted-foreground',
+              };
+              const content = studioContent[sec.id];
+
+              return (
+                <div key={sec.id} className="g-surface g-elevated p-4 reveal" style={{ animationDelay: `${i * 0.04}s` }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground w-6">{i + 1}.</span>
+                      <span className="text-sm font-medium text-foreground">{sec.title}</span>
+                      <span className={`g-chip ${sectionStatus[sec.status] || ''}`}>{sec.status}</span>
+                    </div>
+                    <div className="flex gap-1.5">
+                      {sec.aiReady && (
+                        <button onClick={() => handleAIDraft(sec.id, sec.title)}
+                          disabled={chatMutation.isPending}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#7c3aed]/10 text-[#7c3aed] text-[10px] font-medium hover:bg-[#7c3aed]/20 transition-colors disabled:opacity-50">
+                          {chatMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                          AI Draft
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  {content && (
+                    <div className="mt-3 p-3 rounded-lg bg-card border border-border text-xs text-foreground leading-relaxed whitespace-pre-wrap">
+                      {content}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -319,99 +277,90 @@ export default function PresalesPage() {
         </div>
       )}
 
-      {/* SA Bench Tab */}
-      {activeTab === 'bench' && (
+      {/* SOLUTIONING TAB */}
+      {activeTab === 'solutioning' && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Solution Architect Bench</h2>
-          <div className="g-surface g-elevated overflow-hidden rounded-xl">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b" style={{ borderColor: 'var(--g-line)' }}>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">SA Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Assignments</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Availability</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Skills</th>
-                </tr>
-              </thead>
-              <tbody>
-                {saBench.map((sa, i) => (
-                  <tr key={i} className="border-b last:border-b-0 hover:bg-secondary/50 transition-colors" style={{ borderColor: 'var(--g-line)' }}>
-                    <td className="px-4 py-3">
-                      <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <div className="w-7 h-7 rounded-full bg-[#7c3aed]/10 flex items-center justify-center text-xs font-semibold text-[#7c3aed]">
-                          {sa.name.charAt(0)}
-                        </div>
-                        {sa.name}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{sa.assignments} active</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${availabilityColor(sa.availability)}`}>
-                        {sa.availability}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {sa.skills.map((skill) => (
-                          <span key={skill} className="px-2 py-0.5 rounded bg-secondary text-xs text-muted-foreground">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="text-sm font-semibold text-foreground">Solutioning</div>
+
+          {/* Effort Estimator */}
+          <div className="g-surface g-elevated p-5">
+            <div className="g-section-label mb-3">Effort Estimator</div>
+            <div className="grid grid-cols-5 gap-3">
+              {[
+                { role: 'Solution Architect', weeks: 4, rate: 200 },
+                { role: 'Sr. Developer', weeks: 12, rate: 165 },
+                { role: 'Developer', weeks: 16, rate: 135 },
+                { role: 'QA Engineer', weeks: 8, rate: 120 },
+                { role: 'Project Manager', weeks: 16, rate: 175 },
+              ].map(item => (
+                <div key={item.role} className="p-3 rounded-lg bg-card border border-border text-center">
+                  <div className="text-[10px] text-muted-foreground">{item.role}</div>
+                  <div className="text-lg font-bold text-foreground g-metric">{item.weeks}w</div>
+                  <div className="text-[10px] text-muted-foreground">${item.rate}/hr</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-between p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20">
+              <span className="text-xs text-foreground font-medium">Total Estimated Effort</span>
+              <span className="text-sm font-bold text-[#7c3aed] g-metric">56 person-weeks &middot; ~$890K</span>
+            </div>
+          </div>
+
+          {/* SA Bench */}
+          <div className="g-surface g-elevated p-5">
+            <div className="g-section-label mb-3">SA Bench Allocation</div>
+            <div className="space-y-2">
+              {SA_BENCH.map(sa => (
+                <div key={sa.name} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
+                  <div className="w-8 h-8 rounded-full bg-[#7c3aed]/10 flex items-center justify-center text-[#7c3aed] text-xs font-bold">
+                    {sa.name.slice(0, 2)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-medium text-foreground">{sa.name}</div>
+                    <div className="flex gap-1 mt-0.5">
+                      {sa.skills.map(s => <span key={s} className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{s}</span>)}
+                    </div>
+                  </div>
+                  <div className="w-24">
+                    <div className="flex justify-between text-[9px] mb-0.5">
+                      <span className="text-muted-foreground">Utilization</span>
+                      <span className="text-foreground">{sa.utilization}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${sa.utilization}%`, backgroundColor: sa.utilization > 80 ? '#ef4444' : sa.utilization > 60 ? '#f59e0b' : '#22c55e' }} />
+                    </div>
+                  </div>
+                  <span className={`g-chip ${sa.availability === 'Available' ? 'bg-emerald-500/10 text-emerald-400' : sa.availability === 'Partial' ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
+                    {sa.availability}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* AI Drafter Tab */}
-      {activeTab === 'drafter' && (
+      {/* TEMPLATES TAB */}
+      {activeTab === 'templates' && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">AI Response Drafter</h2>
-          <p className="text-sm text-muted-foreground">
-            Paste RFP/RFI requirements below and let AI draft a professional response.
-          </p>
-
-          <div className="g-surface g-elevated p-4 space-y-4" style={{ borderRadius: '0.75rem' }}>
-            <textarea
-              value={rfpRequirements}
-              onChange={(e) => setRfpRequirements(e.target.value)}
-              placeholder="Paste RFP/RFI requirements here...&#10;&#10;Example: The vendor must demonstrate capability in cloud-native application development, including containerization, CI/CD pipelines, and Kubernetes orchestration for a Fortune 500 financial services client."
-              rows={6}
-              className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40 resize-none"
-            />
-            <button
-              onClick={handleDraftResponse}
-              disabled={!rfpRequirements.trim() || chatMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#7c3aed] text-white text-sm font-medium hover:bg-[#6d28d9] transition-colors disabled:opacity-50"
-            >
-              {chatMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Drafting...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" /> AI Draft Response
-                </>
-              )}
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold text-foreground">Templates & Assets</div>
+            <button className="px-3 py-1.5 text-xs rounded-lg bg-[#7c3aed] text-white font-medium hover:bg-[#6d28d9] transition-colors flex items-center gap-1">
+              <Plus className="h-3 w-3" /> New Template
             </button>
           </div>
-
-          {/* Draft Output */}
-          {draftResponse && (
-            <div className="g-surface g-elevated p-4 space-y-3" style={{ borderRadius: '0.75rem' }}>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#7c3aed]" />
-                <h3 className="text-sm font-semibold text-foreground">AI Drafted Response</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {TEMPLATES.map((t, i) => (
+              <div key={i} className="p-4 rounded-xl g-surface g-elevated hover-lift hover-glow text-center">
+                <FileText className="h-6 w-6 text-[#7c3aed] mx-auto mb-2 opacity-60" />
+                <div className="text-xs font-semibold text-foreground">{t.title}</div>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <span className="g-chip bg-secondary text-muted-foreground">{t.type}</span>
+                  <span className="text-[10px] text-muted-foreground">{t.uses} uses</span>
+                </div>
               </div>
-              <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-card border border-border rounded-lg p-4">
-                {draftResponse}
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       )}
     </div>
