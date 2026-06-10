@@ -8,3 +8,5 @@ export { Workflow, type IWorkflow } from './workflow';
 export { ServiceLine, type IServiceLine, type IPipelineStage } from './service-line';
 export { Product, type IProduct } from './product';
 export { default as KnowledgeNode, type IKnowledgeNode } from './knowledge-graph';
+export { default as Contract, type IContract } from './contract';
+export { default as EngagementType, type IEngagementType } from './engagement-type';

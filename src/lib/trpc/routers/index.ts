@@ -8,6 +8,8 @@ import { authRouter } from './auth';
 import { userRouter } from './user';
 import { graphRouter } from './graph';
 import { aiRouter } from './ai';
+import { contractRouter } from './contract';
+import { engagementTypeRouter } from './engagement-type';
 
 export const appRouter = router({
   opportunity: opportunityRouter,
@@ -19,6 +21,8 @@ export const appRouter = router({
   user: userRouter,
   graph: graphRouter,
   ai: aiRouter,
+  contract: contractRouter,
+  engagementType: engagementTypeRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -117,6 +117,8 @@ const OpportunitySchema = new Schema<IOpportunity>(
     stageEnteredDate: { type: Date, required: false },
     sentimentScore: { type: Number, required: false },
     accountId: { type: Schema.Types.ObjectId, ref: 'Account', required: false },
+    engagementType: { type: String, required: false },
+    engagementTypes: { type: [String], default: [] },
   },
   { timestamps: true }
 );
