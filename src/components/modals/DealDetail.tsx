@@ -68,7 +68,7 @@ function WinProbabilityBar({ probability }: { probability: number }) {
 export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const { opportunities, updateOpportunity, deleteOpportunity } = useOpportunities();
   const opp = opportunities.find(o => o.id === opportunityId);
-  const [activeTab, setActiveTab] = useState<'details' | 'stakeholders' | 'tasks' | 'log' | 'documents'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'stakeholders' | 'tasks' | 'log' | 'documents' | 'pricing' | 'presales' | 'contracts'>('details');
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [analysis, setAnalysis] = useState<any>(null);
@@ -242,8 +242,11 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
     { id: 'details' as const, label: 'Details' },
     { id: 'stakeholders' as const, label: `Stakeholders (${stakeholders.length})` },
     { id: 'tasks' as const, label: `Tasks (${completedTasks}/${tasks.length})` },
+    { id: 'pricing' as const, label: 'Pricing' },
+    { id: 'presales' as const, label: 'Presales' },
+    { id: 'contracts' as const, label: 'Contracts' },
+    { id: 'documents' as const, label: 'Docs' },
     { id: 'log' as const, label: 'Log' },
-    { id: 'documents' as const, label: 'Documents' },
   ];
 
   const inputClasses = 'w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#5B4FE9]/20 focus:border-[#5B4FE9]';
@@ -1122,6 +1125,21 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               ) : null}
             </div>
           )}
+
+          {/* ── Pricing Tab ── */}
+          {activeTab === 'pricing' && (
+            <DealPricingTab opportunity={opp} />
+          )}
+
+          {/* ── Presales Tab ── */}
+          {activeTab === 'presales' && (
+            <DealPresalesTab opportunity={opp} />
+          )}
+
+          {/* ── Contracts Tab ── */}
+          {activeTab === 'contracts' && (
+            <DealContractsTab opportunity={opp} />
+          )}
         </div>
 
         <MeetingNotesModal
@@ -1131,6 +1149,297 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
           opportunityName={`${opp.customerName} — ${opp.opportunityName}`}
         />
       </div>
+    </div>
+  );
+}
+
+// ── Pricing Tab Component ──
+function DealPricingTab({ opportunity }: { opportunity: any }) {
+  const GEO_RATES: Record<string, { label: string; multiplier: number }> = {
+    us: { label: 'US (Onshore)', multiplier: 1.0 },
+    india: { label: 'India (Offshore)', multiplier: 0.35 },
+    latam: { label: 'LATAM (Nearshore)', multiplier: 0.55 },
+  };
+  const ROLES = [
+    { role: 'Program Manager', baseRate: 130 },
+    { role: 'Technical Architect', baseRate: 120 },
+    { role: 'Sr Full Stack Engineer', baseRate: 95 },
+    { role: 'QA Engineer', baseRate: 80 },
+    { role: 'DevOps Engineer', baseRate: 95 },
+    { role: 'AI/ML Engineer', baseRate: 130 },
+    { role: 'Business Analyst', baseRate: 90 },
+    { role: 'UX Designer', baseRate: 90 },
+  ];
+
+  const [lines, setLines] = useState([
+    { id: '1', role: 'Program Manager', count: 1, geo: 'us', rate: 130 },
+    { id: '2', role: 'Sr Full Stack Engineer', count: 2, geo: 'india', rate: 95 },
+  ]);
+  const [margin, setMargin] = useState(opportunity.margin || 28);
+  const [duration, setDuration] = useState(parseInt(opportunity.dealDuration) || 12);
+
+  const totalMonthly = lines.reduce((s, l) => s + l.rate * (GEO_RATES[l.geo]?.multiplier || 1) * l.count * 160, 0);
+  const totalCost = totalMonthly * duration;
+  const tcv = totalCost * (1 + margin / 100);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">Pricing Estimate</span>
+        <Link href="/pricing" className="text-[10px] text-[#7c3aed] hover:underline flex items-center gap-1">
+          Full Pricing Engine <ArrowRight className="h-2.5 w-2.5" />
+        </Link>
+      </div>
+
+      {/* Quick KPIs */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="p-3 rounded-lg bg-card border border-border text-center">
+          <div className="text-[10px] text-muted-foreground">TCV</div>
+          <div className="text-sm font-bold text-foreground g-metric">${(tcv / 1000).toFixed(0)}k</div>
+        </div>
+        <div className="p-3 rounded-lg bg-card border border-border text-center">
+          <div className="text-[10px] text-muted-foreground">Monthly</div>
+          <div className="text-sm font-bold text-foreground g-metric">${(totalMonthly / 1000).toFixed(0)}k</div>
+        </div>
+        <div className="p-3 rounded-lg bg-card border border-border text-center">
+          <div className="text-[10px] text-muted-foreground">Margin</div>
+          <div className="text-sm font-bold text-foreground g-metric">{margin}%</div>
+        </div>
+      </div>
+
+      {/* Team composition */}
+      <div className="space-y-2">
+        <span className="g-section-label">Team Composition</span>
+        {lines.map((line, i) => (
+          <div key={line.id} className="flex items-center gap-2 text-xs">
+            <select value={line.role} onChange={e => {
+              const role = ROLES.find(r => r.role === e.target.value);
+              const next = [...lines]; next[i] = { ...line, role: e.target.value, rate: role?.baseRate || line.rate }; setLines(next);
+            }} className="flex-1 px-2 py-1.5 bg-card border border-border rounded-lg text-foreground">
+              {ROLES.map(r => <option key={r.role} value={r.role}>{r.role}</option>)}
+            </select>
+            <input type="number" value={line.count} onChange={e => { const next = [...lines]; next[i] = { ...line, count: Number(e.target.value) }; setLines(next); }}
+              className="w-12 px-2 py-1.5 bg-card border border-border rounded-lg text-foreground text-center" min={1} />
+            <select value={line.geo} onChange={e => { const next = [...lines]; next[i] = { ...line, geo: e.target.value }; setLines(next); }}
+              className="w-24 px-2 py-1.5 bg-card border border-border rounded-lg text-foreground">
+              {Object.entries(GEO_RATES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+            <span className="text-muted-foreground w-16 text-right">${(line.rate * (GEO_RATES[line.geo]?.multiplier || 1)).toFixed(0)}/hr</span>
+            <button onClick={() => setLines(lines.filter((_, j) => j !== i))} className="p-1 text-muted-foreground hover:text-[var(--g-red)]">
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+        <button onClick={() => setLines([...lines, { id: String(Date.now()), role: 'Sr Full Stack Engineer', count: 1, geo: 'india', rate: 95 }])}
+          className="text-[10px] text-[#7c3aed] hover:underline flex items-center gap-1">
+          <Plus className="h-3 w-3" /> Add Role
+        </button>
+      </div>
+
+      {/* Controls */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-[10px] text-muted-foreground mb-1">Duration (months)</label>
+          <input type="number" value={duration} onChange={e => setDuration(Number(e.target.value))} min={1} max={60}
+            className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground" />
+        </div>
+        <div>
+          <label className="block text-[10px] text-muted-foreground mb-1">Margin %</label>
+          <input type="number" value={margin} onChange={e => setMargin(Number(e.target.value))} min={0} max={80}
+            className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Presales Tab Component ──
+function DealPresalesTab({ opportunity }: { opportunity: any }) {
+  const sowMutation = trpc.ai.generateSOW.useMutation();
+  const [proposalSections, setProposalSections] = useState<Record<string, string>>({});
+
+  const SECTIONS = [
+    { id: 'exec_summary', label: 'Executive Summary' },
+    { id: 'scope', label: 'Scope of Work' },
+    { id: 'approach', label: 'Technical Approach' },
+    { id: 'team', label: 'Team & Resources' },
+    { id: 'timeline', label: 'Timeline & Milestones' },
+    { id: 'pricing', label: 'Pricing Summary' },
+    { id: 'assumptions', label: 'Assumptions & Risks' },
+    { id: 'terms', label: 'Terms & Conditions' },
+  ];
+
+  const handleGenerateSection = async (sectionId: string) => {
+    setProposalSections(p => ({ ...p, [sectionId]: '..generating..' }));
+    try {
+      const result = await sowMutation.mutateAsync({ opportunityId: opportunity.id });
+      setProposalSections(p => ({ ...p, [sectionId]: result.content.slice(0, 500) }));
+    } catch {
+      setProposalSections(p => ({ ...p, [sectionId]: 'Generation failed — check API key' }));
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">Proposal Studio</span>
+        <Link href="/presales" className="text-[10px] text-[#7c3aed] hover:underline flex items-center gap-1">
+          Full Presales OS <ArrowRight className="h-2.5 w-2.5" />
+        </Link>
+      </div>
+
+      {/* Stage readiness */}
+      <div className="p-3 rounded-lg bg-card border border-border">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-foreground">Proposal Readiness</span>
+          <span className="text-xs text-muted-foreground">
+            {Object.keys(proposalSections).length}/{SECTIONS.length} sections
+          </span>
+        </div>
+        <div className="h-2 rounded-full bg-secondary overflow-hidden">
+          <div className="h-full rounded-full bg-[#7c3aed] transition-all"
+            style={{ width: `${(Object.keys(proposalSections).length / SECTIONS.length) * 100}%` }} />
+        </div>
+      </div>
+
+      {/* Proposal sections */}
+      <div className="space-y-2">
+        <span className="g-section-label">Proposal Sections</span>
+        {SECTIONS.map(section => {
+          const content = proposalSections[section.id];
+          const isGenerating = content === '..generating..';
+          return (
+            <div key={section.id} className="p-3 rounded-lg bg-card border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {content && !isGenerating ? (
+                    <div className="w-5 h-5 rounded-full bg-[var(--g-green-soft)] flex items-center justify-center">
+                      <CheckSquare className="h-3 w-3 text-[var(--g-green)]" />
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center">
+                      <FileText className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  )}
+                  <span className="text-xs font-medium text-foreground">{section.label}</span>
+                </div>
+                {!content ? (
+                  <button onClick={() => handleGenerateSection(section.id)}
+                    className="flex items-center gap-1 text-[10px] text-[#7c3aed] hover:underline">
+                    <Sparkles className="h-3 w-3" /> AI Draft
+                  </button>
+                ) : isGenerating ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-[#7c3aed]" />
+                ) : (
+                  <span className="text-[10px] text-[var(--g-green)]">Ready</span>
+                )}
+              </div>
+              {content && !isGenerating && (
+                <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2">{content}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Contracts Tab Component ──
+function DealContractsTab({ opportunity }: { opportunity: any }) {
+  const { data: contracts = [] } = trpc.contract.list.useQuery();
+  const createMutation = trpc.contract.create.useMutation();
+  const utils = trpc.useUtils();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [form, setForm] = useState({ title: '', type: 'SOW', value: opportunity.tcv || 0, startDate: '', endDate: '' });
+
+  // Filter contracts for this opportunity
+  const dealContracts = (contracts as any[]).filter((c: any) => c.opportunityId === opportunity.id);
+
+  const handleCreate = async () => {
+    if (!form.title) return;
+    await createMutation.mutateAsync({
+      title: form.title,
+      type: form.type,
+      value: Number(form.value),
+      opportunityId: opportunity.id,
+      customerName: opportunity.customerName,
+      startDate: form.startDate || undefined,
+      endDate: form.endDate || undefined,
+    } as any);
+    utils.contract.list.invalidate();
+    setShowCreateForm(false);
+    setForm({ title: '', type: 'SOW', value: opportunity.tcv || 0, startDate: '', endDate: '' });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">Contracts</span>
+        <div className="flex items-center gap-2">
+          <Link href="/contracts" className="text-[10px] text-muted-foreground hover:underline">View All</Link>
+          <button onClick={() => setShowCreateForm(!showCreateForm)}
+            className="flex items-center gap-1 text-[10px] text-[#7c3aed] font-medium hover:underline">
+            <Plus className="h-3 w-3" /> New Contract
+          </button>
+        </div>
+      </div>
+
+      {/* Create form */}
+      {showCreateForm && (
+        <div className="p-3 rounded-lg bg-card border border-border space-y-2 animate-flow-in">
+          <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+            placeholder="Contract title *" className="w-full px-2 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground" />
+          <div className="grid grid-cols-3 gap-2">
+            <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}
+              className="px-2 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground">
+              {['SOW', 'MSA', 'NDA', 'Change Order', 'Amendment'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <input type="number" value={form.value} onChange={e => setForm(p => ({ ...p, value: Number(e.target.value) }))}
+              placeholder="Value" className="px-2 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground" />
+            <input type="date" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))}
+              className="px-2 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground" />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setShowCreateForm(false)} className="px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground">Cancel</button>
+            <button onClick={handleCreate} disabled={!form.title || createMutation.isPending}
+              className="px-3 py-1 text-[10px] rounded-lg bg-[#7c3aed] text-white font-medium hover:bg-[#6d28d9] disabled:opacity-50">
+              {createMutation.isPending ? 'Creating...' : 'Create'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Contract list */}
+      {dealContracts.length > 0 ? (
+        <div className="space-y-2">
+          {dealContracts.map((contract: any) => (
+            <div key={contract._id} className="p-3 rounded-lg bg-card border border-border flex items-center justify-between">
+              <div>
+                <div className="text-xs font-medium text-foreground">{contract.title}</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">
+                  {contract.type} · ${((contract.value || 0) / 1000).toFixed(0)}k
+                  {contract.status && <span className="ml-2">{contract.status}</span>}
+                </div>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                contract.status === 'active' ? 'bg-[var(--g-green-soft)] text-[var(--g-green)]'
+                : contract.status === 'pending_approval' ? 'bg-[var(--g-amber-soft)] text-[var(--g-amber)]'
+                : 'bg-secondary text-muted-foreground'
+              }`}>{contract.status || 'draft'}</span>
+            </div>
+          ))}
+        </div>
+      ) : !showCreateForm ? (
+        <div className="text-center py-6">
+          <FileText className="h-6 w-6 text-muted-foreground mx-auto mb-2 opacity-40" />
+          <p className="text-xs text-muted-foreground mb-2">No contracts for this deal yet.</p>
+          <button onClick={() => setShowCreateForm(true)}
+            className="text-[10px] text-[#7c3aed] hover:underline flex items-center gap-1 mx-auto">
+            <Plus className="h-3 w-3" /> Create First Contract
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
