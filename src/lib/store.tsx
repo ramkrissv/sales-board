@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import type { Opportunity, Status } from './types';
 
@@ -14,6 +14,7 @@ interface FilterState {
 
 interface OpportunityContextType {
   opportunities: Opportunity[];
+  filteredOpportunities: Opportunity[];
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   isLoading: boolean;
@@ -71,10 +72,22 @@ export function OpportunityProvider({ children }: { children: React.ReactNode })
     await utils.opportunity.list.invalidate();
   };
 
+  const filteredOpportunities = useMemo(() => {
+    return (opportunities as Opportunity[]).filter(opp => {
+      if (filters.search && !opp.customerName.toLowerCase().includes(filters.search.toLowerCase()) && !opp.opportunityName.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      if (filters.status.length > 0 && !filters.status.includes(opp.status)) return false;
+      if (filters.primaryOwner.length > 0 && !filters.primaryOwner.includes(opp.primaryOwner)) return false;
+      if (filters.industry.length > 0 && !filters.industry.includes(opp.industry)) return false;
+      if (filters.region.length > 0 && !filters.region.includes(opp.region)) return false;
+      return true;
+    });
+  }, [opportunities, filters]);
+
   return (
     <OpportunityContext.Provider
       value={{
         opportunities: opportunities as Opportunity[],
+        filteredOpportunities,
         filters,
         setFilters,
         isLoading,

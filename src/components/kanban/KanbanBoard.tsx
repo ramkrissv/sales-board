@@ -27,33 +27,8 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
-  const { opportunities, updateOpportunity, filters } = useOpportunities();
+  const { opportunities, filteredOpportunities, updateOpportunity } = useOpportunities();
   const [activeId, setActiveId] = useState<string | null>(null);
-
-  // Filter opportunities
-  const filteredOpportunities = useMemo(() => {
-    return opportunities.filter(opp => {
-      // Search filter
-      if (filters.search && !opp.customerName.toLowerCase().includes(filters.search.toLowerCase()) && 
-          !opp.opportunityName.toLowerCase().includes(filters.search.toLowerCase())) {
-        return false;
-      }
-      
-      // Status filter
-      if (filters.status.length > 0 && !filters.status.includes(opp.status)) return false;
-      
-      // Owner filter
-      if (filters.primaryOwner.length > 0 && !filters.primaryOwner.includes(opp.primaryOwner)) return false;
-      
-      // Region filter
-      if (filters.region.length > 0 && !filters.region.includes(opp.region)) return false;
-      
-      // Industry filter
-      if (filters.industry.length > 0 && !filters.industry.includes(opp.industry)) return false;
-
-      return true;
-    });
-  }, [opportunities, filters]);
 
   const columns = useMemo(() => {
     const cols: Record<Status, Opportunity[]> = {

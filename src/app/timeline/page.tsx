@@ -1,6 +1,7 @@
 'use client';
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
+import { FilterPanel } from '@/components/shared/FilterPanel';
 import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
 
 function TimelineContent() {
@@ -73,6 +74,7 @@ function TimelineContent() {
 export default function TimelinePage() {
   return (
     <OpportunityProvider>
+      <FilterPanel />
       <TimelineContent />
     </OpportunityProvider>
   );

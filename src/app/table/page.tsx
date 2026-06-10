@@ -4,16 +4,17 @@ import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { useState } from 'react';
 import { Search, Download } from 'lucide-react';
 import { format } from 'date-fns';
+import { FilterPanel } from '@/components/shared/FilterPanel';
 
 function TableContent() {
-  const { opportunities, isLoading } = useOpportunities();
+  const { filteredOpportunities, isLoading } = useOpportunities();
   const [search, setSearch] = useState('');
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading data...</div>;
   }
 
-  const filtered = opportunities.filter(o =>
+  const filtered = filteredOpportunities.filter(o =>
     !search || o.customerName.toLowerCase().includes(search.toLowerCase()) || o.opportunityName.toLowerCase().includes(search.toLowerCase()) || o.primaryOwner.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -84,6 +85,7 @@ function TableContent() {
 export default function TablePage() {
   return (
     <OpportunityProvider>
+      <FilterPanel />
       <TableContent />
     </OpportunityProvider>
   );
