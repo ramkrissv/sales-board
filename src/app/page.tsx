@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react';
 import {
   Sparkles, TrendingUp, AlertTriangle, Target, ChevronRight,
   Zap, ArrowRight, Clock, DollarSign, Users, CheckSquare,
-  Brain, Shield, Rocket, Eye, FileText, Plus
+  Brain, Shield, Rocket, Eye, FileText, Plus, MessageCircle, Globe
 } from 'lucide-react';
 import Link from 'next/link';
 import { DealDetail } from '@/components/modals/DealDetail';
@@ -332,6 +332,22 @@ function HomeContent() {
             );
           })}
         </div>
+      </div>
+
+      {/* Quick Navigation */}
+      <div className="grid grid-cols-4 gap-3 animate-flow-in animate-flow-in-delay-4">
+        {[
+          { label: 'Deal Room', href: '/deal-room', icon: MessageCircle, desc: 'AI-guided deal management' },
+          { label: 'Ask Galent', href: '/ask', icon: Sparkles, desc: 'Natural language pipeline queries' },
+          { label: 'Signal', href: '/intake', icon: Globe, desc: 'Capture from any channel' },
+          { label: 'Presales', href: '/presales', icon: FileText, desc: 'RFP intake & proposal studio' },
+        ].map(item => (
+          <Link key={item.href} href={item.href} className="p-3 rounded-xl g-surface g-elevated hover-lift hover-glow text-center transition-all">
+            <item.icon className="h-5 w-5 mx-auto mb-1.5 text-[#7c3aed]" />
+            <div className="text-xs font-semibold text-foreground">{item.label}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">{item.desc}</div>
+          </Link>
+        ))}
       </div>
 
       {/* Deal Detail Modal */}

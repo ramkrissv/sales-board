@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { OpportunityProvider } from '@/lib/store';
 import { DealDetail } from '@/components/modals/DealDetail';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, MessageCircle, Table as TableIcon, Eye } from 'lucide-react';
+import Link from 'next/link';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 import { useOpportunities } from '@/lib/store';
@@ -43,6 +44,17 @@ export default function PipelinePage() {
       <FilterPanel />
       <PipelineScopeHeader />
       <KanbanBoard onCardClick={setSelectedOppId} />
+      <div className="flex gap-2 mt-4">
+        <Link href="/deal-room" className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg g-surface hover-glow transition-all text-muted-foreground hover:text-foreground">
+          <MessageCircle className="h-3 w-3" /> Deal Room
+        </Link>
+        <Link href="/table" className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg g-surface hover-glow transition-all text-muted-foreground hover:text-foreground">
+          <TableIcon className="h-3 w-3" /> Table View
+        </Link>
+        <Link href="/graph" className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg g-surface hover-glow transition-all text-muted-foreground hover:text-foreground">
+          <Eye className="h-3 w-3" /> Deal Graph
+        </Link>
+      </div>
       {selectedOppId && (
         <DealDetail
           opportunityId={selectedOppId}
