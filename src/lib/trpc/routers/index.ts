@@ -14,6 +14,7 @@ import { settingsRouter } from './settings';
 import { forecastRouter } from './forecast';
 import { integrationRouter } from './integration';
 import { notificationRouter } from './notification';
+import { workflowRouter } from './workflow';
 
 export const appRouter = router({
   opportunity: opportunityRouter,
@@ -31,6 +32,7 @@ export const appRouter = router({
   forecast: forecastRouter,
   integration: integrationRouter,
   notification: notificationRouter,
+  workflow: workflowRouter,
 });
 
 export type AppRouter = typeof appRouter;
