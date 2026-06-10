@@ -4,6 +4,7 @@ import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { trpc } from '@/lib/trpc/client';
 import { useState } from 'react';
 import { Sparkles, Send, Loader2, BarChart3, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { GenUI, parseToGenUI } from '@/components/ai/GenUI';
 
 function AskContent() {
   const { opportunities } = useOpportunities();
@@ -73,8 +74,15 @@ function AskContent() {
                 ? 'bg-[#7c3aed] text-white rounded-tr-sm'
                 : 'g-surface text-foreground rounded-tl-sm'
             }`}>
-              {result.type === 'answer' && <Sparkles className="h-3.5 w-3.5 text-[#7c3aed] inline mr-1.5" />}
-              <span className="whitespace-pre-wrap">{result.content}</span>
+              {result.type === 'answer' ? (
+                <GenUI blocks={parseToGenUI(result.content, opportunities)} onAction={(action, data) => {
+                  if (action === 'open_deal' && data?.id) {
+                    // Handle opening deal
+                  }
+                }} />
+              ) : (
+                <span className="whitespace-pre-wrap">{result.content}</span>
+              )}
             </div>
           </div>
         ))}
