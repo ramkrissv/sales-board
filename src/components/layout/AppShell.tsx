@@ -10,7 +10,7 @@ import {
   Kanban, TrendingUp, CalendarClock, CalendarDays, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles, Magnet,
   Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield, GitBranch, MessageSquare, MessageCircle, Menu,
-  BookOpen, Presentation, DollarSign, BarChart3, Globe, Eye,
+  BookOpen, Presentation, DollarSign, BarChart3, Globe, Eye, Mail,
 } from 'lucide-react';
 import { NewDealModal } from '@/components/modals/NewDealModal';
 import { MeetingNotesModal } from '@/components/modals/MeetingNotesModal';
@@ -50,6 +50,8 @@ const navGroups: { label: string; items: { icon: any; label: string; href: strin
       { icon: Eye, label: 'Deal Graph', href: '/graph' },
       { icon: Sparkles, label: 'AI Agents', href: '/agents' },
       { icon: MessageSquare, label: 'Ask Galent', href: '/ask' },
+      { icon: Mail, label: 'Campaigns', href: '/campaigns' },
+      { icon: TrendingUp, label: 'Waterfall', href: '/waterfall' },
     ],
   },
   {
