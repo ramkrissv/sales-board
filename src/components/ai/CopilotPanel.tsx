@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles, Bot, User, Loader2, BarChart3, AlertTriangle, ArrowRight, Clock } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
+import { GenUI, parseToGenUI } from '@/components/ai/GenUI';
 
 interface Message {
   id: string;
@@ -194,7 +195,15 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
                 ? 'bg-[#7B52FF] text-white rounded-tr-sm'
                 : 'bg-card border border-border text-foreground rounded-tl-sm'
             }`}>
-              {msg.content}
+              {msg.role === 'assistant' ? (
+                <GenUI blocks={parseToGenUI(msg.content)} onAction={(action, data) => {
+                  if (action === 'open_deal' && data?.id) {
+                    // Handle opening deal - could navigate or set state
+                  }
+                }} />
+              ) : (
+                msg.content
+              )}
             </div>
           </div>
         ))}
