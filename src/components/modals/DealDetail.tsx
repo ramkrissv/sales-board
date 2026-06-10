@@ -346,13 +346,16 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               {/* Create task from action */}
                               <button
-                                onClick={() => handleCreateActionTask(a.action)}
+                                onClick={(e) => { e.stopPropagation(); handleCreateActionTask(a.action); }}
                                 disabled={createTaskMutation.isPending}
-                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#7B52FF]/10 text-[#7B52FF] text-[10px] font-medium hover:bg-[#7B52FF]/20 transition-colors"
-                                title="Create as task"
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-[#7B52FF]/15 text-[#7B52FF] text-[11px] font-medium hover:bg-[#7B52FF]/25 transition-colors disabled:opacity-50"
+                                title="Create this as a task"
                               >
-                                <CalendarPlus className="h-3 w-3" />
-                                Task
+                                {createTaskMutation.isPending ? (
+                                  <><Loader2 className="h-3 w-3 animate-spin" /> Creating...</>
+                                ) : (
+                                  <><CalendarPlus className="h-3 w-3" /> Create Task</>
+                                )}
                               </button>
                               {/* Update stage if action mentions it */}
                               {(a.action.toLowerCase().includes('stage') || a.action.toLowerCase().includes('move') || a.action.toLowerCase().includes('advance')) && (
