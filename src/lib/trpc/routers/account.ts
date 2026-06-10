@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import mongoose from 'mongoose';
 import { router, protectedProcedure } from '../trpc';
 import { connectDB } from '@/lib/db/connection';
 import { Account } from '@/lib/db/models/account';
@@ -113,5 +114,48 @@ export const accountRouter = router({
       }
 
       return { success: true };
+    }),
+
+  scoreIntent: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const account = await Account.findById(input.id).lean();
+      if (!account) throw new TRPCError({ code: 'NOT_FOUND' });
+
+      // Get all opportunities for this account
+      const OppModel = mongoose.models.Opportunity || Opportunity;
+      const opps = await OppModel.find({
+        $or: [{ accountId: input.id }, { customerName: (account as any).companyName }]
+      }).lean();
+
+      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
+      const client = getAnthropicClient();
+
+      const response = await client.messages.create({
+        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514',
+        max_tokens: 512,
+        messages: [{ role: 'user', content: `Score this account's buying intent for an IT services company. Return ONLY JSON:
+Account: ${(account as any).companyName}
+Industry: ${(account as any).industry || 'Unknown'}
+Type: ${(account as any).accountType || 'Unknown'}
+Deals: ${opps.length} (${opps.map((o: any) => `${o.status}: $${(o.tcv||0).toLocaleString()}`).join(', ')})
+Health: ${(account as any).accountHealth || 'N/A'}
+
+{"intentScore": <0-100>, "buyingStage": "<awareness|consideration|evaluation|decision|closed>", "signals": [{"signal": "<what>", "strength": "<strong|moderate|weak>"}], "recommendation": "<one sentence>"}` }],
+      });
+
+      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      try {
+        const result = JSON.parse(text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+        // Save score to account
+        await Account.findByIdAndUpdate(input.id, {
+          accountHealth: result.intentScore,
+          $set: { 'intentData': result },
+        });
+        return result;
+      } catch {
+        return { intentScore: 50, buyingStage: 'consideration', signals: [], recommendation: text.slice(0, 200) };
+      }
     }),
 });

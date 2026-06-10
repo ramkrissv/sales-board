@@ -78,4 +78,22 @@ export const notificationRouter = router({
       const Notification = getModel();
       return Notification.create(input);
     }),
+
+  createIntentAlert: protectedProcedure
+    .input(z.object({
+      accountName: z.string(),
+      signal: z.string(),
+      strength: z.enum(['strong', 'moderate', 'weak']),
+    }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const Notification = getModel();
+      return Notification.create({
+        userId: 'default-user',
+        type: 'ai_signal',
+        title: `Intent Signal: ${input.accountName}`,
+        message: `${input.strength.toUpperCase()} signal detected: ${input.signal}`,
+        metadata: { accountName: input.accountName, strength: input.strength },
+      });
+    }),
 });
