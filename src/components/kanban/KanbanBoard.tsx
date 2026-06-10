@@ -103,6 +103,10 @@ export function KanbanBoard({ onCardClick }: KanbanBoardProps) {
 
     if (newStatus && newStatus !== opportunity.status) {
       updateOpportunity(activeId, { status: newStatus });
+      // Open deal detail for editing after stage change
+      if (onCardClick) {
+        setTimeout(() => onCardClick(activeId), 300);
+      }
     }
 
     setActiveId(null);

@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import {
   Kanban, TrendingUp, CalendarClock, CalendarDays, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles, Magnet,
-  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield, GitBranch, MessageSquare, Menu,
+  Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield, GitBranch, MessageSquare, MessageCircle, Menu,
 } from 'lucide-react';
 import { NewDealModal } from '@/components/modals/NewDealModal';
 import { MeetingNotesModal } from '@/components/modals/MeetingNotesModal';
@@ -43,6 +43,7 @@ const navGroups = [
       { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
       { icon: Sparkles, label: 'Forecasting', href: '/forecasting' },
       { icon: Bot, label: 'Agents', href: '/agents' },
+      { icon: MessageCircle, label: 'Ask Galent', href: '/ask' },
     ],
   },
   {
@@ -105,7 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Galent Logo */}
         <Link href="/" className="mb-4 flex-shrink-0 flex items-center gap-2 px-3" title="Galent SalesPilot">
           <img src="/galent-logo.svg" alt="Galent" className="w-7 h-7 rounded-lg" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          <span className="text-sm font-bold text-foreground">Galent</span>
+          
         </Link>
 
         {/* Nav icons — grouped */}
