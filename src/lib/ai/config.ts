@@ -207,6 +207,99 @@ Use historical conversion rates and current deal health signals. Be conservative
     schedule: '0 6 * * 1', // 6am every Monday
     tools: ['query_deals', 'calculate_forecast', 'generate_report'],
   },
+  {
+    id: 'intake-processor',
+    name: 'Intake Processor',
+    description: 'Omni-channel intake agent. Processes voice notes, emails, Teams transcripts, and chat messages into structured deal intelligence.',
+    systemPrompt: `You are the Intake Processor for Galent SalesPilot. When content arrives from any channel (voice, email, Teams, Outlook), you:
+1. Identify the customer and deal context
+2. Extract action items, stakeholder insights, and deal signals
+3. Match to existing deals in the pipeline
+4. Auto-log high-confidence updates to the deal's conversation log
+5. Suggest follow-up actions`,
+    modelConfig: AVAILABLE_MODELS[0],
+    guardrails: {
+      maxActionsPerMinute: 20,
+      requireApprovalFor: [],
+      blockedActions: ['delete_opportunity'],
+      maxTokenBudgetPerDay: 300000,
+      deterministicMode: false,
+      contentFilters: [],
+    },
+    isActive: true,
+    autoInvoke: true,
+    tools: ['query_deals', 'log_activity', 'create_task', 'add_stakeholder', 'send_notification'],
+  },
+  {
+    id: 'proposal-drafter',
+    name: 'Proposal Drafter',
+    description: 'Generates proposal sections, SOW documents, and executive presentations from deal context and knowledge base.',
+    systemPrompt: `You are the Proposal Drafter for Galent SalesPilot. You generate professional sales documents:
+1. Executive summaries from deal context
+2. SOW sections with specific deliverables and timelines
+3. Pricing proposals aligned to engagement types
+4. Technical architecture overviews
+Be specific to the client and deal, never generic.`,
+    modelConfig: AVAILABLE_MODELS[0],
+    guardrails: {
+      maxActionsPerMinute: 5,
+      requireApprovalFor: ['send_email'],
+      blockedActions: ['change_stage', 'delete_opportunity'],
+      maxTokenBudgetPerDay: 400000,
+      deterministicMode: false,
+      contentFilters: ['pricing_details'],
+    },
+    isActive: true,
+    autoInvoke: false,
+    tools: ['query_deals', 'get_forecast', 'generate_sow', 'draft_outreach'],
+  },
+  {
+    id: 'account-intelligence',
+    name: 'Account Intelligence',
+    description: 'Deep account research agent. Enriches company data, tracks news signals, maps stakeholder relationships, and identifies expansion opportunities.',
+    systemPrompt: `You are the Account Intelligence Agent for Galent SalesPilot. You provide deep account analysis:
+1. Company research: industry position, tech stack, recent news
+2. Stakeholder mapping: decision makers, champions, influencers
+3. Competitive landscape: who else is pursuing this account
+4. Expansion signals: whitespace, upsell, cross-sell opportunities
+5. Risk indicators: leadership changes, budget cuts, competitor wins`,
+    modelConfig: AVAILABLE_MODELS[0],
+    guardrails: {
+      maxActionsPerMinute: 5,
+      requireApprovalFor: ['update_opportunity'],
+      blockedActions: ['delete_opportunity', 'send_email'],
+      maxTokenBudgetPerDay: 250000,
+      deterministicMode: false,
+      contentFilters: [],
+    },
+    isActive: true,
+    autoInvoke: false,
+    tools: ['list_accounts', 'query_graph', 'get_similar_accounts', 'log_activity', 'send_notification'],
+  },
+  {
+    id: 'competitive-intel',
+    name: 'Competitive Intel',
+    description: 'Monitors competitive landscape. Detects competitor mentions in deal notes, builds battle cards, and alerts on competitive threats.',
+    systemPrompt: `You are the Competitive Intelligence Agent. You:
+1. Scan deal conversation logs for competitor mentions
+2. Build competitive battle cards with differentiators
+3. Alert when competitors are detected on active deals
+4. Recommend counter-positioning strategies
+5. Track win/loss patterns against specific competitors`,
+    modelConfig: AVAILABLE_MODELS[2], // Haiku for speed
+    guardrails: {
+      maxActionsPerMinute: 15,
+      requireApprovalFor: [],
+      blockedActions: ['change_stage', 'update_tcv', 'send_email'],
+      maxTokenBudgetPerDay: 150000,
+      deterministicMode: true,
+      contentFilters: [],
+    },
+    isActive: true,
+    autoInvoke: true,
+    schedule: '0 3 * * *', // 3am daily
+    tools: ['list_opportunities', 'query_graph', 'send_notification', 'log_activity'],
+  },
 ];
 
 /**

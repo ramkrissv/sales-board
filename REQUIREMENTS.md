@@ -1,111 +1,184 @@
 # Galent SalesPilot — Revenue Intelligence Platform
 
-**Version:** 5.0 | **Date:** June 10, 2026 | **PRs Merged:** 26+ | **Live:** http://98.92.255.185:3000
+**Version:** 6.0 | **Date:** June 10, 2026 | **PRs:** 49 | **Routes:** 31
 
 ---
 
-## Platform Summary
+## Platform Overview
 
-Galent SalesPilot is an AI-native sales intelligence platform built on an **Agent Harness** architecture. Agents are first-class citizens with full tool access to the platform. Every capability is agent-invokable.
+Galent SalesPilot is an AI-native sales intelligence platform built on an Agent Harness architecture. The platform covers the full revenue lifecycle: Lead Generation → Pipeline Management → Deal Room → Presales → Contracts → Pricing → Delivery.
 
-**Stack:** Next.js 15 · MongoDB · tRPC · Claude API (Anthropic) · Docker · EC2
+**Stack:** Next.js 15 · MongoDB · tRPC · Claude API · Docker · EC2
+
+**Live:** http://98.92.255.185:3000 | **Login:** admin@galent.com
 
 ---
 
-## What's Built
+## Architecture
 
-### 23 Pages
-| Route | Feature | Status |
-|-------|---------|--------|
-| `/` | Command Center — AI brief, KPIs, pipeline lifecycle, activity feed | Real |
-| `/leads` | Lead Generation — Signal→Qualify→Enrich→Engage→Convert (AI) | Real |
-| `/pipeline` | Kanban Board — drag-drop, gated stages, confirmation dialog | Real |
-| `/table` | Pipeline Table — group-by, sort, biz segmentation, inline edit, CSV | Real |
-| `/calendar` | Calendar — monthly grid, deal dates + task dates | Real |
-| `/timeline` | Timeline — 90-day Gantt view | Real |
-| `/tasks` | Tasks — add/delete/complete toggle, priority filters | Real |
-| `/stakeholders` | Contacts — add/delete, toggle DM/Primary, linked to deals | Real |
-| `/accounts` | Account 360 — CRUD, linked deals, knowledge graph visualization | Real |
-| `/contracts` | Contracts — MSA/SOW/NDA, approvals, expiry alerts | Real |
-| `/forecasting` | Forecasting — weighted pipeline, by rep/quarter, forecast categories | Real |
-| `/dashboard` | Dashboard — funnel, conversion rates, biz segmentation | Real |
-| `/integrations` | Integrations — 8 systems + AI Discovery | Real |
-| `/agents` | Agent Registry — 5 agents, model/prompt/guardrails config | Real |
-| `/workflows` | Workflows — trigger→action, 3 templates, auto-executes on events | Real |
-| `/settings` | Settings — AI model, guardrails, notifications (persists to DB) | Real |
-| `/admin/users` | User Management — invite, roles (6 types), delete | Real |
-| `/ask` | Ask Galent — conversational dashboard with full pipeline context | Real |
-| `/guide` | User Guide — role-based (AE, SDR, Manager, Presales, Exec) | Real |
-| `/presales` | Presales Portal — 6-stage lifecycle (coming soon) | Placeholder |
-| `/login` | Auth — credentials + Azure AD + signup | Real |
+### Agent Harness
+- 17 platform tools exposed as agent-callable functions
+- Claude tool calling with multi-step reasoning chains
+- Agent fleet: Deal Coach, Research, Outreach, Hygiene, Forecast
+- Configurable guardrails, approval requirements, blocked actions
+- Visual reasoning chain display in Agent Command Center
 
-### Agent Harness Runtime
-| Component | Description |
-|-----------|-------------|
-| Agent Runtime | Agents observe, reason, and execute using Claude tool calling |
-| 17 Platform Tools | Every CRUD operation exposed as agent-callable tool |
-| Tool Executor | Runs tools against MongoDB and returns results to agents |
-| Reasoning Chains | Full visibility into agent thinking and tool calls |
-| Quick Actions | 6 preset agent tasks (analyze pipeline, find risks, suggest next steps, etc.) |
-| Copilot Modes | Chat (conversational) + Agent (tool-calling with reasoning) |
+### Data Layer
+- 15+ MongoDB collections with Mongoose ODM
+- Knowledge Graph (adjacency-list with $graphLookup)
+- Full-text search, _id→id mapping for all sub-documents
+- Database indexes on high-query fields
 
-### 9 AI Features (Real Claude API)
-1. Auto pipeline analysis on page load
-2. Auto deal analysis (health ring + win probability bar)
-3. Copilot chat with full pipeline context in every message
-4. Lead qualification scoring (ICP/budget/timing)
-5. Outreach email drafting (personalized)
-6. SOW generation from deal context
-7. Meeting transcript intelligence (Teams/Zoom/notes → extract insights)
-8. AI integration discovery (type any service → Claude researches)
-9. Agent harness with tool calling and reasoning chains
+### API Layer
+- tRPC with Zod validation on all mutations
+- 22 routers covering all CRUD operations
+- Auto activity logging on mutations
+- Workflow execution on stage changes and deal creation
 
-### 14 MongoDB Collections
-Opportunity · Stakeholder · Task · ResourceLink · Account · Lead · Contract · EngagementType · Workflow · Notification · Activity · Settings · Approval · SalesStageTemplate · KnowledgeGraph · User · Integration
+### Auth
+- NextAuth.js with credentials + Azure AD
+- Cookie-based middleware protection
+- RBAC defined (admin, manager, rep, sdr, presales, viewer)
+- New users default to 'rep' role
 
-### Key Platform Features
-- Gated stage transitions with gate criteria enforcement
-- Executive approval workflows (CSO/CFO/CTO/CEO/COO chains)
-- Scope switcher (My/Team/Org) on all views
-- Forecast categories (Commit/Best Case/Pipeline per deal)
-- Auto activity logging on every mutation
-- Sales ontology with stage templates, gate criteria, roles
-- Smart Kanban cards (weighted value, next step, time-in-stage, close date coloring)
-- 16 engagement types (T&M, FP, Outcome, Pod, Staffing, Product, Hybrid, etc.)
-- Global filters + saved views (My Deals, At Risk, Closing Soon, etc.)
-- Meeting notes from Teams/Zoom/plain text → AI extraction
+---
+
+## Pages (31 Routes)
+
+### Sales Lifecycle
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | Command Center | AI pipeline brief, KPIs, critical actions, activity feed, scope switcher |
+| `/leads` | Leads | AI-led pipeline: Signal→Qualify→Enrich→Engage→Convert |
+| `/intake` | Signal | Omni-channel intake: voice, Teams, Outlook, desktop notes |
+| `/pipeline` | Deals | Kanban board with smart cards, drag-drop with gate confirmation |
+| `/pipeline/[stage]` | Stage Detail | All deals in a specific stage with ontology gates |
+| `/deal-room` | Deal Room | Conversational AI-guided deal management |
+| `/accounts` | Accounts | Account 360 with linked deals, knowledge graph viz, intent scoring |
+| `/stakeholders` | Contacts | Add/delete/toggle DM-Primary, linked to deals |
+| `/tasks` | Tasks | Add/delete/complete toggle, AI suggestions after completion |
+| `/contracts` | Contracts | MSA/SOW/NDA with approvals, expiry alerts |
+| `/pricing` | Pricing | Team composition, geo rates, margin calculator |
+| `/presales` | Presales OS | Pursuits, Proposal Studio (AI drafting), Solutioning, Templates |
+
+### Views
+| Route | Page | Description |
+|-------|------|-------------|
+| `/table` | Table | Group-by, sort, biz segmentation, inline stage edit, CSV export/import |
+| `/calendar` | Calendar | Monthly grid with deal close dates + task due dates |
+| `/timeline` | Timeline | 90-day Gantt view |
+| `/schedule` | Schedule | Deals bucketed by close date |
+
+### Intelligence
+| Route | Page | Description |
+|-------|------|-------------|
+| `/dashboard` | Dashboard | Interactive funnel (3 views), conversion rates, biz segmentation |
+| `/forecasting` | Forecast | Weighted pipeline, by rep/quarter, forecast categories (Commit/Best Case/Pipeline) |
+| `/graph` | Deal Graph | SVG flow visualization (Graph/Sankey/List), click-to-drill |
+| `/agents` | AI Agents | Agent Command Center with live invocation, reasoning chains |
+| `/agents/logs` | Analytics | Execution metrics, activity timeline, agent breakdown |
+| `/ask` | Ask Galent | Conversational dashboard with full pipeline context |
+
+### Platform
+| Route | Page | Description |
+|-------|------|-------------|
+| `/integrations` | Integrations | 8 systems + AI Discovery (type any service→Claude researches) |
+| `/workflows` | Workflows | Trigger→Action engine, 3 templates, auto-executes on events |
+| `/settings` | Settings | AI model, guardrails, notifications (persists to DB) |
+| `/admin/users` | Users | Invite, role management, delete |
+| `/guide` | Guide | Role-based walkthrough (AE, SDR, Manager, Presales, Exec) |
+| `/login` | Login | Credentials + Azure AD + signup |
+
+---
+
+## AI Features (10 Claude Integrations)
+
+1. **Auto Pipeline Analysis** — AI brief on Command Center load
+2. **Auto Deal Analysis** — Health ring + win probability on deal open
+3. **Copilot Chat** — Full pipeline context in every message, GenUI rendering
+4. **Lead Qualification** — ICP/budget/timing scoring
+5. **Outreach Drafting** — Personalized emails from deal context
+6. **SOW Generation** — Full Statement of Work from deal data
+7. **Meeting Transcript Intelligence** — Teams/Zoom/notes→extract insights
+8. **Integration Discovery** — Type service name→Claude researches→add to platform
+9. **Agent Harness** — 17-tool runtime with reasoning chains
+10. **Intake Processing** — Omni-channel content→extract deal intelligence
+
+---
+
+## Key Features
+
+### Deal Management
+- Smart Kanban cards: weighted value, next step, time-in-stage, close date coloring
+- Drag-drop with gate criteria confirmation dialog
+- Flexible lifecycle: Opportunity→Deal→Engagement→Delivery→Closed
+- Create contract or follow-on deal from any deal
+- Executive approval chains (CSO/CFO/CEO) for high-value deals
+
+### Sales Ontology
+- Stage-specific templates, gate criteria, roles
+- 5 stages seeded: Discovery→Qualification→Proposal→Negotiation→Won
+- Gate criteria evaluation (checkmark/cross) shown in deal detail
+- Required/optional artifacts with AI-generable tags
+
+### Presales OS
+- Pursuits pipeline (RFP/RFI/Proactive) with coverage scores
+- Proposal Studio: 10-section editor with per-section AI drafting
+- Solutioning: effort estimator + SA bench allocation
+- Templates & assets library
+
+### Pricing Engine
+- 11 roles (PM, Architect, Developer, QA, DevOps, etc.)
+- 6 geo regions with rate multipliers (US 1.0x → India 0.35x)
+- Margin calculator + blended rate
+- Link to deal (updates TCV)
+
+### Workflow Engine
+- Trigger→Condition→Action workflows
+- Auto-executes on deal stage change, deal creation, lead qualification
+- 3 pre-built templates (Discovery Checklist, Stale Deal Alert, Win Handoff)
+- Active workflows shown in deal detail
+
+### Scope & Filtering
+- My/Team/Org scope switcher on all views
+- Global filters: status, owner, industry, region
+- Saved views: My Deals, At Risk, Closing Soon, etc.
+- Business segmentation: Net New/Existing/Services/Product/Hybrid
+
+### Data
+- 31 seed opportunities with stakeholders and tasks
+- 5 accounts (Brightspeed, Motion Industries, HNI, Wells Fargo, Fannie Mae)
+- 16 engagement types (T&M, FP, Outcome, Pod, Staffing, etc.)
 - Knowledge graph with force-directed visualization
-- CSV import with column mapping
-- Mobile responsive layout
-- Dark/light theme toggle
+
+---
+
+## Data Models (15+ Collections)
+
+Opportunity · Stakeholder · Task · ResourceLink · Account · Lead · Contract · EngagementType · Workflow · Notification · Activity · Settings · Approval · SalesStageTemplate · KnowledgeNode · User · Integration
+
+---
+
+## Deployment
+
+- **Docker**: Next.js app + MongoDB 7 + Redis 7
+- **EC2**: t3.medium, Ubuntu, Docker Compose
+- **CI/CD**: GitHub PRs → merge → SSM deploy
 
 ---
 
 ## Backlog
 
-### Next: Agent Builder + Proposal Engine
-- Visual agent builder (LangFlow-style)
-- Dynamic agent mashup (compose at runtime)
-- Ontology builder through agents
-- Proposal builder with QA, pricing engine
-- Presales artifact database
-- Multi-geo pricing with market intelligence
-
-### Next+1: Integration Layer
-- Microsoft Graph API (Outlook/Teams)
+### Next Phase
+- Fully generative UI (AI composes every view dynamically)
+- Real Microsoft Graph plugins (Outlook/Teams)
+- Pipecat Python voice server (real-time conversational AI)
 - Salesforce bidirectional sync
-- MCP-based tool calling
-- Power Platform widgets
+- Real-time WebSocket updates
 
-### Next+2: Enterprise
-- Real-time WebSocket
-- Presales full lifecycle
-- Bid management
+### Future
+- Multi-tenant architecture
 - SOC 2 compliance
-- Multi-tenant
-
----
-
-**Repo:** https://github.com/ramkrissv/sales-board
-**Live:** http://98.92.255.185:3000
-**Login:** admin@galent.com
+- Mobile native app
+- Advanced knowledge graph (Neo4j)
+- Revenue waterfall / Sankey diagrams
