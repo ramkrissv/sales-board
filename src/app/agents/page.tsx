@@ -120,45 +120,88 @@ export default function AgentsPage() {
                 <button onClick={() => setRunResult(null)} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
               </div>
 
-              {/* Tool calls — show what the agent did */}
+              {/* Visual reasoning chain — compact timeline */}
               {runResult.toolCalls?.length > 0 && (
-                <div className="space-y-2">
-                  <div className="g-section-label flex items-center gap-1.5">
-                    <GitBranch className="h-3 w-3" /> Reasoning Chain
-                  </div>
-                  {runResult.toolCalls.map((call: any, i: number) => (
-                    <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-card border border-border text-xs reveal" style={{ animationDelay: `${i * 0.1}s` }}>
-                      <div className="w-5 h-5 rounded-full bg-[#7c3aed]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-[9px] font-bold text-[#7c3aed]">{i + 1}</span>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {runResult.toolCalls.map((call: any, i: number) => {
+                    const toolLabels: Record<string, { label: string; icon: any; color: string }> = {
+                      list_opportunities: { label: 'Scanned pipeline', icon: Eye, color: '#3b82f6' },
+                      get_opportunity: { label: `Checked ${call.params?.opportunityId || 'deal'}`, icon: Target, color: '#7c3aed' },
+                      get_forecast: { label: 'Ran forecast', icon: BarChart3, color: '#06b6d4' },
+                      create_task: { label: 'Created task', icon: CheckSquare, color: '#22c55e' },
+                      complete_task: { label: 'Completed task', icon: CheckSquare, color: '#10b981' },
+                      update_opportunity: { label: 'Updated deal', icon: ArrowRight, color: '#f59e0b' },
+                      list_stakeholders: { label: 'Checked contacts', icon: Target, color: '#8b5cf6' },
+                      send_notification: { label: 'Sent alert', icon: Zap, color: '#ef4444' },
+                      list_accounts: { label: 'Scanned accounts', icon: Eye, color: '#3b82f6' },
+                    };
+                    const info = toolLabels[call.tool] || { label: call.tool, icon: GitBranch, color: '#71717a' };
+                    const Icon = info.icon;
+                    return (
+                      <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium reveal"
+                        style={{ backgroundColor: `${info.color}10`, color: info.color, animationDelay: `${i * 0.08}s` }}>
+                        <Icon className="h-3 w-3" />
+                        {info.label}
+                        {i < runResult.toolCalls.length - 1 && <span className="text-muted-foreground ml-1">→</span>}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-mono text-[#7c3aed]">{call.tool}()</div>
-                        {call.params && Object.keys(call.params).length > 0 && (
-                          <div className="text-muted-foreground mt-0.5 truncate">
-                            {JSON.stringify(call.params).slice(0, 100)}
-                          </div>
-                        )}
-                      </div>
-                      <CheckSquare className="h-3 w-3 text-emerald-400 flex-shrink-0" />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
-              {/* Final answer */}
+              {/* Final answer — rendered as structured cards, not raw text */}
               {runResult.finalAnswer && (
-                <div className="p-4 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20">
-                  <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{runResult.finalAnswer}</div>
+                <div className="space-y-3">
+                  {/* Parse numbered items from the answer */}
+                  {runResult.finalAnswer.split(/\n/).filter((l: string) => l.trim()).map((line: string, i: number) => {
+                    const trimmed = line.trim();
+                    // Check if it's a numbered action step
+                    const isNumbered = /^\d+[\.\)]\s/.test(trimmed);
+                    const isHeader = trimmed.startsWith('**') || trimmed.startsWith('#');
+                    const isDealMention = /\$[\d,]+[kKmM]?/.test(trimmed);
+                    const isWarning = /risk|overdue|stale|missing|urgent|critical/i.test(trimmed);
+                    const isPositive = /close|won|strong|healthy|ready/i.test(trimmed);
+
+                    if (isNumbered) {
+                      const text = trimmed.replace(/^\d+[\.\)]\s*/, '');
+                      return (
+                        <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border transition-all reveal ${
+                          isWarning ? 'bg-amber-500/5 border-amber-500/20' :
+                          isPositive ? 'bg-emerald-500/5 border-emerald-500/20' :
+                          'bg-card border-border'
+                        }`} style={{ animationDelay: `${i * 0.06}s` }}>
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${
+                            isWarning ? 'bg-amber-500/15 text-amber-400' :
+                            isPositive ? 'bg-emerald-500/15 text-emerald-400' :
+                            'bg-[#7c3aed]/10 text-[#7c3aed]'
+                          }`}>
+                            {trimmed.match(/^\d+/)?.[0]}
+                          </div>
+                          <div className="flex-1 text-sm text-foreground">{text.replace(/\*\*/g, '')}</div>
+                        </div>
+                      );
+                    }
+
+                    if (isHeader) {
+                      return <div key={i} className="g-section-label mt-2">{trimmed.replace(/[#*]/g, '').trim()}</div>;
+                    }
+
+                    if (trimmed.length > 10) {
+                      return <p key={i} className="text-sm text-foreground leading-relaxed">{trimmed.replace(/\*\*/g, '')}</p>;
+                    }
+
+                    return null;
+                  })}
                 </div>
               )}
 
-              {/* Reasoning steps */}
-              {runResult.reasoning?.length > 0 && runResult.reasoning[0] !== runResult.finalAnswer && (
+              {/* Expand raw reasoning */}
+              {runResult.reasoning?.length > 1 && (
                 <details className="text-xs">
-                  <summary className="text-muted-foreground cursor-pointer hover:text-foreground">Show full reasoning ({runResult.reasoning.length} steps)</summary>
-                  <div className="mt-2 space-y-1 p-2 rounded-lg bg-card border border-border font-mono text-muted-foreground max-h-48 overflow-y-auto">
+                  <summary className="text-muted-foreground cursor-pointer hover:text-foreground">Raw reasoning ({runResult.reasoning.length} steps)</summary>
+                  <div className="mt-2 p-2 rounded-lg bg-card border border-border font-mono text-muted-foreground max-h-32 overflow-y-auto text-[10px]">
                     {runResult.reasoning.map((r: string, i: number) => (
-                      <div key={i} className="whitespace-pre-wrap">{r}</div>
+                      <div key={i} className="whitespace-pre-wrap mb-1">{r.slice(0, 200)}</div>
                     ))}
                   </div>
                 </details>
