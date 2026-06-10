@@ -42,7 +42,7 @@ export function FilterPanel() {
   };
 
   const clearAll = () => {
-    setFilters({ status: [], primaryOwner: [], industry: [], region: [], search: '' });
+    setFilters({ status: [], primaryOwner: [], industry: [], region: [], search: '', scope: 'org' });
   };
 
   // Close dropdown on outside click

@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { FilterPanel } from '@/components/shared/FilterPanel';
+import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 
 function getRelativeTime(date: Date): string {
   const now = new Date();
@@ -25,7 +26,7 @@ function getRelativeTime(date: Date): string {
 }
 
 function HomeContent() {
-  const { filteredOpportunities: opportunities, isLoading } = useOpportunities();
+  const { filteredOpportunities: opportunities, isLoading, filters, setFilters } = useOpportunities();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const { data: activities = [] } = trpc.activity.list.useQuery();
@@ -75,6 +76,14 @@ function HomeContent() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 px-2 sm:px-0">
+      {/* Scope Switcher */}
+      <div className="flex items-center justify-end">
+        <ScopeSwitch
+          value={filters.scope || 'org'}
+          onChange={(scope) => setFilters(prev => ({ ...prev, scope }))}
+        />
+      </div>
+
       {/* AI Insight Banner -- auto-generated, not on-demand */}
       <div className="relative overflow-hidden rounded-xl ai-glow animate-flow-in" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.02), transparent)' }}>
         <div className="absolute top-0 right-0 w-32 h-32 opacity-5">

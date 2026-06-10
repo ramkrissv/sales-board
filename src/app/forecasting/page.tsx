@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
+import { ScopeSwitch, type Scope } from '@/components/shared/ScopeSwitch';
 import { TrendingUp, Target, Percent, DollarSign, CheckCircle, TrendingDown, Clock, EyeOff } from 'lucide-react';
 
 const CATEGORY_META: Record<string, { label: string; color: string; bgColor: string; icon: any; description: string }> = {
@@ -12,6 +13,7 @@ const CATEGORY_META: Record<string, { label: string; color: string; bgColor: str
 };
 
 export default function ForecastingPage() {
+  const [scope, setScope] = useState<Scope>('org');
   const utils = trpc.useUtils();
   const { data, isLoading } = trpc.forecast.getSummary.useQuery();
   const updateOpp = trpc.opportunity.update.useMutation({
@@ -39,9 +41,12 @@ export default function ForecastingPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Forecasting</h1>
-        <p className="text-sm text-muted-foreground mt-1">Pipeline forecast across {data.activeDeals} active deals</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Forecasting</h1>
+          <p className="text-sm text-muted-foreground mt-1">Pipeline forecast across {data.activeDeals} active deals</p>
+        </div>
+        <ScopeSwitch value={scope} onChange={setScope} />
       </div>
 
       {/* KPI Cards */}

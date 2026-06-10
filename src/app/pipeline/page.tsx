@@ -6,6 +6,8 @@ import { OpportunityProvider } from '@/lib/store';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { Sparkles } from 'lucide-react';
 import { FilterPanel } from '@/components/shared/FilterPanel';
+import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
+import { useOpportunities } from '@/lib/store';
 
 const KanbanBoard = dynamic(
   () => import('@/components/kanban/KanbanBoard').then(m => ({ default: m.KanbanBoard })),
@@ -19,12 +21,25 @@ const KanbanBoard = dynamic(
   )}
 );
 
+function PipelineScopeHeader() {
+  const { filters, setFilters } = useOpportunities();
+  return (
+    <div className="flex items-center justify-end mb-4">
+      <ScopeSwitch
+        value={filters.scope || 'org'}
+        onChange={(scope) => setFilters(prev => ({ ...prev, scope }))}
+      />
+    </div>
+  );
+}
+
 export default function PipelinePage() {
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   return (
     <OpportunityProvider>
       <FilterPanel />
+      <PipelineScopeHeader />
       <KanbanBoard onCardClick={setSelectedOppId} />
       {selectedOppId && (
         <DealDetail

@@ -2,9 +2,10 @@
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
+import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 
 function AnalyticsContent() {
-  const { filteredOpportunities: opportunities, isLoading } = useOpportunities();
+  const { filteredOpportunities: opportunities, isLoading, filters, setFilters } = useOpportunities();
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading analytics...</div>;
@@ -64,9 +65,15 @@ function AnalyticsContent() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 px-2 sm:px-0">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Pipeline Analytics</h1>
-        <p className="text-sm text-muted-foreground mt-1">Performance across {opportunities.length} opportunities</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Pipeline Analytics</h1>
+          <p className="text-sm text-muted-foreground mt-1">Performance across {opportunities.length} opportunities</p>
+        </div>
+        <ScopeSwitch
+          value={filters.scope || 'org'}
+          onChange={(scope) => setFilters(prev => ({ ...prev, scope }))}
+        />
       </div>
 
       {/* KPI Row */}

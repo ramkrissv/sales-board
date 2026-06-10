@@ -80,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         style={{ background: 'var(--g-bg)', borderRight: '1px solid var(--g-line)' }}>
         {/* Galent Logo */}
         <Link href="/" className="mb-4 flex-shrink-0 flex items-center gap-2 px-3" title="Galent SalesPilot">
-          <img src="/galent-logo.svg" alt="Galent" className="w-7 h-7 rounded-lg" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          <img src="/galent-logo.svg" alt="Galent" className="w-9 h-9 rounded-xl" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           
         </Link>
 

@@ -2,6 +2,7 @@
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
+import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { ImportModal } from '@/components/modals/ImportModal';
 import { useState, useMemo, useEffect } from 'react';
@@ -18,7 +19,7 @@ type SortField = 'customerName' | 'tcv' | 'margin' | 'expectedCloseDate' | 'stat
 type SortDir = 'asc' | 'desc';
 
 function TableContent() {
-  const { filteredOpportunities: opportunities, isLoading, updateOpportunity } = useOpportunities();
+  const { filteredOpportunities: opportunities, isLoading, updateOpportunity, filters, setFilters } = useOpportunities();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
   const [bizFilter, setBizFilter] = useState<BizFilter>('all');
@@ -144,6 +145,10 @@ function TableContent() {
           <p className="text-sm text-muted-foreground">{sorted.length} projects &middot; ${(totalTcv / 1e6).toFixed(1)}M total &middot; {avgMargin}% avg margin</p>
         </div>
         <div className="flex items-center gap-2">
+          <ScopeSwitch
+            value={filters.scope || 'org'}
+            onChange={(scope) => setFilters(prev => ({ ...prev, scope }))}
+          />
           <button onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
             <Upload className="h-3.5 w-3.5" /> Import
           </button>
