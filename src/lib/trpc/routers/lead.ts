@@ -9,13 +9,8 @@ function getModel() {
   return (require('@/lib/db/models/lead') as { default: mongoose.Model<any> }).default;
 }
 
-const DEFAULT_LEADS = [
-  { company: 'Acme Corp', contactName: 'Jane Smith', contactTitle: 'VP Engineering', contactEmail: 'jane@acme.com', source: 'inbound' as const, type: 'product' as const, productInterest: ['AI Platform'], serviceInterest: [], stage: 'signal' as const, score: 0, tags: ['inbound', 'enterprise'] },
-  { company: 'GlobalTech Inc', contactName: 'Robert Chen', contactTitle: 'CTO', contactEmail: 'robert@globaltech.io', source: 'outbound' as const, type: 'services' as const, productInterest: [], serviceInterest: ['DevSecOps', 'Cloud Migration'], stage: 'signal' as const, score: 0, tags: ['outbound', 'mid-market'] },
-  { company: 'FinServ Partners', contactName: 'Maria Garcia', contactTitle: 'Director of IT', contactEmail: 'maria@finserv.com', source: 'referral' as const, type: 'combined' as const, productInterest: ['Data Analytics'], serviceInterest: ['QA CoE'], stage: 'qualify' as const, score: 72, tags: ['referral', 'financial-services'], aiQualification: { icpFit: 80, budgetSignal: 65, timing: 70, overallScore: 72, reasoning: 'Strong ICP fit in financial services. Budget signals present from recent IT modernization initiative.' } },
-  { company: 'MedTech Solutions', contactName: 'David Park', contactTitle: 'CEO', contactEmail: 'david@medtech.com', source: 'event' as const, type: 'product' as const, productInterest: ['AI Platform', 'Contact Center AI'], serviceInterest: [], stage: 'enrich' as const, score: 85, tags: ['healthcare', 'ceo-contact'], industry: 'Healthcare' },
-  { company: 'RetailPlus', contactName: 'Sarah Johnson', contactTitle: 'Head of Digital', contactEmail: 'sarah@retailplus.com', source: 'ai_detected' as const, type: 'services' as const, productInterest: [], serviceInterest: ['Cloud Migration'], stage: 'engage' as const, score: 68, outreachStatus: 'draft_ready' as const, outreachDraft: 'Hi Sarah, I noticed RetailPlus is expanding its digital infrastructure. At Galent, we specialize in cloud migration strategies that reduce downtime by 60%. I\'d love to share how we helped a similar retail brand modernize their stack in under 8 weeks. Would you have 15 minutes this week for a quick chat?', tags: ['retail', 'digital-transformation'] },
-];
+// No dummy seed data — leads are created by users through the UI
+const DEFAULT_LEADS: any[] = [];
 
 export const leadRouter = router({
   list: protectedProcedure

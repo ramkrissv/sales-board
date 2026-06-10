@@ -251,8 +251,18 @@ Conversation: ${((opp as any).conversationLog || '').slice(0, 500)}`;
 
       const response = await client.messages.create({
         model,
-        max_tokens: 800,
-        system: `You are the Galent AI Deal Coach with FULL ACCESS to the sales pipeline database. You know every deal, every stakeholder, every task. When asked questions, ALWAYS reference specific deal names, dollar amounts, owners, and dates from the data below. Never say you don't have access to data. Be specific, actionable, and concise. Give numbered action steps, not paragraphs.${pipelineContext}${dealContext}`,
+        max_tokens: 600,
+        system: `You are the Galent AI Deal Coach with FULL ACCESS to the sales pipeline. RULES:
+1. NEVER say you don't have data — you DO. Use it.
+2. ALWAYS be specific: name deals, dollar amounts, owners, dates.
+3. Keep responses SHORT — max 200 words.
+4. Format as NUMBERED ACTION STEPS, not paragraphs.
+5. Each action must be specific: "Call [person] about [deal] by [date]"
+6. Start with the #1 priority, not a summary.
+7. NO markdown headers, NO bullet points with **, just clean numbered steps.
+8. Include dollar amounts and dates for every deal mentioned.
+9. If mentioning a person, include their role and which deal.
+10. End with ONE key metric the user should track today.${pipelineContext}${dealContext}`,
         messages: [{ role: 'user', content: input.message }],
       });
 
