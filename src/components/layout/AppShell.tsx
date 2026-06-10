@@ -8,7 +8,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import {
   Kanban, TrendingUp, CalendarClock, CalendarDays, Table as TableIcon,
-  LayoutDashboard, CheckSquare, Users, Network, Sparkles,
+  LayoutDashboard, CheckSquare, Users, Network, Sparkles, Magnet,
   Bot, Link2, Settings, Bell, Plus, Sun, Moon, LogOut, FileText, Shield, GitBranch,
 } from 'lucide-react';
 import { NewDealModal } from '@/components/modals/NewDealModal';
@@ -17,6 +17,7 @@ import { NotificationPopover } from '@/components/shared/NotificationPopover';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Home', href: '/' },
+  { icon: Magnet, label: 'Leads', href: '/leads' },
   { icon: Kanban, label: 'Projects', href: '/pipeline' },
   { icon: TrendingUp, label: 'Timeline', href: '/timeline' },
   { icon: CalendarClock, label: 'Schedule', href: '/schedule' },

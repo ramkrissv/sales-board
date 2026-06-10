@@ -10,3 +10,4 @@ export { Product, type IProduct } from './product';
 export { default as KnowledgeNode, type IKnowledgeNode } from './knowledge-graph';
 export { default as Contract, type IContract } from './contract';
 export { default as EngagementType, type IEngagementType } from './engagement-type';
+export { default as Lead, type ILead } from './lead';
