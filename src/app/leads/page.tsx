@@ -160,7 +160,7 @@ export default function LeadsPage() {
           </div>
         </div>
         <button onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium flex items-center gap-2 transition-colors">
+          className="px-4 py-2 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm font-medium flex items-center gap-2 transition-colors">
           <Plus className="h-4 w-4" /> Add Lead
         </button>
       </div>
@@ -211,7 +211,7 @@ export default function LeadsPage() {
         {['all', 'product', 'services', 'combined'].map(t => (
           <button key={t} onClick={() => setTypeFilter(t)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              typeFilter === t ? 'bg-purple-600 text-white' : 'g-surface text-muted-foreground hover:text-foreground'
+              typeFilter === t ? 'bg-[#7c3aed] text-white' : 'g-surface text-muted-foreground hover:text-foreground'
             }`}>
             {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
@@ -260,7 +260,7 @@ export default function LeadsPage() {
           </div>
           <div className="flex gap-2">
             <button type="submit" disabled={createMutation.isPending}
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
+              className="px-4 py-2 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm font-medium transition-colors disabled:opacity-50">
               {createMutation.isPending ? 'Creating...' : 'Create Lead'}
             </button>
             <button type="button" onClick={() => setShowAddForm(false)}
@@ -403,7 +403,7 @@ export default function LeadsPage() {
                       disabled={isProcessing}
                       className={`px-3 py-1.5 rounded-lg text-white text-[11px] font-medium flex items-center gap-1.5 transition-all disabled:opacity-50 ${
                         aiAction.aiGlow
-                          ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/20'
+                          ? 'bg-[#7c3aed] hover:bg-[#6d28d9] shadow-purple-600/20'
                           : 'bg-emerald-600 hover:bg-emerald-500'
                       } ${isProcessing && aiAction.aiGlow ? 'shadow-lg shadow-purple-500/40 animate-pulse' : ''}`}
                     >

@@ -63,7 +63,7 @@ export function FilterPanel() {
         <Filter className="h-3.5 w-3.5" />
         <span className="font-medium">Filters</span>
         {activeFilterCount > 0 && (
-          <span className="ml-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-purple-600 text-white text-[10px] font-bold">
+          <span className="ml-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#7c3aed] text-white text-[10px] font-bold">
             {activeFilterCount}
           </span>
         )}
@@ -107,7 +107,7 @@ export function FilterPanel() {
                       >
                         <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
                           isSelected
-                            ? 'bg-purple-600 border-purple-600'
+                            ? 'bg-[#7c3aed] border-purple-600'
                             : 'border-border'
                         }`}>
                           {isSelected && <Check className="h-3 w-3 text-white" />}

@@ -232,7 +232,7 @@ export default function WorkflowsPage() {
               setShowForm(true);
             }
           }}
-          className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium flex items-center gap-2 transition-colors"
+          className="px-4 py-2 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm font-medium flex items-center gap-2 transition-colors"
         >
           {showForm && !editingId ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
           {showForm && !editingId ? 'Cancel' : 'New Workflow'}
@@ -277,7 +277,7 @@ export default function WorkflowsPage() {
                     onClick={() => setFormMode(m)}
                     className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors flex items-center justify-center gap-2 ${
                       formMode === m
-                        ? 'border-purple-500/40 bg-purple-600/20 text-purple-400'
+                        ? 'border-purple-500/40 bg-[#7c3aed]/20 text-purple-400'
                         : 'border-border text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -368,7 +368,7 @@ export default function WorkflowsPage() {
                   onClick={() => toggleAction(a.value)}
                   className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                     formActions.includes(a.value)
-                      ? 'border-purple-500/40 bg-purple-600/20 text-purple-400'
+                      ? 'border-purple-500/40 bg-[#7c3aed]/20 text-purple-400'
                       : 'border-border text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -392,7 +392,7 @@ export default function WorkflowsPage() {
             <button
               type="submit"
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors disabled:opacity-50"
             >
               {createMutation.isPending || updateMutation.isPending
                 ? 'Saving...'
@@ -411,7 +411,7 @@ export default function WorkflowsPage() {
             <p className="text-xs mt-1">Automate repetitive tasks across your pipeline.</p>
             <button
               onClick={() => { setEditingId(null); resetForm(); setShowForm(true); }}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors"
             >
               <Plus className="h-4 w-4" /> New Workflow
             </button>
@@ -434,7 +434,7 @@ export default function WorkflowsPage() {
                       <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     )}
 
-                    <div className="w-8 h-8 rounded-lg bg-purple-600/10 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-[#7c3aed]/10 flex items-center justify-center flex-shrink-0">
                       <TriggerIcon className="h-4 w-4 text-purple-400" />
                     </div>
 

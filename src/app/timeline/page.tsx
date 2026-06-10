@@ -5,9 +5,22 @@ import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
+import { Kanban, Table as TableIcon, CalendarDays, TrendingUp, Clock, Eye } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const VIEW_MODES = [
+  { id: 'kanban', label: 'Board', icon: Kanban, href: '/pipeline' },
+  { id: 'table', label: 'Table', icon: TableIcon, href: '/table' },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays, href: '/calendar' },
+  { id: 'timeline', label: 'Timeline', icon: TrendingUp, href: '/timeline' },
+  { id: 'schedule', label: 'Schedule', icon: Clock, href: '/schedule' },
+  { id: 'graph', label: 'Graph', icon: Eye, href: '/graph' },
+];
 
 function TimelineContent() {
   const { opportunities, isLoading } = useOpportunities();
+  const pathname = usePathname();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -30,6 +43,22 @@ function TimelineContent() {
       <div>
         <h1 className="text-xl font-semibold text-foreground">Timeline</h1>
         <p className="text-sm text-muted-foreground mt-1">{activeDeals.length} active deals over the next 90 days</p>
+      </div>
+
+      {/* View Mode Tab Bar */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 w-fit mb-6">
+        {VIEW_MODES.map(mode => {
+          const isActive = pathname === mode.href;
+          return (
+            <Link key={mode.id} href={mode.href}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                isActive ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'
+              }`}>
+              <mode.icon className={`h-3.5 w-3.5 ${isActive ? 'text-[#7c3aed]' : ''}`} />
+              {mode.label}
+            </Link>
+          );
+        })}
       </div>
 
       <div className="rounded-xl g-surface g-elevated p-5 overflow-x-auto">

@@ -90,7 +90,7 @@ function LoginForm() {
           <button
             onClick={handleDevLogin}
             disabled={loading}
-            className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
+            className="w-full px-4 py-2.5 bg-[#7c3aed] hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
@@ -145,7 +145,7 @@ function LoginForm() {
           <button
             onClick={handleSignUp}
             disabled={loading || !email}
-            className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
+            className="w-full px-4 py-2.5 bg-[#7c3aed] hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors"
           >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
