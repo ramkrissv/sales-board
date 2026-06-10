@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
-import Link from 'next/link';
 import {
   FileText, Search, Plus, ChevronDown, ChevronRight, Clock,
-  CheckCircle2, AlertTriangle, DollarSign, Filter, X,
+  CheckCircle2, AlertTriangle, DollarSign, Filter, X, Trash2,
+  ShieldCheck, Send,
 } from 'lucide-react';
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { DealDetail } from '@/components/modals/DealDetail';
@@ -27,6 +27,8 @@ const TYPE_COLORS: Record<string, string> = {
   Renewal: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
 };
 
+const ALL_STATUSES = ['draft', 'review', 'approved', 'active', 'expired', 'terminated'] as const;
+
 function formatCurrency(val: number) {
   if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
   if (val >= 1_000) return `$${(val / 1_000).toFixed(0)}K`;
@@ -43,6 +45,7 @@ function daysUntil(d: string | Date) {
 }
 
 function ContractsContent() {
+  const utils = trpc.useUtils();
   const { data: contracts = [], isLoading } = trpc.contract.list.useQuery();
   const { data: engagementTypes = [] } = trpc.engagementType.list.useQuery();
   const { data: expiring = [] } = trpc.contract.getExpiring.useQuery({ days: 60 });
@@ -56,10 +59,60 @@ function ContractsContent() {
   const [showNewForm, setShowNewForm] = useState(false);
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
+  const deleteMutation = trpc.contract.delete.useMutation({
+    onSuccess: () => {
+      utils.contract.list.invalidate();
+      utils.contract.getExpiring.invalidate();
+    },
+  });
+
+  const updateMutation = trpc.contract.update.useMutation({
+    onSuccess: () => {
+      utils.contract.list.invalidate();
+      utils.contract.getExpiring.invalidate();
+    },
+  });
+
+  const requestApprovalMutation = trpc.contract.requestApproval.useMutation({
+    onSuccess: () => {
+      utils.contract.list.invalidate();
+    },
+  });
+
+  const approveMutation = trpc.contract.approve.useMutation({
+    onSuccess: () => {
+      utils.contract.list.invalidate();
+      utils.contract.getExpiring.invalidate();
+    },
+  });
+
   function getOppName(oppId: string) {
     const opp = opportunities.find(o => o.id === oppId);
     return opp ? `${opp.customerName} - ${opp.opportunityName}` : oppId;
   }
+
+  const handleDelete = (contractId: string) => {
+    if (!confirm('Delete this contract? This action cannot be undone.')) return;
+    deleteMutation.mutate({ id: contractId });
+    if (expandedId === contractId) setExpandedId(null);
+  };
+
+  const handleStatusChange = (contractId: string, newStatus: string) => {
+    updateMutation.mutate({ id: contractId, status: newStatus as any });
+  };
+
+  const handleRequestApproval = (contractId: string) => {
+    const name = prompt('Approver name:');
+    if (!name) return;
+    const userId = prompt('Approver user ID (email):');
+    if (!userId) return;
+    requestApprovalMutation.mutate({ contractId, userId, name });
+  };
+
+  const handleApprove = (contractId: string, userId: string, status: 'approved' | 'rejected') => {
+    const notes = status === 'rejected' ? (prompt('Rejection reason:') || '') : '';
+    approveMutation.mutate({ contractId, userId, status, notes });
+  };
 
   if (isLoading) {
     return (
@@ -146,6 +199,27 @@ function ContractsContent() {
         </div>
       </div>
 
+      {/* Expiring Soon Banner */}
+      {expiring.length > 0 && (
+        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-4 w-4 text-amber-400" />
+            <span className="text-sm font-medium text-amber-400">Contracts Expiring Within 60 Days</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {expiring.map((c: any) => (
+              <button
+                key={c._id}
+                onClick={() => setExpandedId(c._id)}
+                className="text-xs px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/20 transition-colors"
+              >
+                {c.title} ({daysUntil(c.endDate)}d left)
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
@@ -177,7 +251,7 @@ function ContractsContent() {
             className="px-3 py-1.5 text-xs rounded-lg g-surface g-elevated text-foreground border border-transparent focus:outline-none focus:border-purple-500/40"
           >
             <option value="all">All Status</option>
-            {['draft', 'review', 'approved', 'active', 'expired', 'terminated'].map(s => (
+            {ALL_STATUSES.map(s => (
               <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
             ))}
           </select>
@@ -207,6 +281,7 @@ function ContractsContent() {
       {showNewForm && (
         <NewContractForm
           engagementTypes={engagementTypes}
+          opportunities={opportunities}
           onClose={() => setShowNewForm(false)}
         />
       )}
@@ -238,66 +313,115 @@ function ContractsContent() {
             const isExpanded = expandedId === contract._id;
             const daysLeft = contract.endDate ? daysUntil(contract.endDate) : null;
             return (
-              <div key={contract._id} className="rounded-xl g-surface g-elevated transition-all hover:border-purple-500/20">
+              <div key={contract._id} className="group rounded-xl g-surface g-elevated transition-all hover:border-purple-500/20">
                 {/* Row */}
-                <button
-                  onClick={() => setExpandedId(isExpanded ? null : contract._id)}
-                  className="w-full flex items-center gap-4 p-4 text-left"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  )}
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground truncate">{contract.title}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${TYPE_COLORS[contract.type] || ''}`}>
-                        {contract.type}
-                      </span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_COLORS[contract.status] || ''}`}>
-                        {contract.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span>{contract.engagementType}</span>
-                      {contract.opportunityId && (
-                        <>
-                          <span>|</span>
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); setSelectedOppId(contract.opportunityId); }}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setSelectedOppId(contract.opportunityId); } }}
-                            className="text-purple-400 hover:text-purple-300 hover:underline cursor-pointer"
-                          >
-                            {getOppName(contract.opportunityId)}
-                          </span>
-                        </>
-                      )}
-                      <span>|</span>
-                      <span>{formatDate(contract.startDate)} - {formatDate(contract.endDate)}</span>
-                      {daysLeft !== null && daysLeft >= 0 && daysLeft <= 60 && (
-                        <>
-                          <span>|</span>
-                          <span className="text-amber-400">{daysLeft}d remaining</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-sm font-semibold text-foreground">{formatCurrency(contract.value)}</div>
-                    {contract.pricingModel && (
-                      <div className="text-[11px] text-muted-foreground">{contract.pricingModel}</div>
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : contract._id)}
+                    className="flex-1 flex items-center gap-4 p-4 text-left"
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     )}
-                  </div>
-                </button>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-foreground truncate">{contract.title}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${TYPE_COLORS[contract.type] || ''}`}>
+                          {contract.type}
+                        </span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_COLORS[contract.status] || ''}`}>
+                          {contract.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        <span>{contract.engagementType}</span>
+                        {contract.opportunityId && (
+                          <>
+                            <span>|</span>
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => { e.stopPropagation(); setSelectedOppId(contract.opportunityId); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setSelectedOppId(contract.opportunityId); } }}
+                              className="text-purple-400 hover:text-purple-300 hover:underline cursor-pointer"
+                            >
+                              {getOppName(contract.opportunityId)}
+                            </span>
+                          </>
+                        )}
+                        <span>|</span>
+                        <span>{formatDate(contract.startDate)} - {formatDate(contract.endDate)}</span>
+                        {daysLeft !== null && daysLeft >= 0 && daysLeft <= 60 && (
+                          <>
+                            <span>|</span>
+                            <span className="text-amber-400">{daysLeft}d remaining</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-sm font-semibold text-foreground">{formatCurrency(contract.value)}</div>
+                      {contract.pricingModel && (
+                        <div className="text-[11px] text-muted-foreground">{contract.pricingModel}</div>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Delete button on hover */}
+                  <button
+                    onClick={() => handleDelete(contract._id)}
+                    disabled={deleteMutation.isPending}
+                    className="mr-4 p-1.5 rounded-lg text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-red-400 hover:bg-red-500/10 transition-all flex-shrink-0"
+                    title="Delete contract"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
 
                 {/* Expanded Detail */}
                 {isExpanded && (
                   <div className="px-4 pb-4 pt-0 border-t border-border/30 space-y-4">
+                    {/* Actions Bar */}
+                    <div className="flex items-center gap-3 pt-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Status:</span>
+                        <select
+                          value={contract.status}
+                          onChange={e => handleStatusChange(contract._id, e.target.value)}
+                          disabled={updateMutation.isPending}
+                          className="px-2 py-1 text-xs rounded-lg g-surface text-foreground border border-border focus:outline-none focus:border-purple-500/40"
+                        >
+                          {ALL_STATUSES.map(s => (
+                            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {(contract.status === 'draft' || contract.status === 'review') && (
+                        <button
+                          onClick={() => handleRequestApproval(contract._id)}
+                          disabled={requestApprovalMutation.isPending}
+                          className="px-3 py-1.5 text-xs rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-500/20 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                        >
+                          <Send className="h-3 w-3" />
+                          {requestApprovalMutation.isPending ? 'Sending...' : 'Request Approval'}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleDelete(contract._id)}
+                        disabled={deleteMutation.isPending}
+                        className="px-3 py-1.5 text-xs rounded-lg bg-red-600/10 text-red-400 hover:bg-red-600/20 border border-red-500/20 flex items-center gap-1.5 transition-colors disabled:opacity-50 ml-auto"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+
                     {/* Signatories */}
                     {contract.signatories?.length > 0 && (
                       <div>
@@ -332,6 +456,26 @@ function ContractsContent() {
                               <span className="g-chip">{a.status}</span>
                               {a.date && <span className="text-[10px]">{formatDate(a.date)}</span>}
                               {a.notes && <span className="text-[10px] italic">{a.notes}</span>}
+                              {a.status === 'pending' && (
+                                <div className="flex gap-1 ml-1">
+                                  <button
+                                    onClick={() => handleApprove(contract._id, a.userId, 'approved')}
+                                    disabled={approveMutation.isPending}
+                                    className="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                    title="Approve"
+                                  >
+                                    <ShieldCheck className="h-3 w-3" /> Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleApprove(contract._id, a.userId, 'rejected')}
+                                    disabled={approveMutation.isPending}
+                                    className="px-2 py-0.5 rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors disabled:opacity-50"
+                                    title="Reject"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -379,7 +523,7 @@ export default function ContractsPage() {
 }
 
 /* ─── New Contract Form ─── */
-function NewContractForm({ engagementTypes, onClose }: { engagementTypes: any[]; onClose: () => void }) {
+function NewContractForm({ engagementTypes, opportunities, onClose }: { engagementTypes: any[]; opportunities: any[]; onClose: () => void }) {
   const utils = trpc.useUtils();
   const createMutation = trpc.contract.create.useMutation({
     onSuccess: () => {
@@ -437,15 +581,20 @@ function NewContractForm({ engagementTypes, onClose }: { engagementTypes: any[];
           />
         </div>
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Opportunity ID *</label>
-          <input
-            type="text"
+          <label className="text-xs text-muted-foreground mb-1 block">Opportunity *</label>
+          <select
             value={form.opportunityId}
             onChange={e => setForm({ ...form, opportunityId: e.target.value })}
-            className="w-full px-3 py-2 text-sm g-surface rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40 border border-border"
-            placeholder="e.g. opp-001"
+            className="w-full px-3 py-2 text-sm g-surface rounded-lg text-foreground focus:outline-none focus:border-purple-500/40 border border-border"
             required
-          />
+          >
+            <option value="">Select opportunity...</option>
+            {opportunities.map((opp: any) => (
+              <option key={opp.id} value={opp.id}>
+                {opp.customerName} - {opp.opportunityName}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Type *</label>
