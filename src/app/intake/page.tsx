@@ -159,10 +159,10 @@ function IntakeContent() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-          <Globe className="h-5 w-5 text-[#7c3aed]" /> Intake Hub
+          <Globe className="h-5 w-5 text-[#7c3aed]" /> Pulse
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Capture deal intelligence from any channel — AI extracts and routes automatically
+          Capture signals from any channel — AI routes them to deals — AI extracts and routes automatically
         </p>
       </div>
 
