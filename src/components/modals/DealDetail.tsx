@@ -371,29 +371,53 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                               <div className="text-sm font-medium text-foreground">{a.action}</div>
                               <div className="text-xs text-muted-foreground mt-0.5">{a.reason}</div>
                             </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              {/* Create task from action */}
+                            <div className="flex flex-wrap items-center gap-1 flex-shrink-0">
+                              {/* Contextual action buttons based on recommendation content */}
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleCreateActionTask(a.action); }}
                                 disabled={createTaskMutation.isPending}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-[#7B52FF]/15 text-[#7B52FF] text-[11px] font-medium hover:bg-[#7B52FF]/25 transition-colors disabled:opacity-50"
-                                title="Create this as a task"
+                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#7B52FF]/12 text-[#7B52FF] text-[10px] font-medium hover:bg-[#7B52FF]/20 transition-colors disabled:opacity-50"
                               >
-                                {createTaskMutation.isPending ? (
-                                  <><Loader2 className="h-3 w-3 animate-spin" /> Creating...</>
-                                ) : (
-                                  <><CalendarPlus className="h-3 w-3" /> Create Task</>
-                                )}
+                                {createTaskMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckSquare className="h-3 w-3" />}
+                                Task
                               </button>
-                              {/* Update stage if action mentions it */}
-                              {(a.action.toLowerCase().includes('stage') || a.action.toLowerCase().includes('move') || a.action.toLowerCase().includes('advance')) && (
+                              {/* Meeting/call actions */}
+                              {(a.action.toLowerCase().includes('meeting') || a.action.toLowerCase().includes('schedule') || a.action.toLowerCase().includes('call') || a.action.toLowerCase().includes('contact')) && (
                                 <button
-                                  onClick={() => setShowStageSelector(true)}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/20 transition-colors"
-                                  title="Change deal stage"
+                                  onClick={(e) => { e.stopPropagation(); handleCreateActionTask(`Schedule: ${a.action}`); }}
+                                  disabled={createTaskMutation.isPending}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/12 text-blue-400 text-[10px] font-medium hover:bg-blue-500/20 transition-colors"
                                 >
-                                  <ArrowUpRight className="h-3 w-3" />
-                                  Stage
+                                  <CalendarPlus className="h-3 w-3" /> Meeting
+                                </button>
+                              )}
+                              {/* Email/outreach actions */}
+                              {(a.action.toLowerCase().includes('email') || a.action.toLowerCase().includes('follow') || a.action.toLowerCase().includes('reach') || a.action.toLowerCase().includes('send')) && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleCreateActionTask(`Follow-up: ${a.action}`); }}
+                                  disabled={createTaskMutation.isPending}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/12 text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/20 transition-colors"
+                                >
+                                  <Mail className="h-3 w-3" /> Follow-up
+                                </button>
+                              )}
+                              {/* Stage change actions */}
+                              {(a.action.toLowerCase().includes('stage') || a.action.toLowerCase().includes('move') || a.action.toLowerCase().includes('advance') || a.action.toLowerCase().includes('progress')) && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setShowStageSelector(true); }}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/12 text-amber-400 text-[10px] font-medium hover:bg-amber-500/20 transition-colors"
+                                >
+                                  <ArrowUpRight className="h-3 w-3" /> Stage
+                                </button>
+                              )}
+                              {/* Escalation actions */}
+                              {(a.action.toLowerCase().includes('escalat') || a.action.toLowerCase().includes('approval') || a.action.toLowerCase().includes('executive') || a.action.toLowerCase().includes('leadership')) && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleCreateActionTask(`Escalation: ${a.action}`); }}
+                                  disabled={createTaskMutation.isPending}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-500/12 text-red-400 text-[10px] font-medium hover:bg-red-500/20 transition-colors"
+                                >
+                                  <Shield className="h-3 w-3" /> Escalate
                                 </button>
                               )}
                             </div>

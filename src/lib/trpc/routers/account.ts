@@ -55,7 +55,13 @@ export const accountRouter = router({
       }
 
       // Get associated opportunities
-      const opportunities = await Opportunity.find({ accountId: input.id }).lean();
+      // Match by accountId OR by customerName (for deals not yet linked)
+      const opportunities = await Opportunity.find({
+        $or: [
+          { accountId: input.id },
+          { customerName: (account as any).companyName },
+        ],
+      }).lean();
 
       return {
         ...account,

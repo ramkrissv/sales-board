@@ -121,8 +121,8 @@ function HomeContent() {
               </div>
               <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">Ready to Close</span>
             </div>
-            <div className="text-sm font-medium text-foreground">{negotiationDeals[0].customerName}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">{negotiationDeals.length} deal{negotiationDeals.length > 1 ? 's' : ''} in negotiation</div>
+            <div className="text-sm font-medium text-foreground">{negotiationDeals.length} deal{negotiationDeals.length > 1 ? 's' : ''} in Negotiation</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{negotiationDeals.map(d => d.customerName).join(', ')}</div>
             <div className="flex items-center gap-1 mt-2 text-xs text-emerald-400 group-hover:gap-2 transition-all">
               <span>Review &amp; close</span><ArrowRight className="h-3 w-3" />
             </div>
