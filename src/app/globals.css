@@ -38,8 +38,8 @@
 /* ─── Light Mode (Zinc palette) ─── */
 :root {
   --g-brand: #7c3aed;
-  --g-bg: #fafafa;
-  --g-bg-2: #f4f4f5;
+  --g-bg: #f4f4f8;
+  --g-bg-2: #ededf3;
   --g-bg-3: #e4e4e7;
   --g-line: #d4d4d8;
   --g-fg: #09090b;
@@ -47,7 +47,7 @@
   --g-fg-3: #71717a;
   --g-card: #ffffff;
   --g-hover: 0,0,0;
-  --g-dot: #e4e4e7;
+  --g-dot: #ccccd5;
   color-scheme: light;
 }
 
@@ -115,6 +115,10 @@
   background: var(--g-card);
   border: 1px solid var(--g-line);
   border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+.dark .g-surface {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 .g-glass {
   background: color-mix(in srgb, var(--g-bg-2) 80%, transparent);
