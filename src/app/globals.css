@@ -199,6 +199,13 @@
 /* ─── Focus (v3 brand) ─── */
 :focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
 
+/* ─── Mobile Responsive ─── */
+@media (max-width: 768px) {
+  .g-kpi { font-size: 22px; }
+  .g-surface { border-radius: 10px; }
+  .g-section-label { font-size: 10px; }
+}
+
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

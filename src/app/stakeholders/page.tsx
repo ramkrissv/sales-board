@@ -2,7 +2,7 @@
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { useState } from 'react';
-import { Search, Crown, UserCheck, ExternalLink, Plus, X, Trash2 } from 'lucide-react';
+import { Search, Crown, UserCheck, ExternalLink, Plus, X, Trash2, Sparkles, Loader2, Shield, Target, Eye, AlertTriangle, Building2, Mail } from 'lucide-react';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { trpc } from '@/lib/trpc/client';
 
@@ -10,9 +10,10 @@ function StakeholdersContent() {
   const { opportunities, isLoading } = useOpportunities();
   const utils = trpc.useUtils();
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'decision_maker' | 'primary'>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<any>(null);
 
   const createMutation = trpc.stakeholder.create.useMutation({
     onSuccess: () => {
@@ -46,14 +47,43 @@ function StakeholdersContent() {
     );
   }
 
+  // Categorize contacts by influence type based on title
+  function categorizeContact(title: string, isDM: boolean): string {
+    const t = (title || '').toLowerCase();
+    if (isDM || /\b(ceo|cto|cfo|cio|coo|svp|evp|president|chief|vp of|vice president|managing director)\b/.test(t)) return 'executive';
+    if (/\b(director|head of|senior director|general manager)\b/.test(t)) return 'champion';
+    if (/\b(manager|lead|principal|senior|architect|partner)\b/.test(t)) return 'influencer';
+    if (/\b(analyst|engineer|developer|designer|specialist|consultant|coordinator)\b/.test(t)) return 'end_user';
+    if (/\b(procurement|legal|compliance|audit|risk)\b/.test(t)) return 'gatekeeper';
+    return 'other';
+  }
+
+  const ROLE_CATEGORIES = [
+    { id: 'all', label: 'All', color: '' },
+    { id: 'executive', label: 'Executives', color: 'text-[var(--g-amber)] bg-[var(--g-amber-soft)]' },
+    { id: 'champion', label: 'Champions', color: 'text-[#7c3aed] bg-[#7c3aed]/10' },
+    { id: 'influencer', label: 'Influencers', color: 'text-[#11A7A0] bg-[#11A7A0]/10' },
+    { id: 'gatekeeper', label: 'Gatekeepers', color: 'text-[var(--g-red)] bg-[var(--g-red-soft)]' },
+    { id: 'end_user', label: 'End Users', color: 'text-blue-400 bg-blue-500/10' },
+    { id: 'decision_maker', label: 'DMs', color: 'text-[var(--g-green)] bg-[var(--g-green-soft)]' },
+  ];
+
   const allStakeholders = opportunities.flatMap(opp =>
-    (opp.customerStakeholders || []).map((s: any) => ({ ...s, customerName: opp.customerName, opportunityName: opp.opportunityName, oppId: opp.id }))
+    (opp.customerStakeholders || []).map((s: any) => ({
+      ...s,
+      customerName: opp.customerName,
+      opportunityName: opp.opportunityName,
+      oppId: opp.id,
+      category: categorizeContact(s.title || '', s.isDecisionMaker),
+      dealStatus: opp.status,
+      dealTcv: opp.tcv,
+    }))
   );
 
   const filtered = allStakeholders.filter(s => {
     if (search && !s.name.toLowerCase().includes(search.toLowerCase()) && !s.customerName.toLowerCase().includes(search.toLowerCase()) && !(s.title || '').toLowerCase().includes(search.toLowerCase())) return false;
     if (roleFilter === 'decision_maker') return s.isDecisionMaker;
-    if (roleFilter === 'primary') return s.isPrimaryContact;
+    if (roleFilter !== 'all' && roleFilter !== 'decision_maker') return s.category === roleFilter;
     return true;
   });
 
@@ -121,39 +151,46 @@ function StakeholdersContent() {
             className="w-full pl-9 pr-3 py-2 text-sm g-surface g-elevated rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/40"
           />
         </div>
-        <div className="flex gap-1">
-          {([['all', 'All'], ['decision_maker', 'Decision Makers'], ['primary', 'Primary Contacts']] as const).map(([val, label]) => (
-            <button
-              key={val}
-              onClick={() => setRoleFilter(val as 'all' | 'decision_maker' | 'primary')}
-              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                roleFilter === val ? 'bg-[#7c3aed]/20 text-purple-400 border border-purple-500/30' : 'text-muted-foreground hover:text-foreground border border-transparent'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="flex gap-1 overflow-x-auto">
+          {ROLE_CATEGORIES.map(cat => {
+            const count = cat.id === 'all' ? allStakeholders.length
+              : cat.id === 'decision_maker' ? allStakeholders.filter(s => s.isDecisionMaker).length
+              : allStakeholders.filter(s => s.category === cat.id).length;
+            return (
+              <button key={cat.id} onClick={() => setRoleFilter(cat.id)}
+                className={`px-3 py-1.5 text-xs rounded-lg transition-colors whitespace-nowrap ${
+                  roleFilter === cat.id ? 'bg-[#7c3aed]/20 text-[#7c3aed] border border-[#7c3aed]/30' : 'text-muted-foreground hover:text-foreground border border-transparent'
+                }`}>
+                {cat.label} {count > 0 && <span className="ml-1 opacity-60">{count}</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {filtered.map((person: any, i: number) => (
-          <div key={person._id || person.id || i} className="group p-4 rounded-xl g-surface g-elevated hover:border-purple-500/20 transition-all relative">
+        {filtered.map((person: any, i: number) => {
+          const catMeta = ROLE_CATEGORIES.find(c => c.id === person.category);
+          return (
+          <div key={person._id || person.id || i} className="group p-4 rounded-xl g-surface g-elevated hover:border-[#7c3aed]/20 transition-all relative">
             <div className="flex items-start gap-3">
               <div
-                className="w-10 h-10 rounded-full bg-[#7c3aed]/20 flex items-center justify-center text-purple-400 text-sm font-bold flex-shrink-0 cursor-pointer"
-                onClick={() => setSelectedOppId(person.oppId)}
+                className="w-10 h-10 rounded-full bg-[#7c3aed]/15 flex items-center justify-center text-[#7c3aed] text-sm font-bold flex-shrink-0 cursor-pointer"
+                onClick={() => setSelectedContact(selectedContact?._id === person._id && selectedContact?.name === person.name ? null : person)}
               >
                 {person.name.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
-                    className="text-sm font-medium text-foreground truncate cursor-pointer hover:text-purple-400 transition-colors"
-                    onClick={() => setSelectedOppId(person.oppId)}
+                    className="text-sm font-medium text-foreground truncate cursor-pointer hover:text-[#7c3aed] transition-colors"
+                    onClick={() => setSelectedContact(selectedContact?._id === person._id && selectedContact?.name === person.name ? null : person)}
                   >
                     {person.name}
                   </span>
+                  {catMeta && catMeta.id !== 'all' && (
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${catMeta.color}`}>{catMeta.label.replace(/s$/, '')}</span>
+                  )}
                   <button
                     onClick={() => handleToggleDM(person)}
                     disabled={updateMutation.isPending}
@@ -208,7 +245,7 @@ function StakeholdersContent() {
               </button>
             </div>
           </div>
-        ))}
+        );})}
         {filtered.length === 0 && (
           <div className="col-span-2 text-center py-12 text-muted-foreground text-sm">
             {allStakeholders.length === 0 ? (
@@ -227,6 +264,105 @@ function StakeholdersContent() {
           </div>
         )}
       </div>
+
+      {/* Contact Intelligence Panel */}
+      {selectedContact && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedContact(null)} />
+          <div className="relative w-full max-w-md bg-card border-l border-border overflow-y-auto card-enter" style={{ borderColor: 'var(--g-line)' }}>
+            <div className="sticky top-0 bg-card z-10 px-5 py-4 border-b border-border">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-foreground font-display">Contact Intelligence</h3>
+                <button onClick={() => setSelectedContact(null)} className="p-1 rounded-lg hover:bg-secondary text-muted-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-5 space-y-5">
+              {/* Contact header */}
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-full bg-[#7c3aed]/15 flex items-center justify-center text-[#7c3aed] text-lg font-bold">
+                  {selectedContact.name?.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
+                </div>
+                <div>
+                  <div className="text-base font-semibold text-foreground">{selectedContact.name}</div>
+                  <div className="text-sm text-muted-foreground">{selectedContact.title}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{selectedContact.customerName}</div>
+                </div>
+              </div>
+
+              {/* Contact details */}
+              <div className="grid grid-cols-2 gap-3">
+                {selectedContact.email && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Mail className="h-3 w-3" /> {selectedContact.email}
+                  </div>
+                )}
+                {selectedContact.phone && (
+                  <div className="text-xs text-muted-foreground">{selectedContact.phone}</div>
+                )}
+                {selectedContact.linkedInUrl && (
+                  <a href={selectedContact.linkedInUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline">
+                    LinkedIn <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
+                )}
+              </div>
+
+              {/* Role classification */}
+              <div className="p-3 rounded-xl bg-secondary/50 space-y-2">
+                <span className="g-section-label">Role Classification</span>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {selectedContact.isDecisionMaker && (
+                    <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-[var(--g-amber-soft)] text-[var(--g-amber)] font-medium"><Crown className="h-3 w-3" /> Decision Maker</span>
+                  )}
+                  {selectedContact.isPrimaryContact && (
+                    <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 font-medium"><UserCheck className="h-3 w-3" /> Primary Contact</span>
+                  )}
+                  {(() => {
+                    const cat = ROLE_CATEGORIES.find(c => c.id === selectedContact.category);
+                    return cat && cat.id !== 'all' ? (
+                      <span className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-medium ${cat.color}`}><Target className="h-3 w-3" /> {cat.label.replace(/s$/, '')}</span>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+
+              {/* Linked deal */}
+              <div className="p-3 rounded-xl bg-card border border-border">
+                <span className="g-section-label">Linked Opportunity</span>
+                <button onClick={() => { setSelectedOppId(selectedContact.oppId); setSelectedContact(null); }}
+                  className="mt-2 w-full text-left p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
+                  <div className="text-xs font-medium text-foreground">{selectedContact.customerName}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{selectedContact.opportunityName}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#7c3aed]/10 text-[#7c3aed]">{selectedContact.dealStatus}</span>
+                    {selectedContact.dealTcv > 0 && <span className="text-[10px] text-muted-foreground">${(selectedContact.dealTcv/1000).toFixed(0)}k</span>}
+                  </div>
+                </button>
+              </div>
+
+              {/* Quick actions */}
+              <div className="space-y-2">
+                <span className="g-section-label">Actions</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => handleToggleDM(selectedContact)}
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-border text-foreground hover:bg-secondary transition-colors">
+                    <Crown className="h-3 w-3 text-[var(--g-amber)]" /> {selectedContact.isDecisionMaker ? 'Remove DM' : 'Set as DM'}
+                  </button>
+                  <button onClick={() => handleTogglePrimary(selectedContact)}
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-border text-foreground hover:bg-secondary transition-colors">
+                    <UserCheck className="h-3 w-3 text-blue-400" /> {selectedContact.isPrimaryContact ? 'Remove Primary' : 'Set Primary'}
+                  </button>
+                  <button onClick={() => { setSelectedOppId(selectedContact.oppId); setSelectedContact(null); }}
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-border text-foreground hover:bg-secondary transition-colors col-span-2">
+                    <Eye className="h-3 w-3 text-[#7c3aed]" /> View Full Deal
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Deal Detail Modal */}
       {selectedOppId && (
