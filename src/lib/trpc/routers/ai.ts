@@ -190,6 +190,92 @@ Return ONLY valid JSON:
       }
     }),
 
+  // Omni-channel intake processor
+  processIntake: protectedProcedure
+    .input(z.object({
+      channel: z.enum(['voice', 'teams_transcript', 'teams_chat', 'outlook_email', 'desktop_notes', 'whatsapp']),
+      content: z.string().min(5),
+      subject: z.string().optional(),
+      sender: z.string().optional(),
+      participants: z.array(z.string()).optional(),
+      existingDealId: z.string().optional(),
+      draftId: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
+      const client = getAnthropicClient();
+      const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514';
+
+      await connectDB();
+      const Opportunity = getOpportunityModel();
+      const existingOpps = await Opportunity.find().select('id customerName opportunityName status').lean();
+      const dealList = existingOpps.map((o: any) => `${o.id}: ${o.customerName} — ${o.opportunityName} (${o.status})`).join('\n');
+
+      const response = await client.messages.create({
+        model,
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: `You are an AI intake processor for a sales intelligence platform. Analyze this ${input.channel.replace('_', ' ')} input and extract structured deal intelligence.
+
+CHANNEL: ${input.channel}
+${input.subject ? `SUBJECT: ${input.subject}` : ''}
+${input.sender ? `FROM: ${input.sender}` : ''}
+${input.participants ? `PARTICIPANTS: ${input.participants.join(', ')}` : ''}
+
+CONTENT:
+${input.content}
+
+EXISTING DEALS IN PIPELINE:
+${dealList}
+
+Return ONLY valid JSON:
+{
+  "intent": "new_deal|update_deal|add_stakeholder|log_activity|schedule_task|general_note",
+  "confidence": <0-100>,
+  "matchedDealId": "<existing deal ID if this relates to an existing deal, or null>",
+  "matchedDealName": "<deal name if matched>",
+  "extractedData": {
+    "customerName": "<company name if mentioned>",
+    "opportunityName": "<deal/project name if mentioned>",
+    "contactName": "<person name if mentioned>",
+    "contactTitle": "<title if mentioned>",
+    "contactEmail": "<email if found>",
+    "tcv": <dollar amount if mentioned, or null>,
+    "status": "<deal stage if mentioned>",
+    "nextSteps": ["<action items>"],
+    "keyInsights": ["<important points>"],
+    "sentiment": "<positive|neutral|negative|urgent>",
+    "competitors": ["<competitor names if mentioned>"],
+    "timeline": "<any dates or timeline mentioned>"
+  },
+  "suggestedActions": [
+    {"type": "create_deal|update_deal|add_task|add_stakeholder|log_notes", "description": "<what to do>", "data": {}}
+  ],
+  "summary": "<2-3 sentence summary of the intake>"
+}` }],
+      });
+
+      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      try {
+        const result = JSON.parse(cleaned);
+
+        if (result.confidence >= 80 && result.matchedDealId && result.intent === 'update_deal') {
+          const opp = await Opportunity.findOne({ id: result.matchedDealId });
+          if (opp) {
+            const timestamp = new Date().toISOString().split('T')[0];
+            const channelLabel = input.channel.replace('_', ' ').toUpperCase();
+            opp.conversationLog = (opp.conversationLog || '') + `\n\n--- ${channelLabel} INTAKE (${timestamp}) ---\n${result.summary}\n\nKey Insights:\n${result.extractedData.keyInsights?.map((k: string) => `• ${k}`).join('\n') || 'None'}\n\nNext Steps:\n${result.extractedData.nextSteps?.map((s: string) => `• ${s}`).join('\n') || 'None'}`;
+            await opp.save();
+          }
+        }
+
+        return { ...result, processedAt: new Date().toISOString(), channel: input.channel };
+      } catch {
+        return { intent: 'general_note', confidence: 50, summary: text.slice(0, 500), error: 'Parse failed', processedAt: new Date().toISOString(), channel: input.channel };
+      }
+    }),
+
   // Chat with Deal Coach (conversational)
   chat: protectedProcedure
     .input(
