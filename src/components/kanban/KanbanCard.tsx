@@ -79,7 +79,7 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
       onClick={() => onClick(opp.id)}
       title={`Deal ID: ${opp.id}`}
       className={cn(
-        'p-3 rounded-xl bg-card border border-border cursor-pointer transition-all hover:border-[#7c3aed]/30 group mb-3 touch-none',
+        'p-3 rounded-xl bg-card border border-border cursor-pointer transition-all hover:border-[#7c3aed]/30 group mb-3 touch-none hover-lift',
         isDragging && 'opacity-50 rotate-1 shadow-lg'
       )}
     >

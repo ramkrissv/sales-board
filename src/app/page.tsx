@@ -172,7 +172,7 @@ function HomeContent() {
           { label: 'Closing Soon', value: `${closingSoonDeals.length}`, icon: Clock, color: '#f59e0b', sub: 'within 30 days' },
           { label: 'At Risk', value: `${atRiskDeals.length}`, icon: AlertTriangle, color: '#ef4444', sub: 'need attention' },
         ].map(kpi => (
-          <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated">
+          <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated hover-lift">
             <div className="flex items-center gap-2 mb-2">
               <kpi.icon className="h-3.5 w-3.5" style={{ color: kpi.color }} />
               <span className="g-section-label">{kpi.label}</span>
@@ -236,7 +236,7 @@ function HomeContent() {
               return priority(a) - priority(b);
             })
             .slice(0, 8)
-            .map(opp => {
+            .map((opp, i) => {
               const isAtRisk = atRiskDeals.some(r => r.id === opp.id);
               const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
                 'Discovery': { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-500' },
@@ -255,7 +255,8 @@ function HomeContent() {
                 <button
                   key={opp.id}
                   onClick={() => setSelectedOppId(opp.id)}
-                  className="flex items-center gap-4 p-3 rounded-xl g-surface g-elevated w-full text-left transition-all group hover:!border-[#7c3aed]/20"
+                  className="flex items-center gap-4 p-3 rounded-xl g-surface g-elevated w-full text-left transition-all group hover:!border-[#7c3aed]/20 reveal hover-lift"
+                  style={{ animationDelay: `${i * 0.05}s` }}
                 >
                   {/* Status dot */}
                   <div className="flex flex-col items-center gap-1 w-6 flex-shrink-0">
