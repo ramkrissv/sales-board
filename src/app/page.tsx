@@ -43,10 +43,10 @@ function HomeContent() {
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6 px-2 sm:px-0">
         <div className="h-10 w-64 bg-card rounded-lg animate-pulse" />
         <div className="h-24 bg-card rounded-xl animate-pulse ai-glow" />
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[1,2,3,4].map(i => <div key={i} className="h-24 bg-card rounded-xl animate-pulse" />)}
         </div>
       </div>
@@ -74,7 +74,7 @@ function HomeContent() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 px-2 sm:px-0">
       {/* AI Insight Banner -- auto-generated, not on-demand */}
       <div className="relative overflow-hidden rounded-xl ai-glow animate-flow-in" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.02), transparent)' }}>
         <div className="absolute top-0 right-0 w-32 h-32 opacity-5">

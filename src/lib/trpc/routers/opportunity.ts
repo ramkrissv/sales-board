@@ -180,6 +180,45 @@ export const opportunityRouter = router({
       return enrichOpportunity(opportunity);
     }),
 
+  bulkImport: protectedProcedure
+    .input(z.object({
+      opportunities: z.array(z.object({
+        customerName: z.string(),
+        opportunityName: z.string(),
+        status: z.string().default('Discovery'),
+        tcv: z.number().default(0),
+        dealDuration: z.string().default('12 months'),
+        expectedCloseDate: z.string(),
+        startDate: z.string(),
+        primaryOwner: z.string(),
+        industry: z.string().default('Technology'),
+        region: z.string().default('North America'),
+        source: z.string().default('Import'),
+        serviceLine: z.string().optional(),
+        billingModel: z.string().optional(),
+        margin: z.number().optional(),
+      }))
+    }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const year = new Date().getFullYear();
+
+      const toInsert = input.opportunities.map((opp) => ({
+        id: `OPP-${year}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+        ...opp,
+        expectedCloseDate: new Date(opp.expectedCloseDate),
+        startDate: new Date(opp.startDate),
+        salesPOCs: [],
+        presalesPOCs: [],
+        customTags: ['imported'],
+        conversationLog: '',
+        activityLog: [],
+      }));
+
+      const result = await Opportunity.insertMany(toInsert);
+      return { imported: result.length };
+    }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
