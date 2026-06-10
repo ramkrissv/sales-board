@@ -4,11 +4,13 @@ import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { useState } from 'react';
 import { CheckSquare, AlertTriangle, Search } from 'lucide-react';
 import { format, isPast } from 'date-fns';
+import { DealDetail } from '@/components/modals/DealDetail';
 
 function TasksContent() {
   const { opportunities, isLoading } = useOpportunities();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'complete' | 'overdue'>('all');
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading tasks...</div>;
@@ -94,7 +96,13 @@ function TasksContent() {
                   {task.name}
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  {task.customerName} · {task.owner}
+                  <button
+                    onClick={() => setSelectedOppId(task.oppId)}
+                    className="text-purple-400 hover:text-purple-300 hover:underline transition-colors"
+                  >
+                    {task.customerName}
+                  </button>
+                  {' · '}{task.owner}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -113,6 +121,11 @@ function TasksContent() {
           <div className="text-center py-12 text-muted-foreground text-sm">No tasks match your filter.</div>
         )}
       </div>
+
+      {/* Deal Detail Modal */}
+      {selectedOppId && (
+        <DealDetail opportunityId={selectedOppId} onClose={() => setSelectedOppId(null)} />
+      )}
     </div>
   );
 }

@@ -3,11 +3,13 @@
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { useState } from 'react';
 import { Search, Crown, UserCheck, ExternalLink } from 'lucide-react';
+import { DealDetail } from '@/components/modals/DealDetail';
 
 function StakeholdersContent() {
   const { opportunities, isLoading } = useOpportunities();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'decision_maker' | 'primary'>('all');
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading stakeholders...</div>;
@@ -67,7 +69,7 @@ function StakeholdersContent() {
           <div key={person.id || i} className="p-4 rounded-xl g-surface g-elevated hover:border-purple-500/20 transition-all">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center text-purple-400 text-sm font-bold flex-shrink-0">
-                {person.name.split(' ').map(n => n[0]).join('').slice(0,2)}
+                {person.name.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -84,7 +86,14 @@ function StakeholdersContent() {
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground">{person.title}</div>
-                <div className="text-xs text-muted-foreground mt-1">{person.customerName} · {person.opportunityName}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  <button
+                    onClick={() => setSelectedOppId(person.oppId)}
+                    className="text-purple-400 hover:text-purple-300 hover:underline transition-colors"
+                  >
+                    {person.customerName} &middot; {person.opportunityName}
+                  </button>
+                </div>
               </div>
               <div className="flex flex-col gap-1 flex-shrink-0">
                 {person.email && <span className="text-[11px] text-muted-foreground">{person.email}</span>}
@@ -101,6 +110,11 @@ function StakeholdersContent() {
           <div className="col-span-2 text-center py-12 text-muted-foreground text-sm">No stakeholders match your filter.</div>
         )}
       </div>
+
+      {/* Deal Detail Modal */}
+      {selectedOppId && (
+        <DealDetail opportunityId={selectedOppId} onClose={() => setSelectedOppId(null)} />
+      )}
     </div>
   );
 }

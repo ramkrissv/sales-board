@@ -2,18 +2,26 @@
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
+import { trpc } from '@/lib/trpc/client';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import {
   AlertTriangle, ArrowRight, TrendingUp, DollarSign,
   Target, Clock, Sparkles, Zap, ChevronRight,
-  Users, CheckSquare, Kanban
+  Users, CheckSquare, Kanban, Building2
 } from 'lucide-react';
 import Link from 'next/link';
 import { DealDetail } from '@/components/modals/DealDetail';
 
+function formatCurrency(val: number) {
+  if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
+  if (val >= 1_000) return `$${(val / 1_000).toFixed(0)}K`;
+  return `$${val.toLocaleString()}`;
+}
+
 function HomeContent() {
   const { filteredOpportunities: opportunities, isLoading } = useOpportunities();
+  const { data: accounts = [] } = trpc.account.list.useQuery();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -202,6 +210,66 @@ function HomeContent() {
           })}
         </div>
       </div>
+
+      {/* Top Accounts */}
+      {accounts.length > 0 && (
+        <div className="animate-flow-in animate-flow-in-delay-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <Building2 className="h-3 w-3 text-purple-400" />
+              Top Accounts
+            </div>
+            <Link href="/accounts" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1">
+              View All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {(() => {
+              const accountsWithStats = accounts.map((acc: any) => {
+                const accOpps = opportunities.filter(o => {
+                  const customerMatch = o.customerName?.toLowerCase() === acc.companyName?.toLowerCase();
+                  const accountIdMatch = (o as any).accountId === (acc._id?.toString() || acc.id);
+                  return customerMatch || accountIdMatch;
+                });
+                return {
+                  ...acc,
+                  dealCount: accOpps.length,
+                  totalTcv: accOpps.reduce((sum: number, o: any) => sum + (o.tcv || 0), 0),
+                };
+              });
+              return accountsWithStats
+                .sort((a: any, b: any) => b.dealCount - a.dealCount)
+                .slice(0, 5)
+                .map((acc: any) => (
+                  <Link
+                    key={acc._id || acc.id}
+                    href="/accounts"
+                    className="p-4 rounded-xl g-surface g-elevated hover:border-purple-500/30 transition-all group"
+                  >
+                    <div className="text-sm font-medium text-foreground group-hover:text-purple-300 transition-colors truncate">
+                      {acc.companyName}
+                    </div>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                      <span>{acc.dealCount} deal{acc.dealCount !== 1 ? 's' : ''}</span>
+                      {acc.totalTcv > 0 && (
+                        <>
+                          <span>&middot;</span>
+                          <span className="text-foreground font-medium">{formatCurrency(acc.totalTcv)}</span>
+                        </>
+                      )}
+                      {acc.industry && (
+                        <>
+                          <span>&middot;</span>
+                          <span>{acc.industry}</span>
+                        </>
+                      )}
+                    </div>
+                  </Link>
+                ));
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* Deal Detail Modal */}
       {selectedOppId && (

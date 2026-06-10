@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
+import Link from 'next/link';
 import {
   FileText, Search, Plus, ChevronDown, ChevronRight, Clock,
   CheckCircle2, AlertTriangle, DollarSign, Filter, X,
 } from 'lucide-react';
+import { OpportunityProvider, useOpportunities } from '@/lib/store';
+import { DealDetail } from '@/components/modals/DealDetail';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
@@ -39,10 +42,11 @@ function daysUntil(d: string | Date) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export default function ContractsPage() {
+function ContractsContent() {
   const { data: contracts = [], isLoading } = trpc.contract.list.useQuery();
   const { data: engagementTypes = [] } = trpc.engagementType.list.useQuery();
   const { data: expiring = [] } = trpc.contract.getExpiring.useQuery({ days: 60 });
+  const { opportunities } = useOpportunities();
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -50,6 +54,12 @@ export default function ContractsPage() {
   const [engFilter, setEngFilter] = useState<string>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+
+  function getOppName(oppId: string) {
+    const opp = opportunities.find(o => o.id === oppId);
+    return opp ? `${opp.customerName} - ${opp.opportunityName}` : oppId;
+  }
 
   if (isLoading) {
     return (
@@ -231,6 +241,20 @@ export default function ContractsPage() {
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                       <span>{contract.engagementType}</span>
+                      {contract.opportunityId && (
+                        <>
+                          <span>|</span>
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => { e.stopPropagation(); setSelectedOppId(contract.opportunityId); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setSelectedOppId(contract.opportunityId); } }}
+                            className="text-purple-400 hover:text-purple-300 hover:underline cursor-pointer"
+                          >
+                            {getOppName(contract.opportunityId)}
+                          </span>
+                        </>
+                      )}
                       <span>|</span>
                       <span>{formatDate(contract.startDate)} - {formatDate(contract.endDate)}</span>
                       {daysLeft !== null && daysLeft >= 0 && daysLeft <= 60 && (
@@ -316,7 +340,20 @@ export default function ContractsPage() {
           })
         )}
       </div>
+
+      {/* Deal Detail Modal */}
+      {selectedOppId && (
+        <DealDetail opportunityId={selectedOppId} onClose={() => setSelectedOppId(null)} />
+      )}
     </div>
+  );
+}
+
+export default function ContractsPage() {
+  return (
+    <OpportunityProvider>
+      <ContractsContent />
+    </OpportunityProvider>
   );
 }
 
