@@ -13,7 +13,7 @@ import {
 type Role = 'ae' | 'sdr' | 'manager' | 'presales' | 'exec';
 
 const roles = [
-  { id: 'ae' as Role, title: 'Account Executive', icon: Briefcase, subtitle: 'Close deals and manage pipeline', color: '#5B4FE9' },
+  { id: 'ae' as Role, title: 'Account Executive', icon: Briefcase, subtitle: 'Close deals and manage pipeline', color: '#7c3aed' },
   { id: 'sdr' as Role, title: 'Sales Development Rep', icon: Magnet, subtitle: 'Generate and qualify leads', color: '#11A7A0' },
   { id: 'manager' as Role, title: 'Sales Manager', icon: Crown, subtitle: 'Coach team and forecast revenue', color: '#B26A05' },
   { id: 'presales' as Role, title: 'Presales / Solution Architect', icon: Target, subtitle: 'Technical qualification and proposals', color: '#178A4C' },
@@ -136,7 +136,7 @@ export default function GuidePage() {
       <div className="grid grid-cols-5 gap-2">
         {roles.map(role => (
           <button key={role.id} onClick={() => setSelectedRole(role.id)}
-            className={`p-3 rounded-xl g-surface text-center transition-all ${selectedRole === role.id ? '!border-[#5B4FE9]/40 ring-1 ring-[#5B4FE9]/20' : 'hover:!border-[#5B4FE9]/20'}`}>
+            className={`p-3 rounded-xl g-surface text-center transition-all ${selectedRole === role.id ? '!border-[#7c3aed]/40 ring-1 ring-[#7c3aed]/20' : 'hover:!border-[#7c3aed]/20'}`}>
             <role.icon className="h-5 w-5 mx-auto mb-1.5" style={{ color: role.color }} />
             <div className="text-xs font-semibold text-foreground">{role.title.split('/')[0].trim()}</div>
             <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{role.subtitle}</div>
@@ -147,7 +147,7 @@ export default function GuidePage() {
       {/* Progress */}
       <div className="flex items-center gap-3">
         <div className="h-2 flex-1 rounded-full bg-card border border-border overflow-hidden">
-          <div className="h-full bg-[#5B4FE9] rounded-full transition-all" style={{ width: `${(completedCount / totalSteps) * 100}%` }} />
+          <div className="h-full bg-[#7c3aed] rounded-full transition-all" style={{ width: `${(completedCount / totalSteps) * 100}%` }} />
         </div>
         <span className="text-xs text-muted-foreground g-metric">{completedCount}/{totalSteps}</span>
       </div>
@@ -169,7 +169,7 @@ export default function GuidePage() {
                   <div key={i} className={`g-surface g-elevated p-4 transition-all ${isComplete ? 'opacity-60' : ''}`}>
                     <div className="flex items-start gap-3">
                       <button onClick={() => toggleStep(stepId)}
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${isComplete ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#5B4FE9]/10 text-[#5B4FE9]'}`}>
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${isComplete ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#7c3aed]/10 text-[#7c3aed]'}`}>
                         {isComplete ? <Check className="h-3 w-3" /> : <span className="text-[10px] font-bold">{i + 1}</span>}
                       </button>
                       <div className="flex-1">
@@ -180,12 +180,12 @@ export default function GuidePage() {
                             <div className="mt-2 space-y-0.5">
                               {step.tips.map((tip, j) => (
                                 <div key={j} className="text-[11px] text-muted-foreground flex items-start gap-1">
-                                  <span className="text-[#5B4FE9]">•</span> {tip}
+                                  <span className="text-[#7c3aed]">•</span> {tip}
                                 </div>
                               ))}
                             </div>
                             {step.action && (
-                              <Link href={step.action.href} className="inline-flex items-center gap-1 mt-2 px-3 py-1 text-xs font-medium rounded-lg bg-[#5B4FE9]/10 text-[#5B4FE9] hover:bg-[#5B4FE9]/20 transition-colors">
+                              <Link href={step.action.href} className="inline-flex items-center gap-1 mt-2 px-3 py-1 text-xs font-medium rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors">
                                 {step.action.label} <ArrowRight className="h-3 w-3" />
                               </Link>
                             )}

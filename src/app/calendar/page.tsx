@@ -123,14 +123,14 @@ function CalendarContent() {
                 onClick={() => setSelectedDate(day)}
                 className={`h-20 p-1.5 rounded-lg text-left transition-all ${
                   isSelected
-                    ? 'bg-[#5B4FE9]/10 border border-[#5B4FE9]/30'
+                    ? 'bg-[#7c3aed]/10 border border-[#7c3aed]/30'
                     : isToday
                       ? 'bg-card border border-border'
                       : 'hover:bg-card/50 border border-transparent'
                 }`}
               >
                 <div
-                  className={`text-xs font-medium ${isToday ? 'text-[#5B4FE9]' : 'text-foreground'}`}
+                  className={`text-xs font-medium ${isToday ? 'text-[#7c3aed]' : 'text-foreground'}`}
                 >
                   {format(day, 'd')}
                 </div>
@@ -140,7 +140,7 @@ function CalendarContent() {
                       key={j}
                       className={`text-[9px] px-1 py-0.5 rounded truncate ${
                         evt.type === 'deal'
-                          ? 'bg-[#5B4FE9]/10 text-[#5B4FE9]'
+                          ? 'bg-[#7c3aed]/10 text-[#7c3aed]'
                           : 'bg-blue-500/10 text-blue-400'
                       }`}
                     >
@@ -162,7 +162,7 @@ function CalendarContent() {
       {/* Legend */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#5B4FE9]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#7c3aed]" />
           <span>Deal close dates</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -188,7 +188,7 @@ function CalendarContent() {
                 >
                   <div
                     className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      evt.type === 'deal' ? 'bg-[#5B4FE9]' : 'bg-blue-500'
+                      evt.type === 'deal' ? 'bg-[#7c3aed]' : 'bg-blue-500'
                     }`}
                   />
                   <div className="flex-1 min-w-0">

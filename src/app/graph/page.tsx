@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Eye, ChevronRight, Users, DollarSign, Clock, AlertTriangle } from 'lucide-react';
 
 const STAGES = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'];
-const STAGE_COLORS = ['#3b82f6', '#f59e0b', '#5B4FE9', '#22c55e', '#10b981'];
+const STAGE_COLORS = ['#3b82f6', '#f59e0b', '#7c3aed', '#22c55e', '#10b981'];
 
 function GraphContent() {
   const { opportunities } = useOpportunities();
@@ -193,7 +193,7 @@ function GraphContent() {
               <span className="text-xs text-muted-foreground">{opportunities.filter(o => o.status === selectedStage).length} deals</span>
             </div>
             <div className="flex gap-2">
-              <Link href={`/pipeline/${encodeURIComponent(selectedStage)}`} className="text-xs text-[#5B4FE9] hover:underline">
+              <Link href={`/pipeline/${encodeURIComponent(selectedStage)}`} className="text-xs text-[#7c3aed] hover:underline">
                 Open Stage View {'\u2192'}
               </Link>
               <button onClick={() => setSelectedStage(null)} className="text-xs text-muted-foreground hover:text-foreground">Close</button>
@@ -202,7 +202,7 @@ function GraphContent() {
           <div className="space-y-1.5">
             {opportunities.filter(o => o.status === selectedStage).map(opp => (
               <button key={opp.id} onClick={() => setSelectedOppId(opp.id)}
-                className="flex items-center gap-3 w-full p-2.5 rounded-lg bg-card border border-border hover:border-[#5B4FE9]/20 text-left transition-all text-xs">
+                className="flex items-center gap-3 w-full p-2.5 rounded-lg bg-card border border-border hover:border-[#7c3aed]/20 text-left transition-all text-xs">
                 <span className="font-medium text-foreground flex-1">{opp.customerName}</span>
                 <span className="text-muted-foreground truncate max-w-[200px]">{opp.opportunityName}</span>
                 <span className="g-metric text-foreground">{opp.tcv > 0 ? `$${(opp.tcv/1000).toFixed(0)}k` : '$0'}</span>

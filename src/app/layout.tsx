@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
+import { Inter, Montserrat, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { TRPCProvider } from '@/lib/trpc/provider';
 import { AppShell } from '@/components/layout/AppShell';
@@ -10,7 +10,7 @@ const inter = Inter({
   variable: '--font-sans',
 });
 
-const spaceGrotesk = Space_Grotesk({
+const spaceGrotesk = Montserrat({
   subsets: ['latin'],
   variable: '--font-display',
 });

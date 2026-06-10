@@ -89,19 +89,19 @@ function HomeContent() {
       {/* AI Insight Banner -- auto-generated, not on-demand */}
       <div className="relative overflow-hidden rounded-xl ai-glow animate-flow-in" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.02), transparent)' }}>
         <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
-          <Brain className="w-full h-full text-[#5B4FE9]" />
+          <Brain className="w-full h-full text-[#7c3aed]" />
         </div>
         <div className="p-5">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-6 h-6 rounded-lg bg-[#5B4FE9]/20 flex items-center justify-center">
-              <Sparkles className="h-3.5 w-3.5 text-[#5B4FE9]" />
+            <div className="w-6 h-6 rounded-lg bg-[#7c3aed]/20 flex items-center justify-center">
+              <Sparkles className="h-3.5 w-3.5 text-[#7c3aed]" />
             </div>
-            <span className="text-xs font-semibold text-[#5B4FE9] uppercase tracking-wider">AI Intelligence Brief</span>
+            <span className="text-xs font-semibold text-[#7c3aed] uppercase tracking-wider">AI Intelligence Brief</span>
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-live ml-1" />
           </div>
           {pipelineMutation.isPending ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Sparkles className="h-4 w-4 animate-spin text-[#5B4FE9]" />
+              <Sparkles className="h-4 w-4 animate-spin text-[#7c3aed]" />
               Analyzing your pipeline...
             </div>
           ) : aiSummary ? (
@@ -176,7 +176,7 @@ function HomeContent() {
       {/* KPI Row with visual indicators */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-flow-in animate-flow-in-delay-2">
         {[
-          { label: 'Pipeline', value: `$${(totalPipeline/1e6).toFixed(1)}M`, icon: DollarSign, color: '#5B4FE9', sub: `${activeDeals.length} active` },
+          { label: 'Pipeline', value: `$${(totalPipeline/1e6).toFixed(1)}M`, icon: DollarSign, color: '#7c3aed', sub: `${activeDeals.length} active` },
           { label: 'Win Rate', value: `${winRate}%`, icon: Target, color: '#22c55e', sub: `${wonDeals.length}W / ${lostDeals.length}L` },
           { label: 'Closing Soon', value: `${closingSoonDeals.length}`, icon: Clock, color: '#f59e0b', sub: 'within 30 days' },
           { label: 'At Risk', value: `${atRiskDeals.length}`, icon: AlertTriangle, color: '#ef4444', sub: 'need attention' },
@@ -198,7 +198,7 @@ function HomeContent() {
           <span className="g-section-label flex items-center gap-1.5">
             <Eye className="h-3 w-3" /> Pipeline Lifecycle
           </span>
-          <Link href="/pipeline" className="text-xs text-[#5B4FE9] hover:underline flex items-center gap-1">
+          <Link href="/pipeline" className="text-xs text-[#7c3aed] hover:underline flex items-center gap-1">
             Open Pipeline <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
@@ -208,7 +208,7 @@ function HomeContent() {
             const stageTcv = stageDeals.reduce((s, o) => s + (o.tcv || 0), 0);
             const maxDeals = Math.max(...['Discovery','Qualification','Proposal','Negotiation','Won'].map(s => opportunities.filter(o => o.status === s).length), 1);
             const height = Math.max(40, (stageDeals.length / maxDeals) * 120);
-            const colors = ['#3b82f6', '#f59e0b', '#5B4FE9', '#22c55e', '#10b981'];
+            const colors = ['#3b82f6', '#f59e0b', '#7c3aed', '#22c55e', '#10b981'];
             return (
               <div key={stage} className="flex-1 flex flex-col items-center gap-1">
                 <div
@@ -264,7 +264,7 @@ function HomeContent() {
                 <button
                   key={opp.id}
                   onClick={() => setSelectedOppId(opp.id)}
-                  className="flex items-center gap-4 p-3 rounded-xl g-surface g-elevated w-full text-left transition-all group hover:!border-[#5B4FE9]/20 reveal hover-lift"
+                  className="flex items-center gap-4 p-3 rounded-xl g-surface g-elevated w-full text-left transition-all group hover:!border-[#7c3aed]/20 reveal hover-lift"
                   style={{ animationDelay: `${i * 0.05}s` }}
                 >
                   {/* Status dot */}
@@ -275,7 +275,7 @@ function HomeContent() {
 
                   {/* Deal info */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-foreground group-hover:text-[#5B4FE9] transition-colors truncate">
+                    <div className="text-sm font-medium text-foreground group-hover:text-[#7c3aed] transition-colors truncate">
                       {opp.customerName}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">{opp.opportunityName}</div>
@@ -293,7 +293,7 @@ function HomeContent() {
                       <Users className="h-3 w-3" />
                       <span className="g-metric">{(opp.customerStakeholders || []).length}</span>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-[#5B4FE9] transition-colors" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-[#7c3aed] transition-colors" />
                   </div>
                 </button>
               );
@@ -312,7 +312,7 @@ function HomeContent() {
               'deal_created': { icon: Plus, color: 'text-emerald-400' },
               'stage_change': { icon: ArrowRight, color: 'text-blue-400' },
               'task_completed': { icon: CheckSquare, color: 'text-green-400' },
-              'ai_analysis': { icon: Sparkles, color: 'text-[#5B4FE9]' },
+              'ai_analysis': { icon: Sparkles, color: 'text-[#7c3aed]' },
               'lead_qualified': { icon: Target, color: 'text-amber-400' },
               'stakeholder_added': { icon: Users, color: 'text-cyan-400' },
               'sow_generated': { icon: FileText, color: 'text-emerald-400' },
