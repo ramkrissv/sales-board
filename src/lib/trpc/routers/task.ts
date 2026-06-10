@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../trpc';
 import { connectDB } from '@/lib/db/connection';
 import { Task } from '@/lib/db/models/task';
+import mongoose from 'mongoose';
 
 const createTaskSchema = z.object({
   opportunityId: z.string(),
@@ -35,6 +36,19 @@ export const taskRouter = router({
       });
 
       const plain = task.toObject();
+
+      // Auto activity logging
+      try {
+        const Activity = mongoose.models.Activity;
+        if (Activity) {
+          await Activity.create({
+            type: 'task_created', entityType: 'task', entityId: plain._id.toString(),
+            entityName: plain.name, description: `Task created: ${plain.name}`,
+            userName: 'Admin User',
+          });
+        }
+      } catch {}
+
       return {
         ...plain,
         dueDate: plain.dueDate.toISOString(),
@@ -65,6 +79,20 @@ export const taskRouter = router({
         });
       }
 
+      // Auto activity logging
+      try {
+        const Activity = mongoose.models.Activity;
+        if (Activity) {
+          await Activity.create({
+            type: input.status === 'complete' ? 'task_completed' : 'task_updated',
+            entityType: 'task', entityId: input.id,
+            entityName: (task as any).name || input.id,
+            description: input.status === 'complete' ? `Task completed: ${(task as any).name}` : `Task updated: ${(task as any).name}`,
+            userName: 'Admin User',
+          });
+        }
+      } catch {}
+
       return {
         ...task,
         dueDate: task.dueDate instanceof Date
@@ -85,6 +113,18 @@ export const taskRouter = router({
           message: 'Task not found',
         });
       }
+
+      // Auto activity logging
+      try {
+        const Activity = mongoose.models.Activity;
+        if (Activity) {
+          await Activity.create({
+            type: 'task_deleted', entityType: 'task', entityId: input.id,
+            entityName: input.id, description: `Task deleted`,
+            userName: 'Admin User',
+          });
+        }
+      } catch {}
 
       return { success: true };
     }),

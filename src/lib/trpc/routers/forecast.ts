@@ -57,6 +57,21 @@ export const forecastRouter = router({
       byQuarter[q].tcv += o.tcv || 0;
     });
 
+    // By forecast category
+    const byCategory: Record<string, { count: number; tcv: number }> = {
+      commit: { count: 0, tcv: 0 },
+      best_case: { count: 0, tcv: 0 },
+      pipeline: { count: 0, tcv: 0 },
+      omitted: { count: 0, tcv: 0 },
+    };
+    active.forEach((o: any) => {
+      const cat = o.forecastCategory || 'pipeline';
+      if (byCategory[cat]) {
+        byCategory[cat].count++;
+        byCategory[cat].tcv += o.tcv || 0;
+      }
+    });
+
     const wonDeals = opps.filter((o: any) => o.status === 'Won');
     const lostDeals = opps.filter((o: any) => o.status === 'Lost');
     const winRate = wonDeals.length + lostDeals.length > 0 ? wonDeals.length / (wonDeals.length + lostDeals.length) : 0;
@@ -70,6 +85,16 @@ export const forecastRouter = router({
       byStage,
       byOwner: Object.entries(byOwner).map(([owner, data]) => ({ owner, ...data })).sort((a, b) => b.tcv - a.tcv),
       byQuarter: Object.entries(byQuarter).map(([quarter, data]) => ({ quarter, ...data })).sort((a, b) => a.quarter.localeCompare(b.quarter)),
+      byCategory: Object.entries(byCategory).map(([category, data]) => ({ category, ...data })),
+      activeOpportunities: active.map((o: any) => ({
+        id: o.id,
+        customerName: o.customerName,
+        opportunityName: o.opportunityName,
+        tcv: o.tcv || 0,
+        status: o.status,
+        primaryOwner: o.primaryOwner,
+        forecastCategory: o.forecastCategory || 'pipeline',
+      })),
     };
   }),
 });

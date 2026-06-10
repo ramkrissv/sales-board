@@ -91,6 +91,7 @@ export interface Opportunity {
   customTags: string[];
   engagementType?: string;
   pricingModel?: string;
+  forecastCategory?: 'commit' | 'best_case' | 'pipeline' | 'omitted';
   createdAt: string;
   updatedAt: string;
   createdBy?: string | null;
