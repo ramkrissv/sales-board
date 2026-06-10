@@ -19,6 +19,7 @@ import { leadRouter } from './lead';
 import { activityRouter } from './activity';
 import { ontologyRouter } from './ontology';
 import { approvalRouter } from './approval';
+import { harnessRouter } from './harness';
 
 export const appRouter = router({
   opportunity: opportunityRouter,
@@ -41,6 +42,7 @@ export const appRouter = router({
   activity: activityRouter,
   ontology: ontologyRouter,
   approval: approvalRouter,
+  harness: harnessRouter,
 });
 
 export type AppRouter = typeof appRouter;

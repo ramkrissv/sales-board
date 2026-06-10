@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles, Bot, User, Loader2 } from 'lucide-react';
+import { X, Send, Sparkles, Bot, User, Loader2, BarChart3, AlertTriangle, ArrowRight, Clock } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 
 interface Message {
@@ -21,11 +21,12 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
     {
       id: 'welcome',
       role: 'assistant',
-      content: "I'm your Galent AI Deal Coach. Ask me anything about your pipeline — deal strategy, stakeholder analysis, competitive intelligence, or next-best-actions.",
+      content: "I'm your Galent AI Deal Coach. Ask me anything about your pipeline — deal strategy, stakeholder analysis, competitive intelligence, or next-best-actions. Switch to Agent mode for autonomous actions.",
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
+  const [mode, setMode] = useState<'chat' | 'agent'>('chat');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -48,6 +49,29 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
     },
   });
 
+  const runAgentMutation = trpc.harness.runAgent.useMutation();
+  const quickInvokeMutation = trpc.harness.quickInvoke.useMutation({
+    onSuccess: (run) => {
+      const toolSummary = run.toolCalls.length > 0
+        ? `\n\n**Tools used:** ${run.toolCalls.map((tc: { tool: string }) => tc.tool).join(', ')}`
+        : '';
+      setMessages(prev => [...prev, {
+        id: `agent-${Date.now()}`,
+        role: 'assistant',
+        content: `**Agent: ${run.agentId}** (${run.toolCalls.length} tool calls)${toolSummary}\n\n${run.finalAnswer}`,
+        timestamp: new Date(),
+      }]);
+    },
+    onError: (error) => {
+      setMessages(prev => [...prev, {
+        id: `err-${Date.now()}`,
+        role: 'assistant',
+        content: `Agent error: ${error.message}`,
+        timestamp: new Date(),
+      }]);
+    },
+  });
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -57,7 +81,7 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
   }, [isOpen]);
 
   const handleSend = () => {
-    if (!input.trim() || chatMutation.isPending) return;
+    if (!input.trim()) return;
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -67,7 +91,36 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    chatMutation.mutate({ message: input.trim(), context: { page: 'copilot' } });
+
+    if (mode === 'agent') {
+      runAgentMutation.mutate(
+        { agentId: 'deal-coach', goal: input.trim() },
+        {
+          onSuccess: (run) => {
+            const toolSummary = run.toolCalls.length > 0
+              ? `\n\n**Tools used:** ${run.toolCalls.map((tc: { tool: string }) => tc.tool).join(', ')}`
+              : '';
+            setMessages(prev => [...prev, {
+              id: `agent-${Date.now()}`,
+              role: 'assistant',
+              content: `**Agent: ${run.agentId}** (${run.toolCalls.length} tool calls)${toolSummary}\n\n${run.finalAnswer}`,
+              timestamp: new Date(),
+            }]);
+          },
+          onError: (error) => {
+            setMessages(prev => [...prev, {
+              id: `err-${Date.now()}`,
+              role: 'assistant',
+              content: `Agent error: ${error.message}`,
+              timestamp: new Date(),
+            }]);
+          },
+        }
+      );
+    } else {
+      chatMutation.mutate({ message: input.trim(), context: { page: 'copilot' } });
+    }
+
     setInput('');
   };
 
@@ -78,11 +131,20 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
     }
   };
 
+  const isLoading = chatMutation.isPending || runAgentMutation.isPending || quickInvokeMutation.isPending;
+
   const quickActions = [
     "What deals should I focus on today?",
     "Which deals are at risk?",
     "Summarize my pipeline",
     "Draft a follow-up strategy",
+  ];
+
+  const agentActions = [
+    { action: 'analyze_pipeline' as const, label: 'Analyze Pipeline', icon: BarChart3 },
+    { action: 'find_at_risk_deals' as const, label: 'Find At-Risk Deals', icon: AlertTriangle },
+    { action: 'suggest_next_steps' as const, label: 'Suggest Next Steps', icon: ArrowRight },
+    { action: 'identify_stale_deals' as const, label: 'Find Stale Deals', icon: Clock },
   ];
 
   if (!isOpen) return null;
@@ -101,11 +163,21 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
         </div>
         <div className="flex-1">
           <div className="text-sm font-semibold text-foreground">Galent AI Copilot</div>
-          <div className="text-[10px] text-green-500 font-medium">Active: Deal Coach</div>
+          <div className="text-[10px] text-green-500 font-medium">
+            {mode === 'agent' ? 'Agent Mode: Tool Calling' : 'Active: Deal Coach'}
+          </div>
         </div>
         <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground">
           <X className="h-4 w-4" />
         </button>
+      </div>
+
+      {/* Mode Toggle */}
+      <div className="px-4 pt-3">
+        <div className="flex gap-1 p-1 rounded-lg bg-secondary mb-2">
+          <button onClick={() => setMode('chat')} className={`flex-1 px-2 py-1 text-xs rounded-md transition-all ${mode === 'chat' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}>Chat</button>
+          <button onClick={() => setMode('agent')} className={`flex-1 px-2 py-1 text-xs rounded-md transition-all ${mode === 'agent' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}>Agent</button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -127,21 +199,21 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
           </div>
         ))}
 
-        {chatMutation.isPending && (
+        {isLoading && (
           <div className="flex gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-[#7B52FF]/15 flex items-center justify-center">
               <Loader2 className="h-3.5 w-3.5 text-[#7B52FF] animate-spin" />
             </div>
             <div className="px-3 py-2 rounded-xl bg-card border border-border text-sm text-muted-foreground rounded-tl-sm">
-              Analyzing...
+              {mode === 'agent' ? 'Agent running tools...' : 'Analyzing...'}
             </div>
           </div>
         )}
 
         <div ref={messagesEndRef} />
 
-        {/* Quick actions (show only if few messages) */}
-        {messages.length <= 2 && (
+        {/* Quick actions for chat mode */}
+        {mode === 'chat' && messages.length <= 2 && (
           <div className="space-y-2 pt-2">
             <div className="g-section-label">Quick Actions</div>
             {quickActions.map((q) => (
@@ -151,6 +223,25 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
                 className="w-full text-left px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-foreground bg-card border border-border hover:border-[#7B52FF]/30 transition-all"
               >
                 {q}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Agent actions for agent mode */}
+        {mode === 'agent' && (
+          <div className="space-y-2 pt-2">
+            <div className="g-section-label">Agent Actions</div>
+            {agentActions.map(a => (
+              <button key={a.action}
+                onClick={() => {
+                  quickInvokeMutation.mutate({ action: a.action });
+                }}
+                disabled={quickInvokeMutation.isPending}
+                className="w-full text-left px-3 py-2.5 rounded-lg text-xs bg-card border border-border hover:border-[#7c3aed]/30 transition-all flex items-center gap-2"
+              >
+                <a.icon className="h-3.5 w-3.5 text-[#7c3aed]" />
+                <span className="text-foreground">{a.label}</span>
               </button>
             ))}
           </div>
@@ -166,12 +257,12 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about your pipeline..."
+            placeholder={mode === 'agent' ? 'Give the agent a goal...' : 'Ask about your pipeline...'}
             className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7B52FF]/40"
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || chatMutation.isPending}
+            disabled={!input.trim() || isLoading}
             className="p-2 rounded-lg bg-[#7B52FF] hover:bg-[#6B42EF] text-white transition-colors disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
