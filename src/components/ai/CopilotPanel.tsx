@@ -80,7 +80,7 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
     {
       id: 'welcome',
       role: 'assistant',
-      content: "I'm your Galent AI Deal Coach. Ask me anything about your pipeline — deal strategy, stakeholder analysis, competitive intelligence, or next-best-actions. Switch to Agent mode for autonomous actions.",
+      content: "I'm your Galent SalesPilot Deal Coach. Ask me anything about your pipeline — deal strategy, stakeholder analysis, competitive intelligence, or next-best-actions. Switch to Agent mode for autonomous actions.",
       timestamp: new Date(),
     },
   ]);
@@ -221,7 +221,7 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
           <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 animate-pulse" style={{ borderColor: 'var(--g-bg)' }} />
         </div>
         <div className="flex-1">
-          <div className="text-sm font-semibold text-foreground">Galent AI Copilot</div>
+          <div className="text-sm font-semibold text-foreground">Galent Copilot</div>
           <div className="text-[10px] text-green-500 font-medium">
             {mode === 'agent' ? 'Agent Mode: Tool Calling' : 'Active: Deal Coach'}
           </div>

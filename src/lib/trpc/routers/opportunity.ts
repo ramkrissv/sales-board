@@ -263,7 +263,16 @@ export const opportunityRouter = router({
         try {
           const Activity = mongoose.models.Activity;
           if (Activity) {
-            const changes = Object.keys(input).filter(k => k !== 'id').join(', ');
+            // Generate meaningful description instead of field list
+            const meaningfulChanges: string[] = [];
+            if (input.status) meaningfulChanges.push(`Stage → ${input.status}`);
+            if ((input as any).tcv) meaningfulChanges.push(`TCV updated to $${((input as any).tcv/1000).toFixed(0)}k`);
+            if ((input as any).primaryOwner) meaningfulChanges.push(`Owner → ${(input as any).primaryOwner}`);
+            if ((input as any).expectedCloseDate) meaningfulChanges.push(`Close date updated`);
+            if ((input as any).margin) meaningfulChanges.push(`Margin → ${(input as any).margin}%`);
+            if ((input as any).conversationLog) meaningfulChanges.push(`Notes updated`);
+            if ((input as any).forecastCategory) meaningfulChanges.push(`Forecast → ${(input as any).forecastCategory}`);
+            const changes = meaningfulChanges.length > 0 ? meaningfulChanges.join(', ') : 'Deal details updated';
             await Activity.create({
               type: input.status ? 'stage_change' : 'deal_updated', entityType: 'opportunity',
               entityId: input.id, entityName: (oppById as any)?.customerName || input.id,
