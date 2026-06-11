@@ -51,10 +51,10 @@ const PLATFORM_CONFIGS: Record<string, {
   'Gmail': {
     fields: [
       { key: 'email', label: 'Gmail Address', type: 'email', placeholder: 'you@company.com', required: true },
-      { key: 'appPassword', label: 'App Password', type: 'password', placeholder: '16-character app password', required: true, help: 'Google Account → Security → App Passwords' },
+      { key: 'appPassword', label: 'App Password', type: 'password', placeholder: '16-character app password', required: true, help: 'Google Account → Security → 2-Step Verification → App Passwords. No OAuth setup needed.' },
       { key: 'imapEnabled', label: 'IMAP Enabled', type: 'checkbox', placeholder: '', help: 'Enable in Gmail → Settings → See All → Forwarding and POP/IMAP' },
     ],
-    authMethod: 'IMAP + SMTP (App Password)',
+    authMethod: 'Email + App Password (no OAuth needed)',
     syncCapabilities: ['Inbox Monitoring', 'Send Emails', 'Thread Tracking', 'Label Sync'],
     mcpTools: [
       { name: 'email_search', description: 'Search emails by sender, subject, or date range' },
@@ -65,15 +65,17 @@ const PLATFORM_CONFIGS: Record<string, {
   'Outlook': {
     fields: [
       { key: 'email', label: 'Outlook Email', type: 'email', placeholder: 'you@company.com', required: true },
-      { key: 'clientId', label: 'Azure AD App Client ID', type: 'text', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', required: true, help: 'Register at portal.azure.com → App Registrations' },
-      { key: 'tenantId', label: 'Tenant ID', type: 'text', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', required: true },
-      { key: 'clientSecret', label: 'Client Secret', type: 'password', placeholder: '••••••••', required: true },
+      { key: 'authMode', label: 'Authentication Method', type: 'select', placeholder: 'Choose: credentials or oauth', help: 'Use "App Password" for quick setup, or "OAuth" for full Microsoft Graph access' },
+      { key: 'appPassword', label: 'App Password (Simple Auth)', type: 'password', placeholder: 'xxxx-xxxx-xxxx-xxxx', help: 'Generate at account.microsoft.com → Security → App Passwords. Works without Azure AD setup.' },
+      { key: 'clientId', label: 'Azure AD Client ID (OAuth)', type: 'text', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', help: 'Optional — only needed for full Microsoft Graph access (calendar, OneDrive)' },
+      { key: 'tenantId', label: 'Tenant ID (OAuth)', type: 'text', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' },
+      { key: 'clientSecret', label: 'Client Secret (OAuth)', type: 'password', placeholder: '••••••••' },
     ],
-    authMethod: 'OAuth 2.0 (Microsoft Identity)',
+    authMethod: 'App Password or OAuth 2.0',
     syncCapabilities: ['Emails', 'Calendar Events', 'Contacts', 'OneDrive Files'],
     mcpTools: [
       { name: 'outlook_search', description: 'Search Outlook emails and calendar' },
-      { name: 'outlook_send', description: 'Send email via Microsoft Graph' },
+      { name: 'outlook_send', description: 'Send email via Outlook' },
       { name: 'outlook_calendar', description: 'Create/read calendar events' },
     ],
   },
