@@ -3,7 +3,8 @@
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { trpc } from '@/lib/trpc/client';
 import { useState } from 'react';
-import { Sparkles, Send, Loader2, BarChart3, TrendingUp, Users, DollarSign, AlertTriangle, Target, Clock } from 'lucide-react';
+import { Sparkles, Send, Loader2, BarChart3, TrendingUp, Users, DollarSign, AlertTriangle, Target, Clock, CheckCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { GenUI, parseToGenUI } from '@/components/ai/GenUI';
 import { DealDetail } from '@/components/modals/DealDetail';
 
@@ -37,9 +38,34 @@ function renderMiniChart(text: string): React.ReactElement | null {
 
 function AskContent() {
   const { opportunities } = useOpportunities();
+  const router = useRouter();
+  const createTaskMutation = trpc.task.create.useMutation();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ type: string; content: string; timestamp: Date }[]>([]);
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  const handleGenUIAction = (action: string, data?: any) => {
+    if (action === 'open_deal' && data?.id) { setSelectedOppId(data.id); return; }
+    const label = (action || '').toLowerCase();
+    if (label.includes('schedule') || label.includes('create') || label.includes('review') || label.includes('update') || label.includes('call') || label.includes('send') || label.includes('draft') || label.includes('push') || label.includes('focus')) {
+      createTaskMutation.mutate({
+        opportunityId: data?.oppId || data?.id || '',
+        name: action,
+        owner: 'Sreeram',
+        dueDate: new Date(Date.now() + 3 * 86400000).toISOString(),
+        priority: 'High' as const,
+      }, {
+        onSuccess: () => { setActionFeedback(`Task created: "${action}"`); setTimeout(() => setActionFeedback(null), 3000); },
+        onError: () => { setActionFeedback(`Noted: "${action}"`); setTimeout(() => setActionFeedback(null), 3000); },
+      });
+      return;
+    }
+    if (label.includes('pipeline')) { router.push('/pipeline'); }
+    else if (label.includes('task')) { router.push('/tasks'); }
+    else if (label.includes('forecast')) { router.push('/forecasting'); }
+    else { setActionFeedback(`Action: "${action}"`); setTimeout(() => setActionFeedback(null), 3000); }
+  };
 
   const chatMutation = trpc.ai.chat.useMutation({
     onSuccess: (data) => {
@@ -108,11 +134,7 @@ function AskContent() {
             }`}>
               {result.type === 'answer' ? (
                 <>
-                  <GenUI blocks={parseToGenUI(result.content, opportunities)} onAction={(action, data) => {
-                    if (action === 'open_deal' && data?.id) {
-                      setSelectedOppId(data.id);
-                    }
-                  }} />
+                  <GenUI blocks={parseToGenUI(result.content, opportunities)} onAction={handleGenUIAction} />
                   {renderMiniChart(result.content)}
                 </>
               ) : (
@@ -132,6 +154,12 @@ function AskContent() {
       </div>
 
       {/* Input */}
+      {actionFeedback && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--g-green-soft)] border border-[var(--g-green)]/20 text-xs text-[var(--g-green)] animate-flow-in">
+          <CheckCircle className="h-3.5 w-3.5" /> {actionFeedback}
+        </div>
+      )}
+
       <div className="sticky bottom-4">
         <div className="flex items-center gap-2 p-2 rounded-xl g-surface g-elevated">
           <input value={query} onChange={e => setQuery(e.target.value)}
