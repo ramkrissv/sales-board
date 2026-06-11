@@ -5,6 +5,7 @@ import { trpc } from '@/lib/trpc/client';
 import {
   Magnet, Plus, Sparkles, Brain, Globe, Mail, ArrowRightCircle,
   XCircle, Loader2, ChevronRight, Building2, User, Tag, Zap,
+  X, Send, Copy, Edit3, Check,
 } from 'lucide-react';
 
 /* ── stage / type / source colour maps ── */
@@ -73,6 +74,9 @@ export default function LeadsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [outreachModal, setOutreachModal] = useState<{ lead: any; draft: string; editing: boolean } | null>(null);
+  const [editedDraft, setEditedDraft] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Add lead form state
   const [form, setForm] = useState({
@@ -110,7 +114,15 @@ export default function LeadsPage() {
       };
       if (action === 'qualify') await qualifyMutation.mutateAsync({ id: leadId });
       else if (action === 'enrich') await enrichMutation.mutateAsync({ id: leadId });
-      else if (action === 'draft') await draftMutation.mutateAsync({ id: leadId });
+      else if (action === 'draft') {
+        const result = await draftMutation.mutateAsync({ id: leadId });
+        // Open the outreach modal with the generated draft
+        const lead = (leads as any[]).find((l: any) => (l._id?.toString?.() ?? l._id) === leadId);
+        if (result && (result as any).outreachDraft) {
+          setOutreachModal({ lead, draft: (result as any).outreachDraft, editing: false });
+          setEditedDraft((result as any).outreachDraft);
+        }
+      }
       else if (action === 'convert') await convertMutation.mutateAsync({ id: leadId });
       setActionSuccess(actionLabels[action] || 'Action complete');
       setTimeout(() => setActionSuccess(null), 4000);
@@ -445,6 +457,107 @@ export default function LeadsPage() {
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <Zap className="h-10 w-10 mb-3 text-zinc-600" />
           <p className="text-sm">No leads found. Add one to get started.</p>
+        </div>
+      )}
+
+      {/* ── Outreach Draft Modal ── */}
+      {outreachModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOutreachModal(null)} />
+          <div className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl g-surface g-elevated shadow-2xl flex flex-col card-enter">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="text-base font-semibold text-foreground font-display">Outreach Draft</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  To: {outreachModal.lead?.contactName} ({outreachModal.lead?.contactEmail}) · {outreachModal.lead?.company}
+                </p>
+              </div>
+              <button onClick={() => setOutreachModal(null)} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Email preview / editor */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Subject line */}
+              <div className="mb-4">
+                <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Subject</label>
+                <div className="px-3 py-2 rounded-lg bg-secondary/50 border border-border text-sm text-foreground">
+                  Re: {outreachModal.lead?.company} — {(outreachModal.lead?.productInterest || outreachModal.lead?.serviceInterest || ['Partnership'])[0]}
+                </div>
+              </div>
+
+              {/* Recipients */}
+              <div className="flex gap-4 mb-4 text-xs">
+                <div>
+                  <span className="text-muted-foreground">To: </span>
+                  <span className="text-foreground">{outreachModal.lead?.contactName} &lt;{outreachModal.lead?.contactEmail}&gt;</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">From: </span>
+                  <span className="text-foreground">Galent Sales Team</span>
+                </div>
+              </div>
+
+              {/* Email body */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Body</label>
+                  <button onClick={() => { setOutreachModal({ ...outreachModal, editing: !outreachModal.editing }); if (!outreachModal.editing) setEditedDraft(outreachModal.draft); }}
+                    className="flex items-center gap-1 text-[10px] text-[#7c3aed] hover:underline">
+                    <Edit3 className="h-3 w-3" /> {outreachModal.editing ? 'Preview' : 'Edit'}
+                  </button>
+                </div>
+                {outreachModal.editing ? (
+                  <textarea value={editedDraft} onChange={e => setEditedDraft(e.target.value)} rows={12}
+                    className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl text-foreground leading-relaxed resize-y font-sans focus:outline-none focus:border-[#7c3aed]/40" />
+                ) : (
+                  <div className="px-4 py-3 rounded-xl bg-card border border-border text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {outreachModal.editing ? editedDraft : outreachModal.draft}
+                  </div>
+                )}
+              </div>
+
+              {/* AI suggestions */}
+              <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Sparkles className="h-3 w-3 text-[#7c3aed]" />
+                  <span className="text-[10px] font-semibold text-[#7c3aed]">AI Notes</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  This email is personalized for {outreachModal.lead?.contactName} ({outreachModal.lead?.contactTitle}) at {outreachModal.lead?.company}.
+                  {outreachModal.lead?.aiQualification?.reasoning && ` AI Assessment: ${outreachModal.lead.aiQualification.reasoning}`}
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 py-4 border-t border-border flex items-center justify-between shrink-0 bg-secondary/20">
+              <button onClick={() => {
+                navigator.clipboard.writeText(outreachModal.editing ? editedDraft : outreachModal.draft);
+                setCopied(true); setTimeout(() => setCopied(false), 2000);
+              }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
+                {copied ? <Check className="h-3.5 w-3.5 text-[var(--g-green)]" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? 'Copied!' : 'Copy to Clipboard'}
+              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setOutreachModal(null)}
+                  className="px-4 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+                <button onClick={() => {
+                  const leadId = outreachModal.lead?._id?.toString?.() ?? outreachModal.lead?._id;
+                  if (leadId) updateMutation.mutate({ id: leadId, outreachStatus: 'sent' } as any);
+                  setOutreachModal(null);
+                  setActionSuccess('Outreach approved & sent');
+                  setTimeout(() => setActionSuccess(null), 3000);
+                }}
+                  className="flex items-center gap-1.5 px-5 py-2 text-xs rounded-lg bg-[var(--g-green)] text-white font-medium hover:opacity-90 transition-colors">
+                  <Send className="h-3.5 w-3.5" /> Approve & Send
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
