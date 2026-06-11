@@ -237,11 +237,22 @@ Overall: ${totalSent} sent, ${avgOpenRate}% avg open rate, ${avgReplyRate}% repl
     }, {
       onSuccess: (data) => {
         try {
-          const parsed = JSON.parse(data.response);
-          setAiCoachInsight(parsed.insight || data.response);
-          setAiSuggestions(parsed.actions || []);
+          // Strip markdown code blocks that Claude wraps JSON in
+          const cleaned = data.response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+          const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+          if (parsed?.insight) {
+            setAiCoachInsight(parsed.insight);
+            setAiSuggestions(parsed.actions || []);
+          } else {
+            // AI didn't return JSON — use plain text
+            setAiCoachInsight(cleaned.replace(/[{}"]/g, '').trim());
+            setAiSuggestions(null);
+          }
         } catch {
-          setAiCoachInsight(data.response);
+          // Strip any JSON artifacts from display
+          const clean = data.response.replace(/```json\n?/g, '').replace(/```\n?/g, '').replace(/[{}"\[\]]/g, '').replace(/insight:|actions:/g, '').trim();
+          setAiCoachInsight(clean.slice(0, 300));
           setAiSuggestions(null);
         }
         setAiCoachLoading(false);
