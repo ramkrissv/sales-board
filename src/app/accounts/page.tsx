@@ -32,6 +32,19 @@ const emptyForm = {
 export default function AccountsPage() {
   const utils = trpc.useUtils();
   const { data: accounts = [], isLoading } = trpc.account.list.useQuery();
+  const { data: allOpps = [] } = trpc.opportunity.list.useQuery();
+
+  // Compute EE/EN/NN classification per account — pass to AccountRow via prop
+  const getAccountMeta = (name: string) => {
+    const opps = (allOpps as any[]).filter((o: any) => o.customerName === name);
+    const wonCount = opps.filter((o: any) => o.status === 'Won').length;
+    const wonRev = opps.filter((o: any) => o.status === 'Won').reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+    const activePip = opps.filter((o: any) => !['Won', 'Lost'].includes(o.status)).reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+    const cls = wonCount >= 2 ? { code: 'EE', color: 'bg-[var(--g-green)]/15 text-[var(--g-green)]' }
+      : opps.length >= 2 ? { code: 'EN', color: 'bg-[#11A7A0]/15 text-[#11A7A0]' }
+      : { code: 'NN', color: 'bg-[#7c3aed]/15 text-[#7c3aed]' };
+    return { ...cls, wonRev, activePip, dealCount: opps.length, wonCount };
+  };
 
   const createMutation = trpc.account.create.useMutation({ onSuccess: () => { utils.account.list.invalidate(); setShowForm(false); setForm(emptyForm); } });
   const updateMutation = trpc.account.update.useMutation({ onSuccess: () => { utils.account.list.invalidate(); utils.account.getById.invalidate(); setEditingId(null); setForm(emptyForm); } });
@@ -241,6 +254,7 @@ export default function AccountsPage() {
             <AccountRow
               key={account._id}
               account={account}
+              meta={getAccountMeta(account.companyName)}
               expanded={expandedId === account._id}
               onToggle={() => setExpandedId(expandedId === account._id ? null : account._id)}
               onEdit={() => startEdit(account)}
@@ -254,7 +268,8 @@ export default function AccountsPage() {
   );
 }
 
-function AccountRow({ account, expanded, onToggle, onEdit, onDelete, scoreIntentMutation }: {
+function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, scoreIntentMutation }: {
+  meta: { code: string; color: string; wonRev: number; activePip: number; dealCount: number; wonCount: number };
   account: any; expanded: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void; scoreIntentMutation: any;
 }) {
   const { data: detail, isLoading } = trpc.account.getById.useQuery(
@@ -292,6 +307,12 @@ function AccountRow({ account, expanded, onToggle, onEdit, onDelete, scoreIntent
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-foreground truncate">{account.companyName}</span>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${meta.color}`}>{meta.code}</span>
+            {meta.wonRev > 0 ? (
+              <span className="text-[10px] text-[var(--g-green)] font-medium">${(meta.wonRev/1000).toFixed(0)}k</span>
+            ) : meta.activePip > 0 ? (
+              <span className="text-[10px] text-muted-foreground">${(meta.activePip/1000).toFixed(0)}k pipeline</span>
+            ) : null}
             {account.accountType && (
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${typeBadgeColor[account.accountType] || 'bg-zinc-500/15 text-zinc-400'}`}>
                 {account.accountType}

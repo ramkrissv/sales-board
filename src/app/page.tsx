@@ -63,10 +63,18 @@ function HomeContent() {
   const lostDeals = opportunities.filter(o => o.status === 'Lost');
   const wonRevenue = wonDeals.reduce((sum, o) => sum + (o.tcv || 0), 0);
   const monthlyRevenue = wonRevenue / 12;
+  const quarterlyRevenue = monthlyRevenue * 3;
   const winRate = wonDeals.length + lostDeals.length > 0 ? Math.round((wonDeals.length / (wonDeals.length + lostDeals.length)) * 100) : 0;
   const negotiationDeals = opportunities.filter(o => o.status === 'Negotiation');
   const allTasks = opportunities.flatMap(o => o.subTasks || []);
   const overdueTasks = allTasks.filter(t => t.status === 'pending' && new Date(t.dueDate) < new Date());
+
+  // Account classification: EE (repeat engagement), EN (new service for existing), NN (new client)
+  const accountDealCounts: Record<string, number> = {};
+  opportunities.forEach(o => { accountDealCounts[o.customerName] = (accountDealCounts[o.customerName] || 0) + 1; });
+  const eeAccounts = Object.entries(accountDealCounts).filter(([, c]) => c >= 3).length;
+  const enAccounts = Object.entries(accountDealCounts).filter(([, c]) => c === 2).length;
+  const nnAccounts = Object.entries(accountDealCounts).filter(([, c]) => c === 1).length;
 
   // AI-detected signals
   const atRiskDeals = activeDeals.filter(o => {
@@ -194,6 +202,47 @@ function HomeContent() {
             <div className="text-[11px] text-muted-foreground mt-1">{kpi.sub}</div>
           </div>
         ))}
+      </div>
+
+      {/* Revenue & Account Classification */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-flow-in animate-flow-in-delay-2">
+        <div className="p-4 rounded-xl g-surface g-elevated">
+          <div className="g-section-label mb-1">Quarterly Revenue</div>
+          <div className="g-kpi text-foreground" style={{ fontSize: '22px', color: '#10b981' }}>${(quarterlyRevenue/1000).toFixed(0)}k</div>
+          <div className="text-[10px] text-muted-foreground mt-1">~${(wonRevenue/1e6).toFixed(1)}M annualized</div>
+        </div>
+        <div className="p-4 rounded-xl g-surface g-elevated">
+          <div className="g-section-label mb-1">Account Mix</div>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="w-5 h-5 rounded-md bg-[var(--g-green)]/15 text-[var(--g-green)] text-[9px] font-bold flex items-center justify-center">EE</span>
+                <span className="text-xs text-foreground">{eeAccounts}</span>
+                <span className="text-[9px] text-muted-foreground">repeat</span>
+              </div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="w-5 h-5 rounded-md bg-[#11A7A0]/15 text-[#11A7A0] text-[9px] font-bold flex items-center justify-center">EN</span>
+                <span className="text-xs text-foreground">{enAccounts}</span>
+                <span className="text-[9px] text-muted-foreground">expand</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-md bg-[#7c3aed]/15 text-[#7c3aed] text-[9px] font-bold flex items-center justify-center">NN</span>
+                <span className="text-xs text-foreground">{nnAccounts}</span>
+                <span className="text-[9px] text-muted-foreground">new</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 rounded-xl g-surface g-elevated">
+          <div className="g-section-label mb-1">Won This Year</div>
+          <div className="g-kpi text-foreground" style={{ fontSize: '22px' }}>{wonDeals.length}</div>
+          <div className="text-[10px] text-muted-foreground mt-1">${(wonRevenue/1e6).toFixed(1)}M total contract value</div>
+        </div>
+        <div className="p-4 rounded-xl g-surface g-elevated">
+          <div className="g-section-label mb-1">Active Pipeline</div>
+          <div className="g-kpi text-foreground" style={{ fontSize: '22px', color: '#7c3aed' }}>${(totalPipeline/1e6).toFixed(1)}M</div>
+          <div className="text-[10px] text-muted-foreground mt-1">{activeDeals.length} deals · {negotiationDeals.length} in negotiation</div>
+        </div>
       </div>
 
       {/* Pipeline Lifecycle Visual -- animated stage flow */}
