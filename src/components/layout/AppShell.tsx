@@ -42,7 +42,7 @@ const navItems: { icon: any; label: string; href: string; children?: { icon: any
     ],
   },
   { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
-  { icon: Briefcase, label: 'Close', href: '/presales',
+  { icon: Briefcase, label: 'Presales', href: '/presales',
     children: [
       { icon: DollarSign, label: 'Pricing', href: '/pricing' },
       { icon: FileText, label: 'Contracts', href: '/contracts' },
