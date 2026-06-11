@@ -335,10 +335,26 @@ Conversation: ${((opp as any).conversationLog || '').slice(0, 500)}`;
         }
       }
 
-      const response = await client.messages.create({
-        model,
-        max_tokens: 600,
-        system: `You are the Galent AI Deal Coach. You have FULL pipeline data below.
+      // Use deal-focused prompt when working on a specific deal, pipeline prompt otherwise
+      const isDealFocused = input.context?.opportunityId && dealContext;
+      const page = input.context?.page || '';
+
+      const dealFocusedPrompt = `You are the Galent AI Deal Coach focused on ONE specific deal.
+
+CONTEXT — this is the ONLY deal you should talk about:
+${dealContext}
+
+RULES:
+- Talk ONLY about this specific deal — do NOT mention other deals in the pipeline
+- Be specific: use the customer name, stakeholder names, dollar amounts, dates from the context above
+- Answer the user's question directly about THIS deal
+- Suggest specific actions for THIS deal only
+- NO markdown (no ##, no **, no emoji)
+- Keep responses conversational but concise (max 150 words)
+- End with 2-3 specific next actions formatted as: [ACTION: label | type | details]
+- Types: create_task, add_stakeholder, change_stage, generate_sow, schedule_meeting, send_followup, update_tcv, view_deal`;
+
+      const pipelinePrompt = `You are the Galent AI Deal Coach. You have FULL pipeline data below.
 
 STRICT FORMAT RULES — follow EXACTLY:
 - NEVER use markdown (no ##, no **, no ---, no emoji, no bullet points with *)
@@ -355,9 +371,16 @@ EXAMPLE of correct format:
 1. Call Sreeram about Centric $1215k — finalize contract terms by Friday
 2. Update Wells Fargo TCV from $0k — scope needs pricing before pipeline review
 3. Schedule discovery call with Transurban $0k — stale 14 days, needs reactivation
-4. Review Hughes $930k proposal — close date approaching June 15
-5. Send follow-up to Comcast $0k — no activity since last meeting
-KEY METRIC: 21 overdue tasks — clear 5 today${pipelineContext}${dealContext}`,
+KEY METRIC: 21 overdue tasks — clear 5 today${pipelineContext}`;
+
+      const systemPrompt = isDealFocused
+        ? dealFocusedPrompt
+        : `${pipelinePrompt}${dealContext}`;
+
+      const response = await client.messages.create({
+        model,
+        max_tokens: isDealFocused ? 800 : 600,
+        system: systemPrompt,
         messages: [{ role: 'user', content: input.message }],
       });
 
