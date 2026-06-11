@@ -31,6 +31,7 @@ function CalendarContent() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+  const [showSyncConfig, setShowSyncConfig] = useState(false);
 
   // Collect all events (deal close dates + task due dates)
   const events = useMemo(() => {
@@ -125,8 +126,42 @@ function CalendarContent() {
           >
             Today
           </button>
+          <button onClick={() => setShowSyncConfig(!showSyncConfig)}
+            className="ml-2 px-3 py-1.5 text-xs rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] font-medium hover:bg-[#7c3aed]/20 transition-colors">
+            Sync Calendar
+          </button>
         </div>
       </div>
+
+      {/* Calendar Sync Configuration */}
+      {showSyncConfig && (
+        <div className="p-4 rounded-xl g-surface g-elevated space-y-3 animate-flow-in">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-foreground">Calendar Sync</span>
+            <button onClick={() => setShowSyncConfig(false)} className="text-xs text-muted-foreground hover:text-foreground">Close</button>
+          </div>
+          <p className="text-xs text-muted-foreground">Connect your calendar to sync deal meetings, close dates, and task deadlines.</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'outlook', label: 'Outlook 365', color: '#0078d4' },
+              { id: 'google', label: 'Google Calendar', color: '#4285f4' },
+              { id: 'apple', label: 'Apple Calendar', color: '#333' },
+            ].map(p => (
+              <button key={p.id} onClick={() => {
+                if (typeof window !== 'undefined') localStorage.setItem('calendar_sync_provider', p.id);
+              }}
+                className="p-3 rounded-lg border border-border text-center text-xs hover:border-[#7c3aed]/30 transition-colors">
+                <div className="w-6 h-6 rounded-full mx-auto mb-1" style={{ backgroundColor: p.color + '20' }} />
+                <div className="font-medium text-foreground">{p.label}</div>
+              </button>
+            ))}
+          </div>
+          <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20 text-xs text-muted-foreground">
+            <span className="text-[#7c3aed] font-medium">Setup: </span>
+            Configure your calendar provider in <a href="/integrations" className="text-[#7c3aed] hover:underline">Integrations</a> with App Password or OAuth. Calendar sync uses the same credentials.
+          </div>
+        </div>
+      )}
 
       <div className="g-surface g-elevated p-4 rounded-xl border border-border">
         {/* Weekday headers */}

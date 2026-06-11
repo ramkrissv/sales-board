@@ -419,6 +419,24 @@ Log: ${(activeDeal.conversationLog||'').slice(0,300)}`;
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Participants */}
+          {activeDeal && (
+            <div className="flex items-center gap-1 mr-2">
+              <div className="flex -space-x-2">
+                <div className="w-6 h-6 rounded-full bg-[#7c3aed]/20 border-2 border-card flex items-center justify-center text-[8px] font-bold text-[#7c3aed]" title="You">SR</div>
+                <div className="w-6 h-6 rounded-full bg-[#11A7A0]/20 border-2 border-card flex items-center justify-center text-[8px] font-bold text-[#11A7A0]" title="AI Assistant">AI</div>
+                {(activeDeal.customerStakeholders || []).slice(0, 2).map((s: any, i: number) => (
+                  <div key={i} className="w-6 h-6 rounded-full bg-secondary border-2 border-card flex items-center justify-center text-[8px] font-bold text-muted-foreground" title={s.name}>
+                    {s.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                  </div>
+                ))}
+              </div>
+              <span className="text-[10px] text-muted-foreground ml-1">
+                {2 + (activeDeal.customerStakeholders || []).length} in room
+              </span>
+            </div>
+          )}
+
           {/* Deal picker */}
           <div className="relative">
             <button onClick={() => setShowDealPicker(!showDealPicker)}
