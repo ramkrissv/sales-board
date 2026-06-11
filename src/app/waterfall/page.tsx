@@ -2,6 +2,7 @@
 
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { DollarSign, TrendingUp, TrendingDown, ArrowRight, LayoutDashboard, BarChart3 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import Link from 'next/link';
 
 function WaterfallContent() {
@@ -68,30 +69,26 @@ function WaterfallContent() {
 
       {/* Waterfall Chart */}
       <div className="g-surface g-elevated p-6">
-        <div className="text-sm font-semibold text-foreground mb-6">Pipeline Waterfall</div>
-        <div className="flex items-end gap-4" style={{ height: '250px' }}>
-          {waterfallSteps.map((step, i) => {
-            const barHeight = Math.max(20, (Math.abs(step.value) / maxVal) * 200);
-            const color = step.type === 'positive' ? '#22c55e' : step.type === 'negative' ? '#ef4444' : '#7c3aed';
-
-            return (
-              <div key={step.label} className="flex-1 flex flex-col items-center gap-2">
-                <span className="text-xs font-bold g-metric" style={{ color }}>{step.value >= 0 ? '+' : ''}{(step.value/1000).toFixed(0)}k</span>
-                <div className="w-full flex flex-col items-center">
-                  <div className="w-full rounded-lg reveal transition-all"
-                    style={{ height: `${barHeight}px`, backgroundColor: color + '20', border: `1px solid ${color}40`, animationDelay: `${i * 0.1}s` }}>
-                    <div className="h-full w-full flex items-center justify-center">
-                      {step.type === 'positive' && <TrendingUp className="h-4 w-4" style={{ color }} />}
-                      {step.type === 'negative' && <TrendingDown className="h-4 w-4" style={{ color }} />}
-                      {step.type === 'neutral' && <DollarSign className="h-4 w-4" style={{ color }} />}
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[10px] text-muted-foreground text-center">{step.label}</span>
-              </div>
-            );
-          })}
-        </div>
+        <div className="text-sm font-semibold text-foreground mb-4">Pipeline Waterfall</div>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={waterfallSteps.map(s => ({ ...s, absValue: Math.abs(s.value) }))}>
+            <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--g-fg-3)' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: 'var(--g-fg-3)' }} axisLine={false} tickLine={false} tickFormatter={(v: any) => `$${(v/1000).toFixed(0)}k`} />
+            <Tooltip
+              contentStyle={{ backgroundColor: 'var(--g-card)', border: '1px solid var(--g-line)', borderRadius: 8, fontSize: 12 }}
+              formatter={(value: any, name: any, props: any) => {
+                const d = props?.payload;
+                const prefix = d?.type === 'negative' ? '-' : d?.type === 'positive' ? '+' : '';
+                return [`${prefix}$${(Number(value)/1000).toFixed(0)}k`, d?.label || name];
+              }}
+            />
+            <Bar dataKey="absValue" radius={[6, 6, 0, 0]}>
+              {waterfallSteps.map((step, i) => (
+                <Cell key={i} fill={step.type === 'positive' ? '#22c55e' : step.type === 'negative' ? '#ef4444' : '#7c3aed'} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
 
         {/* Flow arrows */}
         <div className="flex items-center justify-center gap-2 mt-4 text-xs text-muted-foreground">
