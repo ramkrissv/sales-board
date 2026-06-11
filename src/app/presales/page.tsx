@@ -12,8 +12,10 @@ import {
   Sparkles, Loader2, Send, FileText, Copy, Check,
   ChevronDown, ChevronUp, Pencil, Trash2, Plus,
   User, Bot, ArrowRight, RotateCcw, BookOpen,
-  Users, Clock, AlertTriangle, Package, Info
+  Users, Clock, AlertTriangle, Package, Info,
+  Download, Eye, EyeOff
 } from 'lucide-react';
+import { Document, Packer, Paragraph, HeadingLevel, TextRun } from 'docx';
 
 /* ─── Types ─── */
 type SectionStatus = 'ai-draft' | 'edited' | 'approved';
@@ -88,6 +90,19 @@ export default function PresalesPage() {
   /* ── Template info panel ── */
   const [showTemplateInfo, setShowTemplateInfo] = useState(false);
 
+  /* ── Brief/Full mode per section ── */
+  const [sectionViewMode, setSectionViewMode] = useState<Record<string, 'brief' | 'full'>>({});
+
+  /* ── Pending insert (Replace/Append dialog) ── */
+  const [pendingInsert, setPendingInsert] = useState<{ sectionId: string; title: string; content: string } | null>(null);
+
+  /* ── Refs for section auto-scroll ── */
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const proposalBodyRef = useRef<HTMLDivElement>(null);
+
+  /* ── Copied markdown state ── */
+  const [copiedMarkdown, setCopiedMarkdown] = useState(false);
+
   /* ── Auto-scroll chat ── */
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -114,31 +129,125 @@ export default function PresalesPage() {
     if (deal) initConversation(deal);
   }, [allOpportunities, initConversation]);
 
-  /* ── Add section to proposal ── */
-  const addSection = useCallback((title: string, content: string) => {
-    setSections(prev => {
-      const exists = prev.find(s => s.title.toLowerCase() === title.toLowerCase());
-      if (exists) {
-        return prev.map(s =>
-          s.id === exists.id ? { ...s, content, status: 'ai-draft' as SectionStatus } : s
-        );
+  /* ── Detect target section from content ── */
+  const detectSection = useCallback((content: string): string | null => {
+    const lower = content.toLowerCase();
+    if (/executive summary|overview of our proposal|proposal overview/i.test(lower)) return 'executive summary';
+    if (/scope of work|deliverables|in-scope|out-of-scope/i.test(lower)) return 'scope';
+    if (/technical approach|methodology|architecture|solution design/i.test(lower)) return 'technical approach';
+    if (/pricing|cost estimate|commercial|rate card|fee structure/i.test(lower)) return 'pricing';
+    if (/timeline|milestones|project plan|phases|schedule/i.test(lower)) return 'timeline';
+    if (/team|staffing|resources|personnel|org chart/i.test(lower)) return 'team';
+    if (/risk|mitigation|assumptions|constraints/i.test(lower)) return 'risks';
+    if (/case stud|success stor|reference|portfolio/i.test(lower)) return 'case studies';
+    if (/terms|conditions|legal|warranty|sla/i.test(lower)) return 'terms';
+    if (/about us|company overview|why us|our experience/i.test(lower)) return 'about us';
+    if (/transition|onboarding|handover|knowledge transfer/i.test(lower)) return 'transition';
+    if (/governance|reporting|communication|escalation/i.test(lower)) return 'governance';
+    return null;
+  }, []);
+
+  /* ── Find matching section by detected keyword or title ── */
+  const findMatchingSection = useCallback((title: string, content: string): ProposalSection | null => {
+    // First try exact title match
+    const byTitle = sections.find(s => s.title.toLowerCase() === title.toLowerCase());
+    if (byTitle) return byTitle;
+
+    // Then try keyword detection from content
+    const detected = detectSection(content);
+    if (detected) {
+      const match = sections.find(s => s.title.toLowerCase().includes(detected) || detected.includes(s.title.toLowerCase()));
+      if (match) return match;
+    }
+
+    // Try fuzzy title match (partial overlap)
+    const titleLower = title.toLowerCase();
+    const fuzzy = sections.find(s =>
+      s.title.toLowerCase().includes(titleLower) || titleLower.includes(s.title.toLowerCase())
+    );
+    return fuzzy || null;
+  }, [sections, detectSection]);
+
+  /* ── Scroll to section ── */
+  const scrollToSection = useCallback((sectionId: string) => {
+    setTimeout(() => {
+      const el = sectionRefs.current[sectionId];
+      if (el && proposalBodyRef.current) {
+        proposalBodyRef.current.scrollTo({
+          top: el.offsetTop - proposalBodyRef.current.offsetTop - 12,
+          behavior: 'smooth',
+        });
       }
-      return [...prev, {
-        id: uid(),
-        title,
-        content,
-        status: 'ai-draft' as SectionStatus,
-        order: prev.length,
-      }];
-    });
-    // System message
+    }, 100);
+  }, []);
+
+  /* ── Add section to proposal (smart placement) ── */
+  const addSection = useCallback((title: string, content: string) => {
+    const matchingSection = findMatchingSection(title, content);
+
+    // If matching section exists AND already has content, show Replace/Append dialog
+    if (matchingSection && matchingSection.content) {
+      setPendingInsert({ sectionId: matchingSection.id, title: matchingSection.title, content });
+      return;
+    }
+
+    // If matching section exists but is empty (template placeholder), fill it in
+    if (matchingSection) {
+      setSections(prev => prev.map(s =>
+        s.id === matchingSection.id ? { ...s, content, status: 'ai-draft' as SectionStatus } : s
+      ));
+      scrollToSection(matchingSection.id);
+      setMessages(prev => [...prev, {
+        id: uid(), role: 'system',
+        content: `"${matchingSection.title}" added to proposal`,
+        timestamp: new Date(),
+      }]);
+      return;
+    }
+
+    // No match — add as new section
+    const newId = uid();
+    setSections(prev => [...prev, {
+      id: newId, title, content,
+      status: 'ai-draft' as SectionStatus,
+      order: prev.length,
+    }]);
+    scrollToSection(newId);
     setMessages(prev => [...prev, {
-      id: uid(),
-      role: 'system',
+      id: uid(), role: 'system',
       content: `"${title}" added to proposal`,
       timestamp: new Date(),
     }]);
-  }, []);
+  }, [findMatchingSection, scrollToSection]);
+
+  /* ── Handle Replace/Append for pending insert ── */
+  const handlePendingReplace = useCallback(() => {
+    if (!pendingInsert) return;
+    setSections(prev => prev.map(s =>
+      s.id === pendingInsert.sectionId ? { ...s, content: pendingInsert.content, status: 'ai-draft' as SectionStatus } : s
+    ));
+    scrollToSection(pendingInsert.sectionId);
+    setMessages(prev => [...prev, {
+      id: uid(), role: 'system',
+      content: `"${pendingInsert.title}" replaced in proposal`,
+      timestamp: new Date(),
+    }]);
+    setPendingInsert(null);
+  }, [pendingInsert, scrollToSection]);
+
+  const handlePendingAppend = useCallback(() => {
+    if (!pendingInsert) return;
+    setSections(prev => prev.map(s =>
+      s.id === pendingInsert.sectionId ? { ...s, content: s.content + '\n\n' + pendingInsert.content, status: 'ai-draft' as SectionStatus } : s
+    ));
+    scrollToSection(pendingInsert.sectionId);
+    setMessages(prev => [...prev, {
+      id: uid(), role: 'system',
+      content: `Content appended to "${pendingInsert.title}"`,
+      timestamp: new Date(),
+    }]);
+    setPendingInsert(null);
+  }, [pendingInsert, scrollToSection]);
 
   /* ── Move section ── */
   const moveSection = useCallback((id: string, direction: 'up' | 'down') => {
@@ -192,6 +301,74 @@ export default function PresalesPage() {
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 2000);
   }, [sections]);
+
+  /* ── Export: PDF ── */
+  const exportPDF = useCallback(() => {
+    const dealName = selectedDeal?.opportunityName || 'Proposal';
+    const customerName = selectedDeal?.customerName || 'Customer';
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html><head><title>${dealName} - Proposal</title>
+      <style>
+        body { font-family: 'Inter', system-ui, sans-serif; max-width: 800px; margin: 40px auto; color: #1a1a2e; line-height: 1.6; }
+        h1 { color: #7c3aed; border-bottom: 2px solid #7c3aed; padding-bottom: 8px; }
+        h2 { color: #333; margin-top: 32px; }
+        .section { page-break-inside: avoid; margin-bottom: 24px; }
+        .footer { text-align: center; color: #888; font-size: 12px; margin-top: 40px; border-top: 1px solid #eee; padding-top: 16px; }
+      </style></head><body>
+      <h1>${dealName} — Proposal</h1>
+      <p style="color:#666;">${customerName} · ${new Date().toLocaleDateString()}</p>
+      ${sections.filter(s => s.content).map(s => `<div class="section"><h2>${s.title}</h2><div>${s.content.replace(/\n/g, '<br>')}</div></div>`).join('')}
+      <div class="footer">Generated by Galent SalesPilot · Confidential</div>
+      </body></html>`);
+    printWindow.document.close();
+    printWindow.print();
+  }, [selectedDeal, sections]);
+
+  /* ── Export: DOCX ── */
+  const exportDOCX = useCallback(async () => {
+    const dealName = selectedDeal?.opportunityName || 'Proposal';
+    const customerName = selectedDeal?.customerName || 'Customer';
+    const doc = new Document({
+      sections: [{
+        children: [
+          new Paragraph({ children: [new TextRun({ text: `${dealName} — Proposal`, bold: true, size: 48 })], heading: HeadingLevel.TITLE }),
+          new Paragraph({ children: [new TextRun({ text: `${customerName} · ${new Date().toLocaleDateString()}`, color: '666666' })] }),
+          ...sections.filter(s => s.content).flatMap(s => [
+            new Paragraph({ text: s.title, heading: HeadingLevel.HEADING_1, spacing: { before: 400 } }),
+            ...s.content.split('\n').filter(Boolean).map(line => new Paragraph({ text: line })),
+          ]),
+          new Paragraph({ children: [new TextRun({ text: 'Generated by Galent SalesPilot · Confidential', color: '888888', size: 20 })], spacing: { before: 600 } }),
+        ],
+      }],
+    });
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `${dealName.replace(/\s/g, '_')}_Proposal.docx`; a.click();
+    URL.revokeObjectURL(url);
+  }, [selectedDeal, sections]);
+
+  /* ── Export: Markdown ── */
+  const exportMarkdown = useCallback(() => {
+    const md = sections.filter(s => s.content).map(s => `## ${s.title}\n\n${s.content}`).join('\n\n---\n\n');
+    navigator.clipboard.writeText(md);
+    setCopiedMarkdown(true);
+    setTimeout(() => setCopiedMarkdown(false), 2000);
+  }, [sections]);
+
+  /* ── Brief/Full toggle ── */
+  const toggleSectionView = useCallback((sectionId: string) => {
+    setSectionViewMode(prev => ({
+      ...prev,
+      [sectionId]: prev[sectionId] === 'brief' ? 'full' : 'brief',
+    }));
+  }, []);
+
+  const getBriefContent = useCallback((content: string): string => {
+    const sentences = content.match(/[^.!?]+[.!?]+/g) || [content];
+    return sentences.slice(0, 3).join(' ').trim();
+  }, []);
 
   /* ── Load template sections ── */
   const loadTemplate = useCallback((template: ProposalTemplate) => {
@@ -661,6 +838,25 @@ User message: ${text.trim()}`;
                         {approvedCount}/{sections.length} approved
                       </span>
                       <button
+                        onClick={exportPDF}
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <FileText className="h-3 w-3" /> PDF
+                      </button>
+                      <button
+                        onClick={exportDOCX}
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Download className="h-3 w-3" /> DOCX
+                      </button>
+                      <button
+                        onClick={exportMarkdown}
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {copiedMarkdown ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                        {copiedMarkdown ? 'Copied!' : 'Markdown'}
+                      </button>
+                      <button
                         onClick={handleCopyAll}
                         disabled={sections.length === 0}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-medium border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
@@ -757,8 +953,40 @@ User message: ${text.trim()}`;
               </div>
             )}
 
+            {/* Pending insert dialog (Replace/Append) */}
+            {pendingInsert && (
+              <div className="px-5 py-3 border-b border-border bg-amber-500/5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                  <span className="text-xs font-medium text-foreground">
+                    &ldquo;{pendingInsert.title}&rdquo; already has content
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handlePendingReplace}
+                    className="px-3 py-1.5 rounded-lg bg-[#7c3aed] text-white text-[10px] font-medium hover:bg-[#6d28d9] transition-colors"
+                  >
+                    Replace
+                  </button>
+                  <button
+                    onClick={handlePendingAppend}
+                    className="px-3 py-1.5 rounded-lg border border-[#7c3aed]/30 text-[#7c3aed] text-[10px] font-medium hover:bg-[#7c3aed]/5 transition-colors"
+                  >
+                    Append
+                  </button>
+                  <button
+                    onClick={() => setPendingInsert(null)}
+                    className="px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Proposal body */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+            <div ref={proposalBodyRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
               {sections.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <FileText className="h-10 w-10 text-muted-foreground opacity-20 mb-4" />
@@ -773,9 +1001,13 @@ User message: ${text.trim()}`;
                 const statusInfo = STATUS_STYLE[section.status];
                 const isEditing = editingSectionId === section.id;
 
+                const viewMode = sectionViewMode[section.id] || 'full';
+                const isBrief = viewMode === 'brief';
+
                 return (
                   <div
                     key={section.id}
+                    ref={el => { sectionRefs.current[section.id] = el; }}
                     className="rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-[#7c3aed]/20"
                   >
                     {/* Section header */}
@@ -790,6 +1022,13 @@ User message: ${text.trim()}`;
                       <div className="flex items-center gap-1">
                         {section.content && !isEditing && (
                           <>
+                            <button
+                              onClick={() => toggleSectionView(section.id)}
+                              className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                              title={isBrief ? 'Show full content' : 'Show brief'}
+                            >
+                              {isBrief ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                            </button>
                             <button
                               onClick={() => moveSection(section.id, 'up')}
                               disabled={idx === 0}
@@ -862,12 +1101,22 @@ User message: ${text.trim()}`;
                           </div>
                         </div>
                       ) : section.content ? (
-                        <div
-                          className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap cursor-pointer"
-                          onClick={() => startEditSection(section.id)}
-                          title="Click to edit"
-                        >
-                          {section.content}
+                        <div>
+                          <div
+                            className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap cursor-pointer"
+                            onClick={() => startEditSection(section.id)}
+                            title="Click to edit"
+                          >
+                            {isBrief ? getBriefContent(section.content) : section.content}
+                          </div>
+                          {isBrief && section.content.length > getBriefContent(section.content).length && (
+                            <button
+                              onClick={() => toggleSectionView(section.id)}
+                              className="text-[10px] text-[#7c3aed] hover:underline mt-1"
+                            >
+                              Show full content
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <div className="flex items-center justify-between py-4">
