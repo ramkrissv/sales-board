@@ -329,9 +329,36 @@ Log: ${(activeDeal.conversationLog||'').slice(0,300)}`;
       case 'dismiss':
         break;
 
+      case 'send_followup':
+      case 'schedule_meeting':
+        // These are task-like actions — create a task for them
+        if (activeDealId) {
+          createTaskMutation.mutate({
+            opportunityId: activeDealId,
+            name: action.label || action.data || `${action.type} for ${activeDeal?.customerName}`,
+            owner: activeDeal?.primaryOwner || 'Unassigned',
+            dueDate: new Date(Date.now() + 2 * 86400000).toISOString(),
+            priority: 'High' as const,
+          });
+          addMessage({ role: 'system', content: `Task created: "${action.label || action.type}"` });
+        }
+        break;
+
       default:
-        setInput(action.label);
-        setTimeout(handleSend, 100);
+        // For any unrecognized action, create a task from it
+        if (activeDealId && action.label) {
+          createTaskMutation.mutate({
+            opportunityId: activeDealId,
+            name: action.label,
+            owner: activeDeal?.primaryOwner || 'Unassigned',
+            dueDate: new Date(Date.now() + 3 * 86400000).toISOString(),
+            priority: 'High' as const,
+          });
+          addMessage({ role: 'system', content: `Task created: "${action.label}"` });
+        } else {
+          setInput(action.label);
+          setTimeout(handleSend, 100);
+        }
     }
   };
 

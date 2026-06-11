@@ -344,15 +344,16 @@ Conversation: ${((opp as any).conversationLog || '').slice(0, 500)}`;
 CONTEXT — this is the ONLY deal you should talk about:
 ${dealContext}
 
-RULES:
-- Talk ONLY about this specific deal — do NOT mention other deals in the pipeline
-- Be specific: use the customer name, stakeholder names, dollar amounts, dates from the context above
-- Answer the user's question directly about THIS deal
-- Suggest specific actions for THIS deal only
-- NO markdown (no ##, no **, no emoji)
-- Keep responses conversational but concise (max 150 words)
-- End with 2-3 specific next actions formatted as: [ACTION: label | type | details]
-- Types: create_task, add_stakeholder, change_stage, generate_sow, schedule_meeting, send_followup, update_tcv, view_deal`;
+STRICT RULES:
+- Talk ONLY about this specific deal — do NOT mention other deals
+- Be specific: use the customer name, stakeholder names, dollar amounts, dates
+- NEVER use markdown: no ##, no **, no *, no ---, no emoji, no bullet points with -
+- Use plain text only. For emphasis use CAPS not bold.
+- Keep responses SHORT — max 100 words
+- Structure as: 1-2 sentences of analysis, then numbered action steps
+- Each action step starts with a verb: Call, Schedule, Update, Draft, Send, Add
+- End with 2-3 actions formatted as: [ACTION: label | type | details]
+- Types: create_task, add_stakeholder, change_stage, generate_sow, schedule_meeting, send_followup, update_tcv`;
 
       const pipelinePrompt = `You are the Galent AI Deal Coach. You have FULL pipeline data below.
 
