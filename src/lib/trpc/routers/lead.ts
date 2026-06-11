@@ -106,6 +106,8 @@ export const leadRouter = router({
       assignedTo: z.string().optional(),
       stage: z.enum(['signal', 'qualify', 'enrich', 'engage', 'convert', 'disqualified', 'converted']).optional(),
       score: z.number().min(0).max(100).optional(),
+      outreachStatus: z.enum(['not_started', 'draft_ready', 'sent', 'replied']).optional(),
+      outreachDraft: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       await connectDB();
