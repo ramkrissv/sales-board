@@ -154,9 +154,15 @@ export function RelationshipMap({ accountNodeId, accountName }: RelationshipMapP
   }
 
   if (!data || nodes.length === 0) {
+    // Fallback: show a simple stakeholder list instead of empty graph
     return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
-        No relationship data available for this account.
+      <div className="space-y-3">
+        <span className="g-section-label">Relationship Map — {accountName}</span>
+        <div className="p-4 rounded-xl g-surface text-center space-y-3">
+          <Users className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+          <p className="text-sm text-muted-foreground">Relationship graph builds as you add stakeholders and log interactions.</p>
+          <p className="text-xs text-muted-foreground">Add contacts to deals linked to this account to see relationships visualized here.</p>
+        </div>
       </div>
     );
   }
