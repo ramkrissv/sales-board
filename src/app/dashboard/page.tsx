@@ -7,6 +7,7 @@ import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 import { LayoutDashboard, BarChart3, TrendingUp } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 const ANALYTICS_TABS: { id: string; label: string; icon: any; href?: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -156,21 +157,26 @@ function AnalyticsContent() {
         )}
 
         {funnelView === 'bar' && (
-          <div className="flex items-end justify-center gap-4 h-48">
-            {funnelData.map((d, i) => {
-              const heightPct = Math.max(15, (d.count / maxFunnelCount) * 100);
-              return (
-                <Link key={d.stage} href={`/pipeline/${encodeURIComponent(d.stage)}`}
-                  className="flex flex-col items-center gap-1 flex-1 group">
-                  <span className="text-xs font-semibold text-foreground g-metric">{d.count}</span>
-                  <div className="w-full rounded-t-lg transition-all group-hover:opacity-80 reveal"
-                    style={{ height: `${heightPct}%`, backgroundColor: stageColors[i], animationDelay: `${i * 0.1}s` }} />
-                  <span className="text-[10px] text-muted-foreground mt-1">{d.stage}</span>
-                  <span className="text-[10px] text-muted-foreground">${(d.tcv/1000).toFixed(0)}k</span>
-                </Link>
-              );
-            })}
-          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={funnelData} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--g-line)" horizontal={false} />
+              <XAxis type="number" tick={{ fill: 'var(--g-fg-3)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="stage" tick={{ fill: 'var(--g-fg-3)', fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
+              <Tooltip
+                contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
+                formatter={(value: any, name: any, props: any) => {
+                  const d = props?.payload;
+                  return d ? [`${value} deals  •  $${(d.tcv / 1000).toFixed(0)}k TCV`, d.stage] : [String(value), name];
+                }}
+              />
+              <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                {funnelData.map((_, i) => (
+                  <Cell key={i} fill={stageColors[i]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         )}
 
         {funnelView === 'table' && (
@@ -254,24 +260,32 @@ function AnalyticsContent() {
       <div className="p-5 rounded-xl g-surface g-elevated hover-lift hover-glow">
         <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-4">Pipeline Forecast &mdash; by Close Month</div>
         {forecastMonths.length > 0 ? (
-          <div className="flex items-end gap-2" style={{ height: '120px' }}>
-            {forecastMonths.map(([month, data]) => {
-              const barHeight = Math.max(16, (data.tcv / maxForecastTcv) * 100);
-              const label = month !== 'Unknown' ? month.substring(5) : '??';
-              const yearLabel = month !== 'Unknown' ? month.substring(0, 4) : '';
-              return (
-                <div key={month} className="flex flex-col items-center flex-1">
-                  <div className="text-[10px] text-muted-foreground tabular-nums mb-1">${(data.tcv / 1000).toFixed(0)}k</div>
-                  <div className="w-full bg-[#7c3aed]/20 rounded-t-md transition-all flex items-end justify-center"
-                    style={{ height: `${barHeight}px` }}>
-                    <span className="text-[10px] text-[#7c3aed] font-medium mb-0.5">{data.count}</span>
-                  </div>
-                  <div className="text-[10px] text-muted-foreground mt-1">{label}</div>
-                  {yearLabel && <div className="text-[9px] text-muted-foreground">{yearLabel}</div>}
-                </div>
-              );
-            })}
-          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={forecastMonths.map(([month, data]) => ({
+              month: month !== 'Unknown' ? month.substring(5) : '??',
+              tcv: data.tcv,
+              count: data.count,
+            }))} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#7c3aed" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--g-line)" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: 'var(--g-fg-3)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'var(--g-fg-3)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+              <Tooltip
+                contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
+                formatter={(value: any, name: any) => {
+                  if (name === 'tcv') return [`$${(Number(value) / 1000).toFixed(0)}k`, 'TCV'];
+                  return [String(value), String(name)];
+                }}
+              />
+              <Area type="monotone" dataKey="tcv" stroke="#7c3aed" strokeWidth={2} fill="url(#purpleGradient)" />
+            </AreaChart>
+          </ResponsiveContainer>
         ) : (
           <div className="text-xs text-muted-foreground">No active deals with close dates</div>
         )}
@@ -303,14 +317,42 @@ function AnalyticsContent() {
         {/* By Industry */}
         <div className="p-5 rounded-xl g-surface g-elevated hover-lift hover-glow">
           <div className="text-sm font-medium text-foreground mb-4">By Industry</div>
-          <div className="space-y-3">
-            {Object.entries(byIndustry).sort((a, b) => b[1] - a[1]).map(([industry, count]) => (
-              <div key={industry} className="flex items-center justify-between">
-                <span className="text-sm text-foreground">{industry}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400">{count}</span>
+          {(() => {
+            const PIE_COLORS = ['#7c3aed', '#3b82f6', '#f59e0b', '#22c55e', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'];
+            const industryData = Object.entries(byIndustry).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
+            return industryData.length > 0 ? (
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0" style={{ width: 160, height: 160 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={industryData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={2} dataKey="value">
+                        {industryData.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                        formatter={(value: any, name: any) => [`${value} deals`, String(name)]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  {industryData.map((d, i) => (
+                    <div key={d.name} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                        <span className="text-xs text-foreground truncate">{d.name}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            ) : (
+              <div className="text-xs text-muted-foreground">No data</div>
+            );
+          })()}
         </div>
       </div>
     </div>
