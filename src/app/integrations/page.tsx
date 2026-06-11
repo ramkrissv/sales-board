@@ -121,6 +121,24 @@ const PLATFORM_CONFIGS: Record<string, {
       { name: 'teams_notify', description: 'Send targeted notifications' },
     ],
   },
+  'SharePoint': {
+    fields: [
+      { key: 'siteUrl', label: 'SharePoint Site URL', type: 'url', placeholder: 'https://yourcompany.sharepoint.com/sites/Sales', required: true, help: 'The SharePoint site containing your sales document libraries' },
+      { key: 'email', label: 'Email (App Password Auth)', type: 'email', placeholder: 'you@company.com', help: 'Simple auth — no Azure AD registration needed' },
+      { key: 'appPassword', label: 'App Password', type: 'password', placeholder: 'xxxx-xxxx-xxxx-xxxx', help: 'Generate at account.microsoft.com → Security → App Passwords' },
+      { key: 'docLibrary', label: 'Document Library', type: 'text', placeholder: 'Shared Documents/Proposals', help: 'Library path for storing proposals and SOWs' },
+      { key: 'autoSync', label: 'Auto-sync proposals', type: 'checkbox', placeholder: '', help: 'Automatically upload AI-generated proposals to SharePoint' },
+    ],
+    authMethod: 'Email + App Password',
+    syncCapabilities: ['Proposals', 'SOW Documents', 'Contracts', 'Pricing Sheets', 'Case Studies', 'Templates'],
+    mcpTools: [
+      { name: 'sp_upload', description: 'Upload document to SharePoint library' },
+      { name: 'sp_list_files', description: 'List files in a SharePoint folder' },
+      { name: 'sp_download', description: 'Download document from SharePoint' },
+      { name: 'sp_create_folder', description: 'Create deal-specific folder structure' },
+      { name: 'sp_search', description: 'Search SharePoint for documents by keyword' },
+    ],
+  },
   'Microsoft 365': {
     fields: [
       { key: 'clientId', label: 'Azure AD Client ID', type: 'text', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', required: true },

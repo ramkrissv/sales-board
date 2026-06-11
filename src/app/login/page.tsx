@@ -23,7 +23,7 @@ function LoginForm() {
   const handleSignUp = async () => {
     if (!email) return;
     setLoading(true);
-    await signIn('credentials', { email, callbackUrl });
+    await signIn('credentials', { email, name: `${firstName} ${lastName}`.trim() || email.split('@')[0], callbackUrl });
   };
 
   const handleAzureLogin = () => {
