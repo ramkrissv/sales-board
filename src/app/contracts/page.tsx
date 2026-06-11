@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
 import {
   FileText, Search, Plus, ChevronDown, ChevronRight, Clock,
@@ -146,11 +147,24 @@ function ContractsContent() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      {/* Presales flow navigation */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 w-fit">
+        <Link href="/presales" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+          Proposal Studio
+        </Link>
+        <Link href="/pricing" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+          Pricing
+        </Link>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-card text-foreground shadow-sm border border-border">
+          Contracts
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <FileText className="h-5 w-5 text-purple-400" />
+          <h1 className="text-xl font-semibold text-foreground font-display flex items-center gap-2">
+            <FileText className="h-5 w-5 text-[#7c3aed]" />
             Contracts
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
