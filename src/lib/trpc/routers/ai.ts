@@ -309,14 +309,33 @@ Return ONLY valid JSON:
       const negotiation = byStatus['Negotiation'] || [];
       const overdueTasks = await Task.find({ status: 'pending', dueDate: { $lt: new Date() } }).lean();
 
-      let pipelineContext = `\n\nYOU HAVE FULL ACCESS TO THE PIPELINE DATA. Here is the current state:\n`;
-      pipelineContext += `Total: ${allOpps.length} deals ($${(totalTcv/1000).toFixed(0)}k pipeline)\n`;
+      // Revenue metrics
+      const wonDeals = byStatus['Won'] || [];
+      const wonRevenue = wonDeals.reduce((s: number, d: any) => s + (d.tcv || 0), 0);
+      const monthlyRevenue = Math.round(wonRevenue / 12);
+
+      // Account classification (EE/EN/NN)
+      const acctCounts: Record<string, { total: number; won: number; tcv: number }> = {};
+      allOpps.forEach((o: any) => {
+        if (!acctCounts[o.customerName]) acctCounts[o.customerName] = { total: 0, won: 0, tcv: 0 };
+        acctCounts[o.customerName].total++;
+        acctCounts[o.customerName].tcv += o.tcv || 0;
+        if (o.status === 'Won') acctCounts[o.customerName].won++;
+      });
+      const eeAccounts = Object.entries(acctCounts).filter(([, c]) => c.won >= 2).map(([n, c]) => `${n} ($${(c.tcv/1000).toFixed(0)}k)`);
+      const enAccounts = Object.entries(acctCounts).filter(([, c]) => c.total >= 2 && c.won < 2).map(([n]) => n);
+
+      let pipelineContext = `\n\nYOU HAVE FULL ACCESS TO THE PIPELINE DATA:\n`;
+      pipelineContext += `Total: ${allOpps.length} deals, $${(totalTcv/1000).toFixed(0)}k active pipeline\n`;
+      pipelineContext += `ONGOING REVENUE: $${(wonRevenue/1000).toFixed(0)}k total won, ~$${(monthlyRevenue/1000).toFixed(0)}k/month, ~$${(monthlyRevenue*3/1000).toFixed(0)}k/quarter from ${wonDeals.length} engagements\n`;
       pipelineContext += `By Stage: ${Object.entries(byStatus).map(([s, deals]) => `${s}: ${deals.length} ($${(deals.reduce((sum: number, d: any) => sum + (d.tcv || 0), 0)/1000).toFixed(0)}k)`).join(', ')}\n`;
+      pipelineContext += `EE accounts (repeat business): ${eeAccounts.join(', ') || 'None'}\n`;
+      pipelineContext += `EN accounts (expanding): ${enAccounts.join(', ') || 'None'}\n`;
       pipelineContext += `Closing soon (Negotiation): ${negotiation.map((d: any) => `${d.customerName} $${((d.tcv||0)/1000).toFixed(0)}k`).join(', ') || 'None'}\n`;
       pipelineContext += `Overdue tasks: ${overdueTasks.length}\n`;
       pipelineContext += `\nTop deals by value:\n`;
       [...allOpps].sort((a: any, b: any) => (b.tcv || 0) - (a.tcv || 0)).slice(0, 10).forEach((o: any) => {
-        pipelineContext += `- ${o.customerName}: ${o.opportunityName} | ${o.status} | $${((o.tcv||0)/1000).toFixed(0)}k | Owner: ${o.primaryOwner} | Close: ${o.expectedCloseDate}\n`;
+        pipelineContext += `- ${o.customerName}: ${o.opportunityName} | ${o.status} | $${((o.tcv||0)/1000).toFixed(0)}k | Owner: ${o.primaryOwner}\n`;
       });
 
       // Add specific deal context if provided
