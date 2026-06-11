@@ -1128,17 +1128,17 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
 
           {/* ── Pricing Tab ── */}
           {activeTab === 'pricing' && (
-            <DealPricingTab opportunity={opp} />
+            <DealPricingTab opportunity={opp} onSwitchTab={(tab) => setActiveTab(tab as any)} />
           )}
 
           {/* ── Presales Tab ── */}
           {activeTab === 'presales' && (
-            <DealPresalesTab opportunity={opp} />
+            <DealPresalesTab opportunity={opp} onSwitchTab={(tab) => setActiveTab(tab as any)} />
           )}
 
           {/* ── Contracts Tab ── */}
           {activeTab === 'contracts' && (
-            <DealContractsTab opportunity={opp} />
+            <DealContractsTab opportunity={opp} onSwitchTab={(tab) => setActiveTab(tab as any)} />
           )}
         </div>
 
@@ -1154,7 +1154,9 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
 }
 
 // ── Pricing Tab Component ──
-function DealPricingTab({ opportunity }: { opportunity: any }) {
+function DealPricingTab({ opportunity, onSwitchTab }: { opportunity: any; onSwitchTab?: (tab: string) => void }) {
+  const updateOpp = trpc.opportunity.update.useMutation();
+  const utils = trpc.useUtils();
   const GEO_RATES: Record<string, { label: string; multiplier: number }> = {
     us: { label: 'US (Onshore)', multiplier: 1.0 },
     india: { label: 'India (Offshore)', multiplier: 0.35 },
@@ -1249,12 +1251,43 @@ function DealPricingTab({ opportunity }: { opportunity: any }) {
             className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground" />
         </div>
       </div>
+
+      {/* Cross-tab actions */}
+      <div className="pt-3 border-t border-border space-y-2">
+        {Math.round(tcv) !== (opportunity.tcv || 0) && (
+          <button onClick={() => {
+            updateOpp.mutate({ id: opportunity.id, tcv: Math.round(tcv), margin } as any, {
+              onSuccess: () => utils.opportunity.list.invalidate(),
+            });
+          }} disabled={updateOpp.isPending}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-[#7c3aed] text-white font-medium hover:bg-[#6d28d9] transition-colors disabled:opacity-50">
+            <DollarSign className="h-3 w-3" /> {updateOpp.isPending ? 'Updating...' : `Apply $${(tcv/1000).toFixed(0)}k TCV to Deal`}
+          </button>
+        )}
+        <div className="flex gap-2">
+          {onSwitchTab && (
+            <>
+              <button onClick={() => onSwitchTab('presales')}
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                <FileText className="h-3 w-3" /> Build Proposal
+              </button>
+              <button onClick={() => onSwitchTab('contracts')}
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                <FileText className="h-3 w-3" /> Create Contract
+              </button>
+            </>
+          )}
+        </div>
+        <div className="text-[10px] text-muted-foreground text-center">
+          Team: {lines.reduce((s, l) => s + l.count, 0)} resources · {lines.filter(l => l.geo === 'us').reduce((s,l) => s + l.count, 0)} onshore · {lines.filter(l => l.geo !== 'us').reduce((s,l) => s + l.count, 0)} offshore
+        </div>
+      </div>
     </div>
   );
 }
 
 // ── Presales Tab Component ──
-function DealPresalesTab({ opportunity }: { opportunity: any }) {
+function DealPresalesTab({ opportunity, onSwitchTab }: { opportunity: any; onSwitchTab?: (tab: string) => void }) {
   const chatMutation = trpc.ai.chat.useMutation();
   const [proposalSections, setProposalSections] = useState<Record<string, string>>({});
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -1291,6 +1324,18 @@ function DealPresalesTab({ opportunity }: { opportunity: any }) {
 
   return (
     <div className="space-y-4">
+      {/* Deal lifecycle flow indicator */}
+      <div className="flex items-center gap-1 text-[10px]">
+        {['Presales', 'Pricing', 'Contracts'].map((step, i) => (
+          <button key={step} onClick={() => onSwitchTab?.(step.toLowerCase())}
+            className={`flex-1 py-1.5 rounded-lg text-center font-medium transition-colors ${
+              step === 'Presales' ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+            }`}>
+            {step} {step === 'Presales' && '●'}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-foreground">Proposal Studio</span>
         <Link href="/presales" className="text-[10px] text-[#7c3aed] hover:underline flex items-center gap-1">
@@ -1370,7 +1415,7 @@ function DealPresalesTab({ opportunity }: { opportunity: any }) {
 }
 
 // ── Contracts Tab Component ──
-function DealContractsTab({ opportunity }: { opportunity: any }) {
+function DealContractsTab({ opportunity, onSwitchTab }: { opportunity: any; onSwitchTab?: (tab: string) => void }) {
   const { data: contracts = [] } = trpc.contract.list.useQuery();
   const createMutation = trpc.contract.create.useMutation();
   const utils = trpc.useUtils();
@@ -1398,6 +1443,18 @@ function DealContractsTab({ opportunity }: { opportunity: any }) {
 
   return (
     <div className="space-y-4">
+      {/* Deal lifecycle flow indicator */}
+      <div className="flex items-center gap-1 text-[10px]">
+        {['Presales', 'Pricing', 'Contracts'].map((step) => (
+          <button key={step} onClick={() => onSwitchTab?.(step.toLowerCase())}
+            className={`flex-1 py-1.5 rounded-lg text-center font-medium transition-colors ${
+              step === 'Contracts' ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+            }`}>
+            {step} {step === 'Contracts' && '●'}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-foreground">Contracts</span>
         <div className="flex items-center gap-2">
@@ -1407,6 +1464,12 @@ function DealContractsTab({ opportunity }: { opportunity: any }) {
             <Plus className="h-3 w-3" /> New Contract
           </button>
         </div>
+      </div>
+
+      {/* Deal context */}
+      <div className="p-2 rounded-lg bg-secondary/50 text-[10px] text-muted-foreground flex items-center justify-between">
+        <span>{opportunity.customerName} · {opportunity.status} · {opportunity.dealDuration}</span>
+        <span className="font-semibold text-foreground">${((opportunity.tcv || 0) / 1000).toFixed(0)}k TCV</span>
       </div>
 
       {/* Create form */}
