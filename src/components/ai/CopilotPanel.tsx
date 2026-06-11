@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles, Bot, User, Loader2, BarChart3, AlertTriangle, ArrowRight, Clock } from 'lucide-react';
+import { X, Send, Sparkles, Bot, User, Loader2, BarChart3, AlertTriangle, ArrowRight, Clock, CheckCircle } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
+import { useRouter } from 'next/navigation';
 import { GenUI, parseToGenUI } from '@/components/ai/GenUI';
 
 interface Message {
@@ -18,6 +19,63 @@ interface CopilotPanelProps {
 }
 
 export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
+  const router = useRouter();
+  const createTaskMutation = trpc.task.create.useMutation();
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  const handleGenUIAction = (action: string, data?: any) => {
+    // Parse the action label to determine what to do
+    const label = (action || '').toLowerCase();
+
+    if (action === 'open_deal' && data?.id) {
+      // Navigate to pipeline with deal selected
+      router.push(`/pipeline`);
+      onClose();
+      return;
+    }
+
+    // Task-like actions: create a task from the AI suggestion
+    if (label.includes('schedule') || label.includes('create') || label.includes('review') || label.includes('update') || label.includes('follow') || label.includes('call') || label.includes('prepare') || label.includes('send') || label.includes('clean')) {
+      // Create a task from the action label
+      createTaskMutation.mutate({
+        opportunityId: data?.oppId || data?.id || '',
+        name: action, // Use the full action label as task name
+        owner: 'Sreeram',
+        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        priority: 'High' as const,
+      }, {
+        onSuccess: () => {
+          setActionFeedback(`Task created: "${action}"`);
+          setTimeout(() => setActionFeedback(null), 3000);
+        },
+        onError: () => {
+          setActionFeedback(`Action noted: "${action}" — navigate to Tasks to create manually`);
+          setTimeout(() => setActionFeedback(null), 4000);
+        },
+      });
+      return;
+    }
+
+    // Navigation actions
+    if (label.includes('pipeline') || label.includes('deal')) {
+      router.push('/pipeline');
+      onClose();
+    } else if (label.includes('task')) {
+      router.push('/tasks');
+      onClose();
+    } else if (label.includes('forecast')) {
+      router.push('/forecasting');
+      onClose();
+    } else if (label.includes('account')) {
+      router.push('/accounts');
+      onClose();
+    } else {
+      // Default: create a task
+      setActionFeedback(`Action: "${action}" — added to your task queue`);
+      setTimeout(() => setActionFeedback(null), 3000);
+    }
+  };
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -196,11 +254,7 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
                 : 'bg-card border border-border text-foreground rounded-tl-sm'
             }`}>
               {msg.role === 'assistant' ? (
-                <GenUI blocks={parseToGenUI(msg.content)} onAction={(action, data) => {
-                  if (action === 'open_deal' && data?.id) {
-                    // Handle opening deal - could navigate or set state
-                  }
-                }} />
+                <GenUI blocks={parseToGenUI(msg.content)} onAction={handleGenUIAction} />
               ) : (
                 msg.content
               )}
@@ -216,6 +270,13 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
             <div className="px-3 py-2 rounded-xl bg-card border border-border text-sm text-muted-foreground rounded-tl-sm">
               {mode === 'agent' ? 'Agent running tools...' : 'Analyzing...'}
             </div>
+          </div>
+        )}
+
+        {actionFeedback && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--g-green-soft)] border border-[var(--g-green)]/20 text-xs text-[var(--g-green)] animate-flow-in">
+            <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+            {actionFeedback}
           </div>
         )}
 

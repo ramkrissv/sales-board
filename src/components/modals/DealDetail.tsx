@@ -10,7 +10,7 @@ import {
   Trash2, ChevronRight, Clock, Building2, Loader2, Sparkles,
   AlertTriangle, Zap, ArrowRight, Shield, TrendingUp,
   Mail, CalendarPlus, ArrowUpRight, FileText, MessageSquare,
-  GitBranch,
+  GitBranch, Copy,
 } from 'lucide-react';
 import Link from 'next/link';
 import { MeetingNotesModal } from './MeetingNotesModal';
@@ -1255,25 +1255,35 @@ function DealPricingTab({ opportunity }: { opportunity: any }) {
 
 // ── Presales Tab Component ──
 function DealPresalesTab({ opportunity }: { opportunity: any }) {
-  const sowMutation = trpc.ai.generateSOW.useMutation();
+  const chatMutation = trpc.ai.chat.useMutation();
   const [proposalSections, setProposalSections] = useState<Record<string, string>>({});
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  const stakeholders = opportunity.customerStakeholders || [];
+  const tasks = opportunity.subTasks || [];
 
   const SECTIONS = [
-    { id: 'exec_summary', label: 'Executive Summary' },
-    { id: 'scope', label: 'Scope of Work' },
-    { id: 'approach', label: 'Technical Approach' },
-    { id: 'team', label: 'Team & Resources' },
-    { id: 'timeline', label: 'Timeline & Milestones' },
-    { id: 'pricing', label: 'Pricing Summary' },
-    { id: 'assumptions', label: 'Assumptions & Risks' },
-    { id: 'terms', label: 'Terms & Conditions' },
+    { id: 'exec_summary', label: 'Executive Summary', prompt: `Write a professional Executive Summary (3-4 paragraphs) for a proposal to ${opportunity.customerName} for "${opportunity.opportunityName}". Include: business challenge, proposed solution, expected outcomes, and why Galent is the right partner. TCV: $${(opportunity.tcv||0).toLocaleString()}, Duration: ${opportunity.dealDuration}, Industry: ${opportunity.industry}. Write the actual proposal text, NOT instructions.` },
+    { id: 'scope', label: 'Scope of Work', prompt: `Write the Scope of Work section for ${opportunity.customerName}'s "${opportunity.opportunityName}" project. Include: in-scope deliverables (5-8 bullet points), out-of-scope items, key milestones, and acceptance criteria. Industry: ${opportunity.industry}. Write actual proposal content.` },
+    { id: 'approach', label: 'Technical Approach', prompt: `Write the Technical Approach section for ${opportunity.customerName}'s "${opportunity.opportunityName}". Describe the methodology, technology stack, architecture considerations, and implementation phases. Industry: ${opportunity.industry}. Write actual proposal content, not advice.` },
+    { id: 'team', label: 'Team & Resources', prompt: `Write the Team & Resources section proposing a team for ${opportunity.customerName}'s "${opportunity.opportunityName}" (${opportunity.dealDuration}). Include role descriptions, responsibilities, and a team org chart in text form. Stakeholders: ${stakeholders.map((s:any) => s.name+' ('+s.title+')').join(', ')||'TBD'}. Write actual proposal content.` },
+    { id: 'timeline', label: 'Timeline & Milestones', prompt: `Write a Timeline & Milestones section for ${opportunity.customerName}'s "${opportunity.opportunityName}" project (${opportunity.dealDuration}). Include 4-6 phases with start/end dates, key milestones, and deliverables per phase. Write as actual proposal content.` },
+    { id: 'pricing', label: 'Pricing Summary', prompt: `Write a Pricing Summary section for ${opportunity.customerName}'s "${opportunity.opportunityName}". TCV: $${(opportunity.tcv||0).toLocaleString()}, Duration: ${opportunity.dealDuration}, Margin: ${opportunity.margin||28}%. Include pricing structure, payment terms, and any assumptions. Write as actual proposal content.` },
+    { id: 'assumptions', label: 'Assumptions & Risks', prompt: `Write Assumptions & Risks for ${opportunity.customerName}'s "${opportunity.opportunityName}". List 5-6 key assumptions and 4-5 risks with mitigation strategies. Industry: ${opportunity.industry}. Write as actual proposal content.` },
+    { id: 'terms', label: 'Terms & Conditions', prompt: `Write standard Terms & Conditions for a ${opportunity.dealDuration} engagement with ${opportunity.customerName}. Include: payment terms, IP ownership, confidentiality, change management, termination, and warranty. Write as actual proposal content.` },
   ];
 
   const handleGenerateSection = async (sectionId: string) => {
+    const section = SECTIONS.find(s => s.id === sectionId);
+    if (!section) return;
     setProposalSections(p => ({ ...p, [sectionId]: '..generating..' }));
+    setExpandedSection(sectionId);
     try {
-      const result = await sowMutation.mutateAsync({ opportunityId: opportunity.id });
-      setProposalSections(p => ({ ...p, [sectionId]: result.content.slice(0, 500) }));
+      const result = await chatMutation.mutateAsync({
+        message: section.prompt,
+        context: { opportunityId: opportunity.id, page: 'presales-proposal' },
+      });
+      setProposalSections(p => ({ ...p, [sectionId]: result.response }));
     } catch {
       setProposalSections(p => ({ ...p, [sectionId]: 'Generation failed — check API key' }));
     }
@@ -1309,13 +1319,16 @@ function DealPresalesTab({ opportunity }: { opportunity: any }) {
           const content = proposalSections[section.id];
           const isGenerating = content === '..generating..';
           return (
-            <div key={section.id} className="p-3 rounded-lg bg-card border border-border">
-              <div className="flex items-center justify-between">
+            <div key={section.id} className="rounded-lg bg-card border border-border overflow-hidden">
+              <button onClick={() => content && !isGenerating ? setExpandedSection(expandedSection === section.id ? null : section.id) : handleGenerateSection(section.id)}
+                className="w-full flex items-center justify-between p-3 text-left hover:bg-secondary/30 transition-colors">
                 <div className="flex items-center gap-2">
                   {content && !isGenerating ? (
                     <div className="w-5 h-5 rounded-full bg-[var(--g-green-soft)] flex items-center justify-center">
                       <CheckSquare className="h-3 w-3 text-[var(--g-green)]" />
                     </div>
+                  ) : isGenerating ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-[#7c3aed]" />
                   ) : (
                     <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center">
                       <FileText className="h-3 w-3 text-muted-foreground" />
@@ -1323,19 +1336,30 @@ function DealPresalesTab({ opportunity }: { opportunity: any }) {
                   )}
                   <span className="text-xs font-medium text-foreground">{section.label}</span>
                 </div>
-                {!content ? (
-                  <button onClick={() => handleGenerateSection(section.id)}
-                    className="flex items-center gap-1 text-[10px] text-[#7c3aed] hover:underline">
+                {!content && !isGenerating ? (
+                  <span className="flex items-center gap-1 text-[10px] text-[#7c3aed] font-medium">
                     <Sparkles className="h-3 w-3" /> AI Draft
-                  </button>
-                ) : isGenerating ? (
-                  <Loader2 className="h-3 w-3 animate-spin text-[#7c3aed]" />
-                ) : (
-                  <span className="text-[10px] text-[var(--g-green)]">Ready</span>
-                )}
-              </div>
-              {content && !isGenerating && (
-                <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2">{content}</p>
+                  </span>
+                ) : content && !isGenerating ? (
+                  <span className="text-[10px] text-[var(--g-green)]">{expandedSection === section.id ? 'Collapse' : 'View'}</span>
+                ) : null}
+              </button>
+              {expandedSection === section.id && content && !isGenerating && (
+                <div className="px-3 pb-3 border-t border-border/50">
+                  <div className="text-[11px] text-foreground mt-2 whitespace-pre-wrap leading-relaxed max-h-[300px] overflow-y-auto">
+                    {content}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={() => { navigator.clipboard.writeText(content); }}
+                      className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1">
+                      <Copy className="h-3 w-3" /> Copy
+                    </button>
+                    <button onClick={() => handleGenerateSection(section.id)}
+                      className="text-[10px] text-[#7c3aed] hover:underline flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" /> Regenerate
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           );
