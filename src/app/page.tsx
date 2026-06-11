@@ -10,6 +10,7 @@ import {
   Brain, Shield, Rocket, Eye, FileText, Plus, MessageCircle, Globe
 } from 'lucide-react';
 import Link from 'next/link';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
@@ -202,29 +203,28 @@ function HomeContent() {
             Open Pipeline <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
-        <div className="flex items-center gap-1">
-          {['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'].map((stage, i) => {
+        {(() => {
+          const stageNames = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'] as const;
+          const stageColors: Record<string, string> = { Discovery: '#3b82f6', Qualification: '#f59e0b', Proposal: '#7c3aed', Negotiation: '#22c55e', Won: '#10b981' };
+          const chartData = stageNames.map(stage => {
             const stageDeals = opportunities.filter(o => o.status === stage);
-            const stageTcv = stageDeals.reduce((s, o) => s + (o.tcv || 0), 0);
-            const maxDeals = Math.max(...['Discovery','Qualification','Proposal','Negotiation','Won'].map(s => opportunities.filter(o => o.status === s).length), 1);
-            const height = Math.max(40, (stageDeals.length / maxDeals) * 120);
-            const colors = ['#3b82f6', '#f59e0b', '#7c3aed', '#22c55e', '#10b981'];
-            return (
-              <div key={stage} className="flex-1 flex flex-col items-center gap-1">
-                <div
-                  className="w-full rounded-lg transition-all duration-500 flex items-end justify-center pb-2 relative overflow-hidden"
-                  style={{ height: `${height}px`, backgroundColor: `${colors[i]}15`, border: `1px solid ${colors[i]}30` }}
-                >
-                  <span className="g-kpi text-foreground" style={{ fontSize: '18px', color: colors[i] }}>{stageDeals.length}</span>
-                  {/* Animated fill line at bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-lg" style={{ backgroundColor: colors[i], opacity: 0.6 }} />
-                </div>
-                <span className="text-[10px] text-muted-foreground font-medium">{stage}</span>
-                <span className="text-[10px] text-muted-foreground">${(stageTcv/1000).toFixed(0)}k</span>
-              </div>
-            );
-          })}
-        </div>
+            return { stage, deals: stageDeals.length, tcv: stageDeals.reduce((s, o) => s + (o.tcv || 0), 0) };
+          });
+          return (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={chartData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+                <XAxis dataKey="stage" tick={{ fill: '#888', fontSize: 10 }} />
+                <YAxis tick={{ fill: '#888', fontSize: 11 }} allowDecimals={false} />
+                <Tooltip formatter={(value: any, name: any) => [name === 'tcv' ? `$${(Number(value) / 1000).toFixed(0)}k` : value, name === 'tcv' ? 'TCV' : 'Deals']} contentStyle={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: 8 }} labelStyle={{ color: '#ccc' }} itemStyle={{ color: '#ccc' }} />
+                <Bar dataKey="deals" radius={[6, 6, 0, 0]}>
+                  {chartData.map(entry => (
+                    <Cell key={entry.stage} fill={stageColors[entry.stage]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          );
+        })()}
       </div>
 
       {/* AI-Prioritized Deal Feed -- not just "recent", but AI-ranked */}

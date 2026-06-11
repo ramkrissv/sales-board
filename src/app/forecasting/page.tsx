@@ -5,6 +5,7 @@ import { trpc } from '@/lib/trpc/client';
 import { ScopeSwitch, type Scope } from '@/components/shared/ScopeSwitch';
 import { TrendingUp, Target, Percent, DollarSign, CheckCircle, TrendingDown, Clock, EyeOff, LayoutDashboard, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const CATEGORY_META: Record<string, { label: string; color: string; bgColor: string; icon: any; description: string }> = {
   commit: { label: 'Commit', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', icon: CheckCircle, description: 'Owner says will close' },
@@ -85,27 +86,19 @@ export default function ForecastingPage() {
       {/* Pipeline by Stage */}
       <div className="p-5 rounded-xl g-surface g-elevated">
         <div className="text-sm font-medium text-foreground mb-4">Pipeline by Stage</div>
-        <div className="space-y-3">
-          {data.byStage.filter(s => s.count > 0 || !['Lost', 'On Hold'].includes(s.stage)).map((stage, i) => {
-            const colors = ['bg-blue-500', 'bg-sky-500', 'bg-purple-500', 'bg-amber-500', 'bg-emerald-500', 'bg-red-500', 'bg-zinc-500'];
-            const width = Math.max((stage.tcv / maxStageTcv) * 100, 4);
-            return (
-              <div key={stage.stage} className="flex items-center gap-3">
-                <div className="w-24 text-xs text-muted-foreground text-right shrink-0">{stage.stage}</div>
-                <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden">
-                  <div
-                    className={`h-full ${colors[i] || 'bg-slate-500'} rounded-lg flex items-center px-3 transition-all`}
-                    style={{ width: `${width}%` }}
-                  >
-                    <span className="text-xs font-medium text-white">{stage.count}</span>
-                  </div>
-                </div>
-                <div className="w-20 text-xs text-muted-foreground text-right shrink-0">${(stage.tcv / 1000).toFixed(0)}k</div>
-                <div className="w-24 text-xs text-muted-foreground text-right shrink-0">W: ${(stage.weighted / 1000).toFixed(0)}k</div>
-              </div>
-            );
-          })}
-        </div>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={data.byStage.filter(s => s.count > 0 || !['Lost', 'On Hold'].includes(s.stage))} layout="vertical" margin={{ left: 20, right: 20, top: 5, bottom: 5 }}>
+            <XAxis type="number" tick={{ fill: '#888', fontSize: 11 }} tickFormatter={(v: any) => `$${(v / 1000).toFixed(0)}k`} />
+            <YAxis type="category" dataKey="stage" tick={{ fill: '#888', fontSize: 11 }} width={90} />
+            <Tooltip formatter={(value: any, name: any) => [`$${(value / 1000).toFixed(0)}k`, name === 'tcv' ? 'TCV' : name]} contentStyle={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: 8 }} labelStyle={{ color: '#ccc' }} itemStyle={{ color: '#ccc' }} />
+            <Bar dataKey="tcv" radius={[0, 6, 6, 0]}>
+              {data.byStage.filter(s => s.count > 0 || !['Lost', 'On Hold'].includes(s.stage)).map((entry, i) => {
+                const stageColors: Record<string, string> = { Discovery: '#3b82f6', Qualification: '#f59e0b', Proposal: '#7c3aed', Negotiation: '#22c55e', Won: '#10b981' };
+                return <Cell key={entry.stage} fill={stageColors[entry.stage] || '#6b7280'} />;
+              })}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -145,22 +138,14 @@ export default function ForecastingPage() {
           {data.byQuarter.length === 0 ? (
             <p className="text-sm text-muted-foreground">No deals with close dates.</p>
           ) : (
-            <div className="space-y-3">
-              {data.byQuarter.map(q => {
-                const width = Math.max((q.tcv / maxQuarterTcv) * 100, 6);
-                return (
-                  <div key={q.quarter}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">{q.quarter}</span>
-                      <span className="text-xs text-foreground">${(q.tcv / 1000).toFixed(0)}k ({q.count} deals)</span>
-                    </div>
-                    <div className="h-6 bg-muted rounded-lg overflow-hidden">
-                      <div className="h-full bg-purple-500 rounded-lg transition-all" style={{ width: `${width}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={data.byQuarter} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+                <XAxis dataKey="quarter" tick={{ fill: '#888', fontSize: 11 }} />
+                <YAxis tick={{ fill: '#888', fontSize: 11 }} tickFormatter={(v: any) => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: any, name: any) => [`$${(Number(value) / 1000).toFixed(0)}k`, name === 'tcv' ? 'TCV' : 'Deals']} contentStyle={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: 8 }} labelStyle={{ color: '#ccc' }} itemStyle={{ color: '#ccc' }} />
+                <Bar dataKey="tcv" fill="#7c3aed" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </div>
       </div>
