@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Mail, Video, Mic, Globe, Copy, ExternalLink, ArrowRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Video, Mic, Globe, Copy, ExternalLink, ArrowRight, FolderOpen } from 'lucide-react';
 
 const PLUGINS = [
   {
@@ -48,7 +48,7 @@ const PLUGINS = [
     id: 'voice',
     name: 'Voice AI (Pipecat)',
     icon: Mic,
-    status: 'coming_soon',
+    status: 'available',
     description: 'Real-time voice AI assistant. Speak naturally, AI transcribes and processes deal updates.',
     setupSteps: [
       'Deploy the Pipecat Python server',
@@ -82,11 +82,53 @@ const PLUGINS = [
     apiEndpoint: '/api/integrations/salesforce/sync',
     docsUrl: 'https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/',
   },
+  {
+    id: 'sharepoint',
+    name: 'SharePoint Connector',
+    icon: FolderOpen,
+    status: 'available',
+    description: 'Sync proposal documents, SOWs, and contracts to SharePoint. Auto-organize by deal.',
+    setupSteps: [
+      'Configure SharePoint site URL',
+      'Set up authentication (App Password or OAuth)',
+      'Map document libraries to deal stages',
+      'Enable auto-sync for generated proposals',
+    ],
+    configFields: [
+      { key: 'siteUrl', label: 'SharePoint Site URL', placeholder: 'https://yourcompany.sharepoint.com/sites/Sales' },
+      { key: 'clientId', label: 'App Client ID (or use email auth)', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' },
+      { key: 'email', label: 'Email (alternative auth)', placeholder: 'you@company.com' },
+      { key: 'appPassword', label: 'App Password', placeholder: 'xxxx-xxxx-xxxx-xxxx' },
+      { key: 'docLibrary', label: 'Document Library', placeholder: 'Shared Documents/Sales' },
+    ],
+    apiEndpoint: '/api/integrations/sharepoint',
+    docsUrl: 'https://learn.microsoft.com/en-us/sharepoint/',
+  },
 ];
 
 export default function PluginsPage() {
   const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null);
   const [configs, setConfigs] = useState<Record<string, Record<string, string>>>({});
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Load saved configs from localStorage on mount
+  useEffect(() => {
+    const saved: Record<string, Record<string, string>> = {};
+    PLUGINS.forEach(plugin => {
+      const raw = localStorage.getItem(`plugin_config_${plugin.id}`);
+      if (raw) {
+        try { saved[plugin.id] = JSON.parse(raw); } catch { /* ignore */ }
+      }
+    });
+    if (Object.keys(saved).length > 0) setConfigs(saved);
+  }, []);
+
+  const handleSave = (pluginId: string, pluginName: string) => {
+    const pluginConfig = configs[pluginId] || {};
+    localStorage.setItem(`plugin_config_${pluginId}`, JSON.stringify(pluginConfig));
+    setToast(`${pluginName} configuration saved`);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -167,7 +209,10 @@ export default function PluginsPage() {
                     <ExternalLink className="h-3 w-3" /> View Documentation
                   </a>
 
-                  <button className="px-4 py-2 rounded-lg bg-[#7c3aed] text-white text-xs font-medium hover:bg-[#6d28d9] transition-colors">
+                  <button
+                    onClick={() => handleSave(plugin.id, plugin.name)}
+                    className="px-4 py-2 rounded-lg bg-[#7c3aed] text-white text-xs font-medium hover:bg-[#6d28d9] transition-colors"
+                  >
                     Save Configuration
                   </button>
                 </div>
@@ -176,6 +221,13 @@ export default function PluginsPage() {
           );
         })}
       </div>
+
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-lg bg-emerald-600 text-white text-sm font-medium shadow-lg animate-in fade-in slide-in-from-bottom-4 z-50">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
