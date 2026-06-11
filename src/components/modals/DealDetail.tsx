@@ -225,16 +225,32 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
     setShowStageSelector(false);
   };
 
-  const handleCreateActionTask = (actionText: string) => {
+  const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
+
+  const handleCreateActionTask = (actionText: string, type: 'task' | 'meeting' | 'followup' | 'escalation' = 'task') => {
     const today = new Date();
-    const dueDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const dueDays = type === 'meeting' ? 2 : type === 'followup' ? 1 : type === 'escalation' ? 1 : 5;
+    const dueDate = new Date(today.getTime() + dueDays * 24 * 60 * 60 * 1000);
+    const prefix = type === 'meeting' ? 'Meeting: ' : type === 'followup' ? 'Follow-up: ' : type === 'escalation' ? 'Escalation: ' : '';
+    const taskName = actionText.startsWith(prefix) ? actionText : `${prefix}${actionText}`;
+
     createTaskMutation.mutate({
       opportunityId: opp.id,
-      name: actionText,
+      name: taskName,
       owner: opp.primaryOwner || 'Unassigned',
       dueDate: dueDate.toISOString().split('T')[0],
-      priority: 'High',
-      notes: 'Auto-created from AI recommendation',
+      priority: type === 'escalation' ? 'Critical' : 'High',
+      notes: `Auto-created from AI recommendation on ${today.toLocaleDateString()}`,
+    }, {
+      onSuccess: () => {
+        // Mark this action as completed
+        setCompletedActions(prev => new Set([...prev, actionText]));
+        // Log activity
+        try {
+          const Activity = (window as any).__activityLog;
+          // Activity is logged server-side via the task creation mutation
+        } catch {}
+      },
     });
   };
 
@@ -466,44 +482,51 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                     </div>
                     <div className="grid grid-cols-1 gap-2">
                       {analysis.actions.map((a: any, i: number) => {
+                        const isCompleted = completedActions.has(a.action);
                         const priorityStyles: Record<string, string> = {
                           high: 'border-orange-500/30 hover:border-orange-500/50',
                           medium: 'border-amber-500/30 hover:border-amber-500/50',
                           low: 'border-blue-500/30 hover:border-blue-500/50',
                           critical: 'border-red-500/30 hover:border-red-500/50',
                         };
-                        const borderStyle = priorityStyles[a.priority] || priorityStyles.medium;
+                        const borderStyle = isCompleted ? 'border-[var(--g-green)]/30 bg-[var(--g-green-soft)]' : (priorityStyles[a.priority] || priorityStyles.medium);
 
                         return (
-                          <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg bg-card border ${borderStyle} transition-all`}>
+                          <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg bg-card border ${borderStyle} transition-all ${isCompleted ? 'opacity-75' : ''}`}>
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-foreground">{a.action}</div>
-                              <div className="text-xs text-muted-foreground mt-0.5">{a.reason}</div>
+                              <div className={`text-sm font-medium ${isCompleted ? 'text-[var(--g-green)] line-through' : 'text-foreground'}`}>
+                                {isCompleted && <span className="inline-flex items-center gap-1 mr-1 no-underline"><CheckSquare className="h-3 w-3" /></span>}
+                                {a.action}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {isCompleted ? 'Task created — view in Tasks tab' : a.reason}
+                              </div>
                             </div>
+                            {!isCompleted && (
                             <div className="flex flex-wrap items-center gap-1 flex-shrink-0">
-                              {/* Contextual action buttons based on recommendation content */}
+                              {/* Task button — always shown */}
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleCreateActionTask(a.action); }}
+                                onClick={(e) => { e.stopPropagation(); handleCreateActionTask(a.action, 'task'); }}
                                 disabled={createTaskMutation.isPending}
-                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#5B4FE9]/12 text-[#5B4FE9] text-[10px] font-medium hover:bg-[#5B4FE9]/20 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#7c3aed]/12 text-[#7c3aed] text-[10px] font-medium hover:bg-[#7c3aed]/20 transition-colors disabled:opacity-50"
                               >
                                 {createTaskMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckSquare className="h-3 w-3" />}
                                 Task
                               </button>
-                              {/* Meeting/call actions */}
-                              {(a.action.toLowerCase().includes('meeting') || a.action.toLowerCase().includes('schedule') || a.action.toLowerCase().includes('call') || a.action.toLowerCase().includes('contact')) && (
+                              {/* Meeting button — for schedule/call/contact actions */}
+                              {(a.action.toLowerCase().includes('meeting') || a.action.toLowerCase().includes('schedule') || a.action.toLowerCase().includes('call') || a.action.toLowerCase().includes('contact') || a.action.toLowerCase().includes('map') || a.action.toLowerCase().includes('intro')) && (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleCreateActionTask(`Schedule: ${a.action}`); }}
+                                  onClick={(e) => { e.stopPropagation(); handleCreateActionTask(a.action, 'meeting'); }}
                                   disabled={createTaskMutation.isPending}
                                   className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/12 text-blue-400 text-[10px] font-medium hover:bg-blue-500/20 transition-colors"
                                 >
                                   <CalendarPlus className="h-3 w-3" /> Meeting
                                 </button>
                               )}
-                              {/* Email/outreach actions */}
-                              {(a.action.toLowerCase().includes('email') || a.action.toLowerCase().includes('follow') || a.action.toLowerCase().includes('reach') || a.action.toLowerCase().includes('send')) && (
+                              {/* Follow-up button — for email/followup actions */}
+                              {(a.action.toLowerCase().includes('email') || a.action.toLowerCase().includes('follow') || a.action.toLowerCase().includes('reach') || a.action.toLowerCase().includes('send') || a.action.toLowerCase().includes('document')) && (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleCreateActionTask(`Follow-up: ${a.action}`); }}
+                                  onClick={(e) => { e.stopPropagation(); handleCreateActionTask(a.action, 'followup'); }}
                                   disabled={createTaskMutation.isPending}
                                   className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/12 text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/20 transition-colors"
                                 >
@@ -520,9 +543,9 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                                 </button>
                               )}
                               {/* Escalation actions */}
-                              {(a.action.toLowerCase().includes('escalat') || a.action.toLowerCase().includes('approval') || a.action.toLowerCase().includes('executive') || a.action.toLowerCase().includes('leadership')) && (
+                              {(a.action.toLowerCase().includes('escalat') || a.action.toLowerCase().includes('approval') || a.action.toLowerCase().includes('executive') || a.action.toLowerCase().includes('leadership') || a.action.toLowerCase().includes('assign') || a.action.toLowerCase().includes('presales')) && (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleCreateActionTask(`Escalation: ${a.action}`); }}
+                                  onClick={(e) => { e.stopPropagation(); handleCreateActionTask(a.action, 'escalation'); }}
                                   disabled={createTaskMutation.isPending}
                                   className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-500/12 text-red-400 text-[10px] font-medium hover:bg-red-500/20 transition-colors"
                                 >
@@ -530,6 +553,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
                                 </button>
                               )}
                             </div>
+                            )}
                           </div>
                         );
                       })}
