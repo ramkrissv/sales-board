@@ -98,7 +98,8 @@ function HomeContent() {
       </div>
 
       {/* AI Insight Banner -- auto-generated, not on-demand */}
-      <div className="relative overflow-hidden rounded-xl ai-glow animate-flow-in" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.02), transparent)' }}>
+      <div className="relative overflow-hidden rounded-xl ai-glow animate-flow-in g-gradient-border g-noise" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.02), transparent)' }}>
+        <div className="g-fractal-orb g-fractal-orb-teal" style={{ width: '200px', height: '200px', top: '-60px', right: '-40px' }} />
         <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
           <Brain className="w-full h-full text-[#7c3aed]" />
         </div>
@@ -184,72 +185,56 @@ function HomeContent() {
         )}
       </div>
 
-      {/* KPI Row with visual indicators */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 animate-flow-in animate-flow-in-delay-2">
-        {[
-          { label: 'Pipeline', value: `$${(totalPipeline/1e6).toFixed(1)}M`, icon: DollarSign, color: '#7c3aed', sub: `${activeDeals.length} active` },
-          { label: 'Win Rate', value: `${winRate}%`, icon: Target, color: '#22c55e', sub: `${wonDeals.length}W / ${lostDeals.length}L` },
-          { label: 'Closing Soon', value: `${closingSoonDeals.length}`, icon: Clock, color: '#f59e0b', sub: 'within 30 days' },
-          { label: 'At Risk', value: `${atRiskDeals.length}`, icon: AlertTriangle, color: '#ef4444', sub: 'need attention' },
-          { label: 'Monthly Revenue', value: `$${(monthlyRevenue/1000).toFixed(0)}k`, icon: DollarSign, color: '#10b981', sub: `${wonDeals.length} active engagements` },
-        ].map(kpi => (
-          <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated hover-lift">
-            <div className="flex items-center gap-2 mb-2">
-              <kpi.icon className="h-3.5 w-3.5" style={{ color: kpi.color }} />
-              <span className="g-section-label">{kpi.label}</span>
-            </div>
-            <div className="g-kpi text-foreground" style={{ fontSize: '24px' }}>{kpi.value}</div>
-            <div className="text-[11px] text-muted-foreground mt-1">{kpi.sub}</div>
+      {/* Consolidated Metrics — single row with key numbers */}
+      <div className="p-5 rounded-xl g-surface g-elevated g-gradient-border animate-flow-in animate-flow-in-delay-2">
+        <div className="grid grid-cols-3 md:grid-cols-7 gap-4">
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Pipeline</div>
+            <div className="g-kpi text-foreground" style={{ fontSize: '22px', color: '#7c3aed' }}>${(totalPipeline/1e6).toFixed(1)}M</div>
+            <div className="text-[10px] text-muted-foreground">{activeDeals.length} deals</div>
           </div>
-        ))}
-      </div>
-
-      {/* Revenue & Account Classification */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-flow-in animate-flow-in-delay-2">
-        <div className="p-4 rounded-xl g-surface g-elevated">
-          <div className="g-section-label mb-1">Quarterly Revenue</div>
-          <div className="g-kpi text-foreground" style={{ fontSize: '22px', color: '#10b981' }}>${(quarterlyRevenue/1000).toFixed(0)}k</div>
-          <div className="text-[10px] text-muted-foreground mt-1">~${(wonRevenue/1e6).toFixed(1)}M annualized</div>
-        </div>
-        <div className="p-4 rounded-xl g-surface g-elevated">
-          <div className="g-section-label mb-1">Account Mix</div>
-          <div className="flex items-center gap-2 mt-2">
-            <div className="flex-1">
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="w-5 h-5 rounded-md bg-[var(--g-green)]/15 text-[var(--g-green)] text-[9px] font-bold flex items-center justify-center">EE</span>
-                <span className="text-xs text-foreground">{eeAccounts}</span>
-                <span className="text-[9px] text-muted-foreground">repeat</span>
-              </div>
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="w-5 h-5 rounded-md bg-[#11A7A0]/15 text-[#11A7A0] text-[9px] font-bold flex items-center justify-center">EN</span>
-                <span className="text-xs text-foreground">{enAccounts}</span>
-                <span className="text-[9px] text-muted-foreground">expand</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-5 h-5 rounded-md bg-[#7c3aed]/15 text-[#7c3aed] text-[9px] font-bold flex items-center justify-center">NN</span>
-                <span className="text-xs text-foreground">{nnAccounts}</span>
-                <span className="text-[9px] text-muted-foreground">new</span>
-              </div>
-            </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Revenue/mo</div>
+            <div className="g-kpi text-foreground" style={{ fontSize: '22px', color: '#10b981' }}>${(monthlyRevenue/1000).toFixed(0)}k</div>
+            <div className="text-[10px] text-muted-foreground">~${(wonRevenue/1e6).toFixed(1)}M/yr</div>
           </div>
-        </div>
-        <div className="p-4 rounded-xl g-surface g-elevated">
-          <div className="g-section-label mb-1">Won This Year</div>
-          <div className="g-kpi text-foreground" style={{ fontSize: '22px' }}>{wonDeals.length}</div>
-          <div className="text-[10px] text-muted-foreground mt-1">${(wonRevenue/1e6).toFixed(1)}M total contract value</div>
-        </div>
-        <div className="p-4 rounded-xl g-surface g-elevated">
-          <div className="g-section-label mb-1">Active Pipeline</div>
-          <div className="g-kpi text-foreground" style={{ fontSize: '22px', color: '#7c3aed' }}>${(totalPipeline/1e6).toFixed(1)}M</div>
-          <div className="text-[10px] text-muted-foreground mt-1">{activeDeals.length} deals · {negotiationDeals.length} in negotiation</div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Won</div>
+            <div className="g-kpi text-foreground" style={{ fontSize: '22px' }}>{wonDeals.length}</div>
+            <div className="text-[10px] text-muted-foreground">{winRate}% win rate</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Closing</div>
+            <div className="g-kpi text-foreground" style={{ fontSize: '22px', color: '#f59e0b' }}>{closingSoonDeals.length}</div>
+            <div className="text-[10px] text-muted-foreground">within 30 days</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">At Risk</div>
+            <div className="g-kpi text-foreground" style={{ fontSize: '22px', color: '#ef4444' }}>{atRiskDeals.length}</div>
+            <div className="text-[10px] text-muted-foreground">need attention</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Negotiation</div>
+            <div className="g-kpi text-foreground" style={{ fontSize: '22px' }}>{negotiationDeals.length}</div>
+            <div className="text-[10px] text-muted-foreground">${(negotiationDeals.reduce((s: number, o: any) => s + (o.tcv || 0), 0)/1000).toFixed(0)}k value</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Accounts</div>
+            <div className="flex items-center gap-1 mt-1">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[var(--g-green)]/15 text-[var(--g-green)]">EE {eeAccounts}</span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#11A7A0]/15 text-[#11A7A0]">EN {enAccounts}</span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#7c3aed]/15 text-[#7c3aed]">NN {nnAccounts}</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-1">{eeAccounts + enAccounts + nnAccounts} total</div>
+          </div>
         </div>
       </div>
 
-      {/* Pipeline Lifecycle Visual -- animated stage flow */}
-      <div className="animate-flow-in animate-flow-in-delay-3">
-        <div className="flex items-center justify-between mb-3">
+      {/* Pipeline Funnel — proper funnel shape */}
+      <div className="animate-flow-in animate-flow-in-delay-3 p-5 rounded-xl g-surface g-elevated">
+        <div className="flex items-center justify-between mb-4">
           <span className="g-section-label flex items-center gap-1.5">
-            <Eye className="h-3 w-3" /> Pipeline Lifecycle
+            <Eye className="h-3 w-3" /> Pipeline Funnel
           </span>
           <Link href="/pipeline" className="text-xs text-[#7c3aed] hover:underline flex items-center gap-1">
             Open Pipeline <ChevronRight className="h-3 w-3" />
@@ -257,26 +242,43 @@ function HomeContent() {
         </div>
         {(() => {
           const stageNames = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'] as const;
-          const stageColors: Record<string, string> = { Discovery: '#3b82f6', Qualification: '#f59e0b', Proposal: '#7c3aed', Negotiation: '#22c55e', Won: '#10b981' };
-          const chartData = stageNames.map(stage => {
-            const stageDeals = opportunities.filter(o => o.status === stage);
-            return { stage, deals: stageDeals.length, tcv: stageDeals.reduce((s, o) => s + (o.tcv || 0), 0) };
+          const stageColors = ['#3b82f6', '#f59e0b', '#7c3aed', '#22c55e', '#10b981'];
+          const stageData = stageNames.map((stage, i) => {
+            const deals = opportunities.filter(o => o.status === stage);
+            const tcv = deals.reduce((s, o) => s + (o.tcv || 0), 0);
+            const nextStage = stageNames[i + 1];
+            const nextCount = nextStage ? opportunities.filter(o => o.status === nextStage).length : 0;
+            const convRate = deals.length > 0 && nextStage ? Math.round((nextCount / deals.length) * 100) : null;
+            return { stage, count: deals.length, tcv, color: stageColors[i], convRate };
           });
+          const maxCount = Math.max(...stageData.map(s => s.count), 1);
+
           return (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={chartData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-                <XAxis dataKey="stage" tick={{ fill: '#888', fontSize: 10 }} />
-                <YAxis tick={{ fill: '#888', fontSize: 11 }} allowDecimals={false} />
-                <Tooltip formatter={(value: any, name: any) => [name === 'tcv' ? `$${(Number(value) / 1000).toFixed(0)}k` : value, name === 'tcv' ? 'TCV' : 'Deals']} contentStyle={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: 8 }} labelStyle={{ color: '#ccc' }} itemStyle={{ color: '#ccc' }} />
-                <Bar dataKey="deals" radius={[6, 6, 0, 0]}>
-                  {chartData.map(entry => (
-                    <Cell key={entry.stage} fill={stageColors[entry.stage]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="space-y-1.5">
+              {stageData.map((s, i) => {
+                const widthPct = Math.max(25, (s.count / maxCount) * 100);
+                return (
+                  <div key={s.stage} className="flex items-center gap-3 reveal" style={{ animationDelay: `${i * 0.08}s` }}>
+                    <div className="w-24 text-right">
+                      <div className="text-xs font-medium text-foreground">{s.stage}</div>
+                      <div className="text-[10px] text-muted-foreground">${(s.tcv/1000).toFixed(0)}k</div>
+                    </div>
+                    <div className="flex-1 flex items-center">
+                      <div className="relative h-10 rounded-lg transition-all duration-700 flex items-center justify-center"
+                        style={{ width: `${widthPct}%`, backgroundColor: s.color + '20', borderLeft: `3px solid ${s.color}` }}>
+                        <span className="text-xs font-bold text-foreground g-metric">{s.count}</span>
+                      </div>
+                      {s.convRate !== null && (
+                        <span className="ml-2 text-[10px] text-muted-foreground whitespace-nowrap">→ {s.convRate}%</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           );
         })()}
+        <div className="g-gradient-line mt-4" />
       </div>
 
       {/* AI-Prioritized Deal Feed -- not just "recent", but AI-ranked */}
