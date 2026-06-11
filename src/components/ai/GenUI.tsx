@@ -263,20 +263,41 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
 export function parseToGenUI(text: string, opportunities?: any[]): GenUIBlock[] {
   const blocks: GenUIBlock[] = [];
   const lines = text.split('\n').filter(l => l.trim());
+  const actionItems: { label: string; action: string; data?: any }[] = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // Numbered action items
+    // Skip empty
+    if (trimmed.length < 3) continue;
+
+    // KEY METRIC / Track metric — render as highlighted insight
+    if (/key metric|track (this|today)|immediate win/i.test(trimmed)) {
+      blocks.push({ type: 'insight', content: trimmed.replace(/\*\*/g, '').replace(/^KEY METRIC[:\s]*/i, ''), category: 'Key Metric' });
+      continue;
+    }
+
+    // Headers
+    if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+      blocks.push({ type: 'heading', content: trimmed.replace(/\*\*/g, ''), level: 2 });
+      continue;
+    }
+    if (trimmed.startsWith('###')) {
+      blocks.push({ type: 'heading', content: trimmed.replace(/^#+\s*/, ''), level: 3 });
+      continue;
+    }
+
+    // Numbered action items — the main content
     if (/^\d+[\.\)]\s/.test(trimmed)) {
       const content = trimmed.replace(/^\d+[\.\)]\s*/, '').replace(/\*\*/g, '');
-      const isWarning = /risk|overdue|stale|missing|urgent|critical/i.test(content);
-      const isPositive = /close|won|strong|healthy|ready|complete/i.test(content);
+      const isWarning = /risk|overdue|stale|missing|urgent|critical|block|slip/i.test(content);
+      const isAction = /call|schedule|review|push|address|focus|submit|send|prepare|draft|update|follow/i.test(content);
 
-      // Check if it mentions a deal we know
-      const matchedDeal = opportunities?.find(o => content.includes(o.customerName));
+      // Check if it mentions a known deal
+      const matchedDeal = opportunities?.find(o => content.toLowerCase().includes(o.customerName.toLowerCase()));
 
       if (matchedDeal) {
+        // Render as deal card
         blocks.push({
           type: 'deal_card',
           id: matchedDeal.id,
@@ -287,30 +308,51 @@ export function parseToGenUI(text: string, opportunities?: any[]): GenUIBlock[] 
           owner: matchedDeal.primaryOwner,
           risk: isWarning ? 'Needs attention' : undefined,
         });
+
+        // Also collect as an action
+        if (isAction) {
+          actionItems.push({ label: content.slice(0, 60), action: content, data: { id: matchedDeal.id, oppId: matchedDeal.id } });
+        }
       } else if (isWarning) {
-        blocks.push({ type: 'warning', message: content, severity: 'medium' });
+        blocks.push({ type: 'warning', message: content, severity: /critical|urgent/i.test(content) ? 'high' : 'medium' });
+        if (isAction) actionItems.push({ label: content.slice(0, 60), action: content });
       } else {
+        // Regular numbered step — render as text
         blocks.push({ type: 'text', content: `${trimmed.match(/^\d+/)?.[0]}. ${content}` });
+        if (isAction) actionItems.push({ label: content.slice(0, 60), action: content });
       }
       continue;
     }
 
-    // Headers
-    if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
-      blocks.push({ type: 'heading', content: trimmed.replace(/\*\*/g, ''), level: 2 });
+    // Dollar amounts / percentages in standalone lines — render as metrics
+    const dollarMatch = trimmed.match(/\$[\d,.]+[kKmM]?/g);
+    const pctMatch = trimmed.match(/\d+%/);
+    if (dollarMatch && dollarMatch.length >= 2 && trimmed.length < 120) {
+      blocks.push({ type: 'text', content: trimmed.replace(/\*\*/g, '') });
       continue;
     }
 
-    // Track metric line
-    if (/Track this metric/i.test(trimmed)) {
-      blocks.push({ type: 'insight', content: trimmed, category: 'Metric' });
+    // Pipeline stage summary line
+    if (/by stage|discovery.*qualification|pipeline.*\$/i.test(trimmed)) {
+      blocks.push({ type: 'insight', content: trimmed.replace(/\*\*/g, ''), category: 'Pipeline' });
       continue;
     }
 
     // Regular text
-    if (trimmed.length > 5) {
-      blocks.push({ type: 'text', content: trimmed.replace(/\*\*/g, '') });
-    }
+    blocks.push({ type: 'text', content: trimmed.replace(/\*\*/g, '') });
+  }
+
+  // Append action row if we collected actionable items
+  if (actionItems.length > 0) {
+    blocks.push({
+      type: 'action_row',
+      actions: actionItems.slice(0, 4).map(a => ({
+        label: a.label,
+        action: a.action,
+        data: a.data,
+        variant: a.data?.id ? 'primary' : undefined,
+      })),
+    });
   }
 
   return blocks;
