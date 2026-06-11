@@ -83,6 +83,30 @@ export default function ForecastingPage() {
         ))}
       </div>
 
+      {/* Ongoing Revenue */}
+      {(data as any).wonRevenue > 0 && (
+        <div className="p-5 rounded-xl g-surface g-elevated">
+          <div className="text-sm font-medium text-foreground mb-4">Ongoing Revenue</div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Monthly Revenue</div>
+              <div className="text-xl font-semibold text-emerald-400">${((data as any).wonRevenue / 12 / 1000).toFixed(0)}k</div>
+              <div className="text-[11px] text-muted-foreground mt-1">{(data as any).wonDealCount} active engagements</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Quarterly Run Rate</div>
+              <div className="text-xl font-semibold text-blue-400">${((data as any).wonRevenue / 4 / 1000).toFixed(0)}k</div>
+              <div className="text-[11px] text-muted-foreground mt-1">from won deals</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">YTD Revenue (est.)</div>
+              <div className="text-xl font-semibold text-purple-400">${((data as any).wonRevenue / 12 * new Date().getMonth() / 1000).toFixed(0)}k</div>
+              <div className="text-[11px] text-muted-foreground mt-1">{new Date().getMonth()} months elapsed</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Pipeline by Stage */}
       <div className="p-5 rounded-xl g-surface g-elevated">
         <div className="text-sm font-medium text-foreground mb-4">Pipeline by Stage</div>

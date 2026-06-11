@@ -284,6 +284,14 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
             <h2 className="text-lg font-semibold text-foreground truncate">{opp.customerName}</h2>
             <p className="text-sm text-muted-foreground truncate">{opp.opportunityName}</p>
 
+            {/* Revenue indicator for Won deals */}
+            {opp.status === 'Won' && opp.tcv > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs mt-1.5 w-fit">
+                <DollarSign className="h-3 w-3" />
+                Active engagement: ~${((opp.tcv || 0) / 12 / 1000).toFixed(0)}k/month revenue
+              </div>
+            )}
+
             {/* Lifecycle Phase */}
             <div className="flex items-center gap-0.5 mt-1">
               {['opportunity', 'deal', 'engagement', 'delivery', 'closed'].map((phase, i) => {

@@ -76,12 +76,16 @@ export const forecastRouter = router({
     const lostDeals = opps.filter((o: any) => o.status === 'Lost');
     const winRate = wonDeals.length + lostDeals.length > 0 ? wonDeals.length / (wonDeals.length + lostDeals.length) : 0;
 
+    const wonRevenue = wonDeals.reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+
     return {
       totalPipeline,
       weightedForecast: Math.round(weightedForecast),
       activeDeals: active.length,
       winRate: Math.round(winRate * 100),
       avgDealSize: active.length > 0 ? Math.round(totalPipeline / active.length) : 0,
+      wonRevenue,
+      wonDealCount: wonDeals.length,
       byStage,
       byOwner: Object.entries(byOwner).map(([owner, data]) => ({ owner, ...data })).sort((a, b) => b.tcv - a.tcv),
       byQuarter: Object.entries(byQuarter).map(([quarter, data]) => ({ quarter, ...data })).sort((a, b) => a.quarter.localeCompare(b.quarter)),
