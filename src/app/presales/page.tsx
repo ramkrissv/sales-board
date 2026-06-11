@@ -1,678 +1,939 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import type { Opportunity } from '@/lib/types';
 import {
-  FileText, Sparkles, Loader2, ChevronRight,
-  Target, Clock, Users, DollarSign, BarChart3,
-  Zap, CheckCircle2, Copy, RotateCcw, Pencil,
-  ArrowRight, Check, ExternalLink, Layers
+  PROPOSAL_TEMPLATES,
+  SERVICE_DOMAINS,
+} from '@/lib/presales/proposal-templates';
+import type { ProposalTemplate } from '@/lib/presales/proposal-templates';
+import {
+  Sparkles, Loader2, Send, FileText, Copy, Check,
+  ChevronDown, ChevronUp, Pencil, Trash2, Plus,
+  User, Bot, ArrowRight, RotateCcw, BookOpen,
+  Users, Clock, AlertTriangle, Package, Info
 } from 'lucide-react';
 
-/* ─── Proposal Sections ─── */
-const SECTIONS = [
-  { id: 'exec_summary',  title: 'Executive Summary',         icon: Target },
-  { id: 'scope',         title: 'Scope of Work',             icon: Layers },
-  { id: 'approach',      title: 'Proposed Approach',         icon: Zap },
-  { id: 'architecture',  title: 'Solution Architecture',     icon: BarChart3 },
-  { id: 'team',          title: 'Team & Resources',          icon: Users },
-  { id: 'timeline',      title: 'Timeline & Milestones',     icon: Clock },
-  { id: 'pricing',       title: 'Pricing & Commercial Terms', icon: DollarSign },
-  { id: 'risks',         title: 'Risks & Mitigations',       icon: Target },
-  { id: 'case_studies',  title: 'Case Studies & References',  icon: FileText },
-  { id: 'terms',         title: 'Terms & Conditions',         icon: CheckCircle2 },
-] as const;
+/* ─── Types ─── */
+type SectionStatus = 'ai-draft' | 'edited' | 'approved';
 
-type SectionId = typeof SECTIONS[number]['id'];
-type Tab = 'pursuits' | 'studio' | 'solutioning';
+interface ProposalSection {
+  id: string;
+  title: string;
+  content: string;
+  status: SectionStatus;
+  order: number;
+}
 
-/* ─── Effort roles for Solutioning ─── */
-const EFFORT_ROLES = [
-  { role: 'Solution Architect', weeks: 4, rate: 200 },
-  { role: 'Sr. Developer',     weeks: 12, rate: 165 },
-  { role: 'Developer',         weeks: 16, rate: 135 },
-  { role: 'QA Engineer',       weeks: 8, rate: 120 },
-  { role: 'Project Manager',   weeks: 16, rate: 175 },
-];
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+  proposalContent?: { title: string; content: string } | null;
+  quickActions?: string[];
+}
 
+/* ─── Helpers ─── */
+let msgCounter = 0;
+function uid() { return `msg-${++msgCounter}-${Date.now()}`; }
+
+function wordCount(text: string) { return text.split(/\s+/).filter(Boolean).length; }
+function pageEstimate(words: number) { return Math.max(1, Math.ceil(words / 300)); }
+
+const STATUS_STYLE: Record<SectionStatus, { label: string; bg: string; text: string }> = {
+  'ai-draft': { label: 'AI Draft', bg: 'bg-[#7c3aed]/10', text: 'text-[#7c3aed]' },
+  'edited':   { label: 'Edited',   bg: 'bg-amber-500/10',  text: 'text-amber-400' },
+  'approved': { label: 'Approved', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
+};
+
+/* ─── Main Component ─── */
 export default function PresalesPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('pursuits');
-  const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<SectionId>('exec_summary');
-  const [sectionContent, setSectionContent] = useState<Record<string, Record<string, string>>>({});
-  const [editingSection, setEditingSection] = useState<string | null>(null);
-  const [editBuffer, setEditBuffer] = useState('');
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
-  const [draftingSection, setDraftingSection] = useState<string | null>(null);
-
-  /* ─── Data ─── */
+  /* ── Deal data ── */
   const { data: allOpportunities = [], isLoading } = trpc.opportunity.list.useQuery();
   const chatMutation = trpc.ai.chat.useMutation();
 
-  /* Only Proposal / Negotiation stage deals are presales-relevant */
   const pursuits = useMemo(() =>
     (allOpportunities as Opportunity[]).filter(
       o => o.status === 'Proposal' || o.status === 'Negotiation'
-    ),
-    [allOpportunities]
+    ), [allOpportunities]
   );
 
+  const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const selectedDeal = useMemo(() =>
     pursuits.find(o => o.id === selectedDealId) ?? null,
     [pursuits, selectedDealId]
   );
 
-  /* Per-deal section content */
-  const dealContent = selectedDealId ? (sectionContent[selectedDealId] ?? {}) : {};
-  const currentContent = dealContent[activeSection] ?? '';
+  /* ── Template ── */
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const selectedTemplate = useMemo(() =>
+    PROPOSAL_TEMPLATES.find(t => t.id === selectedTemplateId) ?? null,
+    [selectedTemplateId]
+  );
 
-  const draftedCount = selectedDealId
-    ? Object.keys(sectionContent[selectedDealId] ?? {}).length
-    : 0;
-  const progressPct = Math.round((draftedCount / SECTIONS.length) * 100);
+  /* ── Proposal sections ── */
+  const [sections, setSections] = useState<ProposalSection[]>([]);
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editBuffer, setEditBuffer] = useState('');
+  const [copiedAll, setCopiedAll] = useState(false);
 
-  /* ─── Helpers ─── */
-  const selectDeal = useCallback((id: string) => {
-    setSelectedDealId(id);
-    setActiveSection('exec_summary');
-    setEditingSection(null);
-    setActiveTab('studio');
+  /* ── Conversation ── */
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  /* ── Template info panel ── */
+  const [showTemplateInfo, setShowTemplateInfo] = useState(false);
+
+  /* ── Auto-scroll chat ── */
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  /* ── When deal changes, reset conversation ── */
+  const initConversation = useCallback((deal: Opportunity) => {
+    const greeting: ChatMessage = {
+      id: uid(),
+      role: 'assistant',
+      content: `I'll help you build a proposal for **${deal.customerName}**.\n\nHere's what I know so far:\n- **Opportunity:** ${deal.opportunityName}\n- **TCV:** $${(deal.tcv || 0).toLocaleString()}\n- **Industry:** ${deal.industry}\n- **Duration:** ${deal.dealDuration}\n\nLet me start by understanding the requirements. **What is the primary business challenge ${deal.customerName} is trying to solve?**`,
+      timestamp: new Date(),
+      quickActions: ['Draft executive summary', 'Load a template first', 'Generate full proposal'],
+    };
+    setMessages([greeting]);
+    setSections([]);
+    setSelectedTemplateId(null);
+    setShowTemplateInfo(false);
   }, []);
 
-  const setSectionText = useCallback((dealId: string, sectionId: string, text: string) => {
-    setSectionContent(prev => ({
-      ...prev,
-      [dealId]: { ...(prev[dealId] ?? {}), [sectionId]: text },
+  const handleSelectDeal = useCallback((dealId: string) => {
+    setSelectedDealId(dealId);
+    const deal = (allOpportunities as Opportunity[]).find(o => o.id === dealId);
+    if (deal) initConversation(deal);
+  }, [allOpportunities, initConversation]);
+
+  /* ── Add section to proposal ── */
+  const addSection = useCallback((title: string, content: string) => {
+    setSections(prev => {
+      const exists = prev.find(s => s.title.toLowerCase() === title.toLowerCase());
+      if (exists) {
+        return prev.map(s =>
+          s.id === exists.id ? { ...s, content, status: 'ai-draft' as SectionStatus } : s
+        );
+      }
+      return [...prev, {
+        id: uid(),
+        title,
+        content,
+        status: 'ai-draft' as SectionStatus,
+        order: prev.length,
+      }];
+    });
+    // System message
+    setMessages(prev => [...prev, {
+      id: uid(),
+      role: 'system',
+      content: `"${title}" added to proposal`,
+      timestamp: new Date(),
+    }]);
+  }, []);
+
+  /* ── Move section ── */
+  const moveSection = useCallback((id: string, direction: 'up' | 'down') => {
+    setSections(prev => {
+      const idx = prev.findIndex(s => s.id === id);
+      if (idx < 0) return prev;
+      if (direction === 'up' && idx === 0) return prev;
+      if (direction === 'down' && idx === prev.length - 1) return prev;
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      const next = [...prev];
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      return next.map((s, i) => ({ ...s, order: i }));
+    });
+  }, []);
+
+  /* ── Remove section ── */
+  const removeSection = useCallback((id: string) => {
+    setSections(prev => prev.filter(s => s.id !== id).map((s, i) => ({ ...s, order: i })));
+  }, []);
+
+  /* ── Approve section ── */
+  const approveSection = useCallback((id: string) => {
+    setSections(prev => prev.map(s => s.id === id ? { ...s, status: 'approved' } : s));
+  }, []);
+
+  /* ── Start editing section ── */
+  const startEditSection = useCallback((id: string) => {
+    const sec = sections.find(s => s.id === id);
+    if (sec) {
+      setEditingSectionId(id);
+      setEditBuffer(sec.content);
+    }
+  }, [sections]);
+
+  /* ── Save edit ── */
+  const saveEditSection = useCallback(() => {
+    if (!editingSectionId) return;
+    setSections(prev => prev.map(s =>
+      s.id === editingSectionId ? { ...s, content: editBuffer, status: 'edited' } : s
+    ));
+    setEditingSectionId(null);
+    setEditBuffer('');
+  }, [editingSectionId, editBuffer]);
+
+  /* ── Copy all ── */
+  const handleCopyAll = useCallback(() => {
+    const fullText = sections
+      .map(s => `## ${s.title}\n\n${s.content}`)
+      .join('\n\n---\n\n');
+    navigator.clipboard.writeText(fullText);
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 2000);
+  }, [sections]);
+
+  /* ── Load template sections ── */
+  const loadTemplate = useCallback((template: ProposalTemplate) => {
+    setSelectedTemplateId(template.id);
+    const templateSections: ProposalSection[] = template.sections.map((sec, i) => ({
+      id: uid(),
+      title: sec.title,
+      content: '',
+      status: 'ai-draft' as SectionStatus,
+      order: i,
     }));
+    setSections(templateSections);
+    setShowTemplateInfo(true);
+
+    setMessages(prev => [
+      ...prev,
+      {
+        id: uid(),
+        role: 'system',
+        content: `Template loaded: "${template.name}" with ${template.sections.length} sections`,
+        timestamp: new Date(),
+      },
+      {
+        id: uid(),
+        role: 'assistant',
+        content: `I've loaded the **${template.name}** template with ${template.sections.length} sections. The proposal structure is ready on the right.\n\nI can now draft content for each section using the deal context. **Would you like me to start with the first section, or is there a specific section you'd like to tackle?**`,
+        timestamp: new Date(),
+        quickActions: ['Draft all sections', 'Start with executive summary', 'Tell me about the requirements first'],
+      },
+    ]);
   }, []);
 
-  const handleAIDraft = useCallback((sectionId: SectionId) => {
-    if (!selectedDeal) return;
-    const section = SECTIONS.find(s => s.id === sectionId);
-    if (!section) return;
+  /* ── Extract proposal content from AI response ── */
+  const extractProposalContent = useCallback((text: string): { title: string; content: string } | null => {
+    // Check for ## Section Title pattern
+    const match = text.match(/^##\s+(.+?)\n\n([\s\S]+)/m);
+    if (match) {
+      return { title: match[1].trim(), content: match[2].trim() };
+    }
+    // Check for **Section: Title** pattern
+    const match2 = text.match(/\*\*Section:\s*(.+?)\*\*\n\n([\s\S]+)/m);
+    if (match2) {
+      return { title: match2[1].trim(), content: match2[2].trim() };
+    }
+    // If the response is long enough and looks like proposal content (>100 words), treat it as generic content
+    if (wordCount(text) > 100) {
+      const firstLine = text.split('\n')[0].replace(/[*#]/g, '').trim();
+      const titleGuess = firstLine.length < 60 ? firstLine : 'Proposal Content';
+      return { title: titleGuess, content: text };
+    }
+    return null;
+  }, []);
 
-    setDraftingSection(sectionId);
-    setActiveSection(sectionId);
-    setEditingSection(null);
+  /* ── Send message ── */
+  const sendMessage = useCallback((text: string) => {
+    if (!text.trim() || !selectedDeal) return;
 
+    const userMsg: ChatMessage = {
+      id: uid(),
+      role: 'user',
+      content: text.trim(),
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMsg]);
+    setInputValue('');
+
+    // Build context for the AI
     const stakeholderNames = selectedDeal.customerStakeholders
       ?.map(s => `${s.name} (${s.title})`)
       .join(', ') || 'Not specified';
 
-    const prompt = `Write the actual proposal section content for ${selectedDeal.customerName}, NOT coaching advice or instructions. This is the "${section.title}" section.
+    const existingSections = sections.filter(s => s.content).map(s => s.title).join(', ');
+    const emptySections = sections.filter(s => !s.content).map(s => s.title).join(', ');
+
+    let templateContext = '';
+    if (selectedTemplate) {
+      templateContext = `\nTemplate: ${selectedTemplate.name}\nTemplate AI Context: ${selectedTemplate.aiPromptContext}`;
+    }
+
+    const systemPrompt = `You are a proposal writing assistant in a conversational proposal builder. The user is building a proposal through dialogue with you.
 
 Deal context:
 - Customer: ${selectedDeal.customerName}
 - Opportunity: ${selectedDeal.opportunityName}
-- TCV: $${selectedDeal.tcv?.toLocaleString() ?? 'TBD'}
+- TCV: $${(selectedDeal.tcv || 0).toLocaleString()}
 - Industry: ${selectedDeal.industry}
 - Duration: ${selectedDeal.dealDuration}
 - Region: ${selectedDeal.region}
 - Service Line: ${selectedDeal.serviceLine ?? 'IT Services'}
 - Billing Model: ${selectedDeal.billingModel ?? 'Time & Material'}
-- Stakeholders: ${stakeholderNames}
-- Additional context: ${(selectedDeal.conversationLog || '').slice(0, 800)}
+- Stakeholders: ${stakeholderNames}${templateContext}
 
-Write 200-350 words of polished, professional proposal content for this section. Use specific details from the deal context above. Format with clear paragraphs. Do NOT include section headers or titles — just the body content.`;
+Proposal progress:
+- Sections with content: ${existingSections || 'None yet'}
+- Empty sections needing content: ${emptySections || 'None'}
+
+IMPORTANT INSTRUCTIONS:
+- When drafting proposal section content, format it as: ## Section Title\n\n[content]
+- Write polished, professional proposal content with specific details from the deal context
+- When the user asks you to draft a section, write 200-400 words of actual proposal content
+- When having a conversation (asking questions, discussing requirements), respond naturally without the ## format
+- Ask clarifying questions to make the proposal more specific and compelling
+- After generating content, suggest what to work on next
+- Keep responses focused and helpful
+
+Additional deal notes: ${(selectedDeal.conversationLog || '').slice(0, 600)}
+
+User message: ${text.trim()}`;
 
     chatMutation.mutate(
-      { message: prompt, context: { page: 'presales-studio', opportunityId: selectedDeal.id } },
+      {
+        message: systemPrompt,
+        context: { opportunityId: selectedDeal.id, page: 'proposal-studio' },
+      },
       {
         onSuccess: (data) => {
-          setSectionText(selectedDeal.id, sectionId, data.response);
-          setDraftingSection(null);
+          const proposalContent = extractProposalContent(data.response);
+          const quickActions = proposalContent
+            ? ['Refine this', 'More detail', 'Make it shorter', 'Next section']
+            : ['Draft executive summary', 'Add pricing section', 'Include case studies', 'Generate full proposal'];
+
+          const aiMsg: ChatMessage = {
+            id: uid(),
+            role: 'assistant',
+            content: data.response,
+            timestamp: new Date(),
+            proposalContent,
+            quickActions,
+          };
+          setMessages(prev => [...prev, aiMsg]);
         },
         onError: () => {
-          setDraftingSection(null);
+          setMessages(prev => [...prev, {
+            id: uid(),
+            role: 'assistant',
+            content: 'I encountered an error. Let me try again -- could you rephrase your request?',
+            timestamp: new Date(),
+          }]);
         },
       }
     );
-  }, [selectedDeal, chatMutation, setSectionText]);
+  }, [selectedDeal, selectedTemplate, sections, chatMutation, extractProposalContent]);
 
-  const handleCopy = useCallback((text: string, sectionId: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedSection(sectionId);
-    setTimeout(() => setCopiedSection(null), 2000);
-  }, []);
-
-  const handleStartEdit = useCallback((sectionId: string, text: string) => {
-    setEditingSection(sectionId);
-    setEditBuffer(text);
-  }, []);
-
-  const handleSaveEdit = useCallback(() => {
-    if (editingSection && selectedDealId) {
-      setSectionText(selectedDealId, editingSection, editBuffer);
-      setEditingSection(null);
-      setEditBuffer('');
+  /* ── Handle Enter key ── */
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(inputValue);
     }
-  }, [editingSection, selectedDealId, editBuffer, setSectionText]);
+  }, [inputValue, sendMessage]);
 
-  /* ─── KPI Aggregations ─── */
-  const totalPursuitValue = pursuits.reduce((s, p) => s + (p.tcv || 0), 0);
-  const negotiationCount = pursuits.filter(p => p.status === 'Negotiation').length;
-
-  const totalEffortCost = EFFORT_ROLES.reduce((s, r) => s + r.weeks * r.rate * 40, 0);
-
-  /* ─── Tab config ─── */
-  const tabs: { id: Tab; label: string; icon: typeof Target; badge?: number }[] = [
-    { id: 'pursuits', label: 'Pursuits', icon: BarChart3, badge: pursuits.length },
-    { id: 'studio', label: 'Studio', icon: FileText },
-    { id: 'solutioning', label: 'Solutioning', icon: Layers },
+  /* ── Quick prompts ── */
+  const quickPrompts = [
+    'Draft executive summary',
+    'Add pricing section',
+    'Include case studies',
+    'Generate full proposal',
   ];
+
+  /* ── Stats ── */
+  const totalWords = sections.reduce((sum, s) => sum + wordCount(s.content), 0);
+  const totalPages = pageEstimate(totalWords);
+  const approvedCount = sections.filter(s => s.status === 'approved').length;
+
+  /* ── Grouped templates ── */
+  const templatesByDomain = useMemo(() => {
+    const map: Record<string, ProposalTemplate[]> = {};
+    for (const domain of SERVICE_DOMAINS) {
+      const templates = PROPOSAL_TEMPLATES.filter(t => t.domain === domain);
+      if (templates.length > 0) map[domain] = templates;
+    }
+    return map;
+  }, []);
 
   /* ─── Render ─── */
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="max-w-[1600px] mx-auto space-y-4 pb-8">
+      {/* ── Header & Deal Selector ── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-display font-semibold text-foreground">Presales OS</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Pursue &rarr; Solution &rarr; Propose &rarr; Win
+          <h1 className="text-xl font-display font-semibold text-foreground flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-[#7c3aed]" />
+            Proposal Studio
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Build proposals through conversation with AI
           </p>
         </div>
-        {selectedDeal && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20">
-            <div className="w-2 h-2 rounded-full bg-[#7c3aed]" />
-            <span className="text-xs font-medium text-foreground">{selectedDeal.customerName}</span>
-            <span className="text-xs text-muted-foreground">{selectedDeal.opportunityName}</span>
-          </div>
-        )}
-      </div>
 
-      {/* Tabs */}
-      <div className="flex gap-0.5 p-0.5 rounded-lg bg-secondary border border-border w-fit">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-md transition-all ${
-              activeTab === tab.id
-                ? 'bg-card text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+        <div className="flex items-center gap-3">
+          <select
+            className="px-3 py-2 text-xs bg-card border border-border rounded-lg text-foreground min-w-[300px] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]/30"
+            value={selectedDealId ?? ''}
+            onChange={e => {
+              if (e.target.value) handleSelectDeal(e.target.value);
+              else setSelectedDealId(null);
+            }}
           >
-            <tab.icon className="h-3.5 w-3.5" />
-            {tab.label}
-            {tab.badge !== undefined && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed] text-[10px] font-semibold">
-                {tab.badge}
-              </span>
-            )}
-          </button>
-        ))}
+            <option value="">Select a deal...</option>
+            {pursuits.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.customerName} -- {p.opportunityName} (${((p.tcv || 0) / 1000).toFixed(0)}k)
+              </option>
+            ))}
+          </select>
+
+          {selectedDeal && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20">
+              <div className="w-2 h-2 rounded-full bg-[#7c3aed]" />
+              <span className="text-[10px] font-medium text-foreground">{selectedDeal.status}</span>
+              <span className="text-[10px] text-muted-foreground">{selectedDeal.industry}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          PURSUITS TAB
-         ═══════════════════════════════════════════════════════════════ */}
-      {activeTab === 'pursuits' && (
-        <div className="space-y-5">
-          {/* KPI Strip */}
-          <div className="grid grid-cols-4 gap-3">
-            {[
-              { label: 'Active Pursuits', value: String(pursuits.length), icon: Target, color: '#7c3aed' },
-              { label: 'Pursuit Value', value: `$${(totalPursuitValue / 1e6).toFixed(1)}M`, icon: DollarSign, color: '#22c55e' },
-              { label: 'In Negotiation', value: String(negotiationCount), icon: BarChart3, color: '#3b82f6' },
-              { label: 'Proposals Due', value: String(pursuits.filter(p => {
-                const close = new Date(p.expectedCloseDate);
-                const now = new Date();
-                const diff = (close.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-                return diff <= 30 && diff >= 0;
-              }).length), icon: Clock, color: '#f59e0b' },
-            ].map(kpi => (
-              <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated">
-                <div className="flex items-center gap-2 mb-1">
-                  <kpi.icon className="h-3.5 w-3.5" style={{ color: kpi.color }} />
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{kpi.label}</span>
-                </div>
-                <div className="text-xl font-bold text-foreground font-display">{kpi.value}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Loading state */}
-          {isLoading && (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-5 w-5 animate-spin text-[#7c3aed]" />
-              <span className="ml-2 text-sm text-muted-foreground">Loading pipeline...</span>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {!isLoading && pursuits.length === 0 && (
-            <div className="g-surface g-elevated p-12 text-center">
-              <Target className="h-8 w-8 text-muted-foreground mx-auto mb-3 opacity-40" />
-              <div className="text-sm font-medium text-foreground mb-1">No active pursuits</div>
-              <div className="text-xs text-muted-foreground">
-                Deals in Proposal or Negotiation stages will appear here.
-              </div>
-            </div>
-          )}
-
-          {/* Pursuit cards */}
-          {pursuits.map((deal, i) => {
-            const dealDrafted = Object.keys(sectionContent[deal.id] ?? {}).length;
-            const pct = Math.round((dealDrafted / SECTIONS.length) * 100);
-            const closeDate = new Date(deal.expectedCloseDate);
-            const daysLeft = Math.ceil((closeDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-
-            return (
-              <div
-                key={deal.id}
-                className={`g-surface g-elevated p-5 transition-all cursor-pointer ${
-                  selectedDealId === deal.id
-                    ? '!border-[#7c3aed]/40 ring-1 ring-[#7c3aed]/10'
-                    : 'hover:border-[#7c3aed]/20'
-                }`}
-                style={{ animationDelay: `${i * 0.05}s` }}
-                onClick={() => selectDeal(deal.id)}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#7c3aed]/10 flex items-center justify-center text-[#7c3aed] text-xs font-bold">
-                      {deal.customerName.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-foreground">{deal.customerName}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">{deal.opportunityName}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-foreground font-display">
-                      ${((deal.tcv || 0) / 1000).toFixed(0)}k
-                    </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                      deal.status === 'Negotiation'
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : 'bg-amber-500/10 text-amber-400'
-                    }`}>
-                      {deal.status}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 gap-4 mb-4">
-                  <div className="text-xs">
-                    <span className="text-muted-foreground">Industry</span>
-                    <div className="text-foreground mt-0.5">{deal.industry}</div>
-                  </div>
-                  <div className="text-xs">
-                    <span className="text-muted-foreground">Duration</span>
-                    <div className="text-foreground mt-0.5">{deal.dealDuration}</div>
-                  </div>
-                  <div className="text-xs">
-                    <span className="text-muted-foreground">Owner</span>
-                    <div className="text-foreground mt-0.5">{deal.primaryOwner}</div>
-                  </div>
-                  <div className="text-xs">
-                    <span className="text-muted-foreground">Close Date</span>
-                    <div className={`mt-0.5 font-medium ${daysLeft <= 14 ? 'text-red-400' : daysLeft <= 30 ? 'text-amber-400' : 'text-foreground'}`}>
-                      {closeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      {daysLeft > 0 && <span className="text-muted-foreground font-normal ml-1">({daysLeft}d)</span>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Proposal progress */}
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">Proposal</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${pct}%`,
-                        backgroundColor: pct >= 80 ? '#22c55e' : pct >= 40 ? '#f59e0b' : '#7c3aed',
-                      }}
-                    />
-                  </div>
-                  <span className="text-[10px] font-semibold text-foreground w-12 text-right">
-                    {dealDrafted}/{SECTIONS.length}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </div>
-            );
-          })}
+      {/* ── Loading ── */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-5 w-5 animate-spin text-[#7c3aed]" />
+          <span className="ml-2 text-sm text-muted-foreground">Loading pipeline...</span>
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════
-          STUDIO TAB
-         ═══════════════════════════════════════════════════════════════ */}
-      {activeTab === 'studio' && (
-        <div className="space-y-4">
-          {/* Deal selector bar */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <select
-                className="px-3 py-2 text-xs bg-card border border-border rounded-lg text-foreground min-w-[280px]"
-                value={selectedDealId ?? ''}
-                onChange={e => {
-                  if (e.target.value) selectDeal(e.target.value);
-                  else setSelectedDealId(null);
-                }}
-              >
-                <option value="">Select an opportunity...</option>
-                {pursuits.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.customerName} — {p.opportunityName}
-                  </option>
-                ))}
-              </select>
-              {selectedDeal && (
-                <span className="text-xs text-muted-foreground">
-                  ${((selectedDeal.tcv || 0) / 1000).toFixed(0)}k &middot; {selectedDeal.status} &middot; {selectedDeal.industry}
-                </span>
-              )}
-            </div>
-            {selectedDealId && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-32 h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500 bg-[#7c3aed]"
-                      style={{ width: `${progressPct}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] font-semibold text-foreground">
-                    {draftedCount}/{SECTIONS.length} sections
-                  </span>
-                </div>
-              </div>
-            )}
+      {/* ── No deal selected ── */}
+      {!isLoading && !selectedDeal && (
+        <div className="g-surface g-elevated p-16 text-center">
+          <Sparkles className="h-10 w-10 text-[#7c3aed] mx-auto mb-4 opacity-40" />
+          <div className="text-sm font-medium text-foreground mb-2">Select a deal to start building a proposal</div>
+          <div className="text-xs text-muted-foreground mb-6 max-w-md mx-auto">
+            Choose from your active pursuits in Proposal or Negotiation stage.
+            The AI will guide you through building a professional proposal through conversation.
           </div>
-
-          {/* No deal selected */}
-          {!selectedDeal && (
-            <div className="g-surface g-elevated p-16 text-center">
-              <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-4 opacity-30" />
-              <div className="text-sm font-medium text-foreground mb-1">Select an opportunity to begin</div>
-              <div className="text-xs text-muted-foreground mb-4">
-                Choose from your active pursuits to start drafting a proposal.
-              </div>
-              <button
-                onClick={() => setActiveTab('pursuits')}
-                className="px-4 py-2 text-xs rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors font-medium inline-flex items-center gap-1.5"
-              >
-                View Pursuits <ArrowRight className="h-3 w-3" />
-              </button>
+          {pursuits.length > 0 && (
+            <div className="flex flex-wrap gap-2 justify-center">
+              {pursuits.slice(0, 4).map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => handleSelectDeal(p.id)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg g-surface border border-border hover:border-[#7c3aed]/30 transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-md bg-[#7c3aed]/10 flex items-center justify-center text-[#7c3aed] text-[10px] font-bold">
+                    {p.customerName.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-medium text-foreground">{p.customerName}</div>
+                    <div className="text-[10px] text-muted-foreground">${((p.tcv || 0) / 1000).toFixed(0)}k &middot; {p.status}</div>
+                  </div>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground ml-2" />
+                </button>
+              ))}
             </div>
           )}
+          {pursuits.length === 0 && !isLoading && (
+            <div className="text-xs text-muted-foreground">
+              No deals in Proposal or Negotiation stage found.
+            </div>
+          )}
+        </div>
+      )}
 
-          {/* Studio editor layout */}
-          {selectedDeal && (
-            <div className="flex gap-4" style={{ minHeight: '65vh' }}>
-              {/* Left: Section navigator */}
-              <div className="w-64 shrink-0 space-y-1">
-                {SECTIONS.map((sec, i) => {
-                  const hasDraft = !!(sectionContent[selectedDeal.id]?.[sec.id]);
-                  const isActive = activeSection === sec.id;
-                  const isDrafting = draftingSection === sec.id;
+      {/* ═══════════════════════════════════════════════════════
+          MAIN: Conversation + Proposal panels
+         ═══════════════════════════════════════════════════════ */}
+      {selectedDeal && (
+        <div className="flex gap-4" style={{ height: 'calc(100vh - 160px)' }}>
 
-                  return (
-                    <button
-                      key={sec.id}
-                      onClick={() => { setActiveSection(sec.id); setEditingSection(null); }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-all ${
-                        isActive
-                          ? 'bg-[#7c3aed]/10 border border-[#7c3aed]/20 text-foreground'
-                          : 'hover:bg-card text-muted-foreground hover:text-foreground border border-transparent'
-                      }`}
-                    >
-                      <span className="text-[10px] text-muted-foreground w-4 shrink-0">{i + 1}</span>
-                      <sec.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-[#7c3aed]' : ''}`} />
-                      <span className="text-xs font-medium flex-1 truncate">{sec.title}</span>
-                      {isDrafting && <Loader2 className="h-3 w-3 animate-spin text-[#7c3aed] shrink-0" />}
-                      {hasDraft && !isDrafting && <Check className="h-3 w-3 text-emerald-400 shrink-0" />}
-                    </button>
-                  );
-                })}
-
-                {/* Draft All button */}
-                <div className="pt-3 mt-3 border-t border-border">
-                  <button
-                    onClick={() => {
-                      const undrafted = SECTIONS.filter(s => !(sectionContent[selectedDeal.id]?.[s.id]));
-                      if (undrafted.length > 0) handleAIDraft(undrafted[0].id);
-                    }}
-                    disabled={chatMutation.isPending || draftedCount === SECTIONS.length}
-                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-[#7c3aed] text-white text-xs font-medium hover:bg-[#6d28d9] transition-colors disabled:opacity-40"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    {draftedCount === SECTIONS.length ? 'All Sections Drafted' : 'AI Draft Next Section'}
-                  </button>
+          {/* ──────────── LEFT: Conversation Panel (40%) ──────────── */}
+          <div className="w-[40%] shrink-0 flex flex-col g-surface g-elevated overflow-hidden">
+            {/* Chat header */}
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-[#7c3aed]/10 flex items-center justify-center">
+                  <Sparkles className="h-3 w-3 text-[#7c3aed]" />
                 </div>
+                <span className="text-xs font-semibold text-foreground">Proposal AI</span>
+                <span className="text-[10px] text-muted-foreground">for {selectedDeal.customerName}</span>
               </div>
+              <button
+                onClick={() => initConversation(selectedDeal)}
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-muted-foreground hover:text-foreground border border-border hover:border-[#7c3aed]/20 transition-colors"
+                title="Reset conversation"
+              >
+                <RotateCcw className="h-3 w-3" /> Reset
+              </button>
+            </div>
 
-              {/* Right: Content area */}
-              <div className="flex-1 g-surface g-elevated p-6 overflow-auto">
-                {(() => {
-                  const sec = SECTIONS.find(s => s.id === activeSection)!;
-                  const content = sectionContent[selectedDeal.id]?.[activeSection] ?? '';
-                  const isDrafting = draftingSection === activeSection;
-                  const isEditing = editingSection === activeSection;
+            {/* Chat messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              {messages.map(msg => (
+                <div key={msg.id}>
+                  {/* System message */}
+                  {msg.role === 'system' && (
+                    <div className="flex justify-center my-2">
+                      <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-medium">
+                        {msg.content}
+                      </span>
+                    </div>
+                  )}
 
-                  return (
-                    <div className="space-y-4">
-                      {/* Section header */}
-                      <div className="flex items-center justify-between pb-4 border-b border-border">
-                        <div>
-                          <h2 className="text-base font-display font-semibold text-foreground">{sec.title}</h2>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {selectedDeal.customerName} &middot; {selectedDeal.opportunityName}
-                          </p>
+                  {/* User message */}
+                  {msg.role === 'user' && (
+                    <div className="flex justify-end">
+                      <div className="max-w-[85%] flex items-start gap-2">
+                        <div className="px-3.5 py-2.5 rounded-2xl rounded-tr-sm bg-[#7c3aed] text-white text-xs leading-relaxed">
+                          {msg.content}
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          {content && !isEditing && (
-                            <>
-                              <button
-                                onClick={() => handleCopy(content, activeSection)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-medium border border-border text-muted-foreground hover:text-foreground transition-colors"
-                              >
-                                {copiedSection === activeSection ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                                {copiedSection === activeSection ? 'Copied' : 'Copy'}
-                              </button>
-                              <button
-                                onClick={() => handleStartEdit(activeSection, content)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-medium border border-border text-muted-foreground hover:text-foreground transition-colors"
-                              >
-                                <Pencil className="h-3 w-3" /> Edit
-                              </button>
-                              <button
-                                onClick={() => handleAIDraft(activeSection)}
-                                disabled={chatMutation.isPending}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-medium border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
-                              >
-                                <RotateCcw className="h-3 w-3" /> Regenerate
-                              </button>
-                            </>
+                        <div className="w-6 h-6 rounded-full bg-[#7c3aed]/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <User className="h-3 w-3 text-[#7c3aed]" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Assistant message */}
+                  {msg.role === 'assistant' && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[90%] flex items-start gap-2">
+                        <div className="w-6 h-6 rounded-full bg-[#7c3aed]/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <Sparkles className="h-3 w-3 text-[#7c3aed]" />
+                        </div>
+                        <div className="space-y-2 flex-1 min-w-0">
+                          {/* Regular message content */}
+                          <div className="px-3.5 py-2.5 rounded-2xl rounded-tl-sm bg-card border border-border text-xs text-foreground leading-relaxed">
+                            {msg.content.split('\n').map((line, li) => (
+                              <span key={li}>
+                                {line.split(/(\*\*.*?\*\*)/).map((part, pi) =>
+                                  part.startsWith('**') && part.endsWith('**')
+                                    ? <strong key={pi} className="font-semibold">{part.slice(2, -2)}</strong>
+                                    : <span key={pi}>{part}</span>
+                                )}
+                                {li < msg.content.split('\n').length - 1 && <br />}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Proposal content card */}
+                          {msg.proposalContent && (
+                            <div className="rounded-xl border-l-[3px] border-l-[#7c3aed] bg-card border border-border overflow-hidden">
+                              <div className="px-3.5 py-2.5 border-b border-border bg-[#7c3aed]/5 flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <FileText className="h-3 w-3 text-[#7c3aed]" />
+                                  <span className="text-[10px] font-semibold text-foreground">{msg.proposalContent.title}</span>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground">{wordCount(msg.proposalContent.content)} words</span>
+                              </div>
+                              <div className="px-3.5 py-2.5 text-[11px] text-muted-foreground leading-relaxed max-h-32 overflow-y-auto">
+                                {msg.proposalContent.content.slice(0, 300)}
+                                {msg.proposalContent.content.length > 300 && '...'}
+                              </div>
+                              <div className="px-3.5 py-2 border-t border-border">
+                                <button
+                                  onClick={() => addSection(msg.proposalContent!.title, msg.proposalContent!.content)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7c3aed] text-white text-[10px] font-medium hover:bg-[#6d28d9] transition-colors"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                  Add to Proposal
+                                  <ArrowRight className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
                           )}
-                          {!content && !isDrafting && (
-                            <button
-                              onClick={() => handleAIDraft(activeSection)}
-                              disabled={chatMutation.isPending}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7c3aed] text-white text-xs font-medium hover:bg-[#6d28d9] transition-colors disabled:opacity-40"
-                            >
-                              {chatMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                              AI Draft
-                            </button>
+
+                          {/* Quick actions */}
+                          {msg.quickActions && msg.quickActions.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {msg.quickActions.map(action => (
+                                <button
+                                  key={action}
+                                  onClick={() => sendMessage(action)}
+                                  disabled={chatMutation.isPending}
+                                  className="px-2.5 py-1 rounded-full text-[10px] font-medium border border-border text-muted-foreground hover:text-[#7c3aed] hover:border-[#7c3aed]/30 hover:bg-[#7c3aed]/5 transition-colors disabled:opacity-40"
+                                >
+                                  {action}
+                                </button>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
+                    </div>
+                  )}
+                </div>
+              ))}
 
-                      {/* Content body */}
-                      {isDrafting && (
-                        <div className="flex flex-col items-center justify-center py-16">
-                          <Loader2 className="h-6 w-6 animate-spin text-[#7c3aed] mb-3" />
-                          <div className="text-sm text-foreground font-medium">Drafting {sec.title}...</div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Using deal context for {selectedDeal.customerName}
-                          </div>
+              {/* Typing indicator */}
+              {chatMutation.isPending && (
+                <div className="flex justify-start">
+                  <div className="flex items-start gap-2">
+                    <div className="w-6 h-6 rounded-full bg-[#7c3aed]/10 flex items-center justify-center shrink-0">
+                      <Sparkles className="h-3 w-3 text-[#7c3aed]" />
+                    </div>
+                    <div className="px-3.5 py-2.5 rounded-2xl rounded-tl-sm bg-card border border-border">
+                      <div className="flex items-center gap-1.5">
+                        <Loader2 className="h-3 w-3 animate-spin text-[#7c3aed]" />
+                        <span className="text-[10px] text-muted-foreground">Thinking...</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Quick prompts */}
+            <div className="px-4 py-2 border-t border-border flex gap-1.5 overflow-x-auto">
+              {quickPrompts.map(prompt => (
+                <button
+                  key={prompt}
+                  onClick={() => sendMessage(prompt)}
+                  disabled={chatMutation.isPending}
+                  className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-secondary text-muted-foreground hover:text-[#7c3aed] hover:bg-[#7c3aed]/5 transition-colors whitespace-nowrap disabled:opacity-40 shrink-0"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            {/* Input bar */}
+            <div className="px-4 py-3 border-t border-border bg-card/50">
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={inputRef}
+                  value={inputValue}
+                  onChange={e => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Describe requirements, ask for a section draft, or refine content..."
+                  rows={1}
+                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-secondary border border-border text-xs text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-[#7c3aed]/30 max-h-24"
+                  style={{ minHeight: '36px' }}
+                />
+                <button
+                  onClick={() => sendMessage(inputValue)}
+                  disabled={!inputValue.trim() || chatMutation.isPending}
+                  className="w-9 h-9 rounded-xl bg-[#7c3aed] text-white flex items-center justify-center hover:bg-[#6d28d9] transition-colors disabled:opacity-40 shrink-0"
+                >
+                  {chatMutation.isPending
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Send className="h-3.5 w-3.5" />
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ──────────── RIGHT: Live Proposal Document (60%) ──────────── */}
+          <div className="flex-1 flex flex-col g-surface g-elevated overflow-hidden">
+            {/* Proposal header */}
+            <div className="px-5 py-3 border-b border-border">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-[#7c3aed]" />
+                  <span className="text-xs font-semibold text-foreground">
+                    {selectedDeal.customerName} Proposal
+                  </span>
+                  {sections.length > 0 && (
+                    <span className="text-[10px] text-muted-foreground">
+                      {sections.length} sections &middot; {totalWords.toLocaleString()} words &middot; ~{totalPages} {totalPages === 1 ? 'page' : 'pages'}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {sections.length > 0 && (
+                    <>
+                      <span className="text-[10px] text-muted-foreground">
+                        {approvedCount}/{sections.length} approved
+                      </span>
+                      <button
+                        onClick={handleCopyAll}
+                        disabled={sections.length === 0}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-medium border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                      >
+                        {copiedAll ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                        {copiedAll ? 'Copied!' : 'Copy All'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Template selector */}
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-3 w-3 text-muted-foreground" />
+                <select
+                  className="flex-1 px-2 py-1.5 text-[10px] bg-secondary border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-[#7c3aed]/30"
+                  value={selectedTemplateId ?? ''}
+                  onChange={e => {
+                    const tmpl = PROPOSAL_TEMPLATES.find(t => t.id === e.target.value);
+                    if (tmpl) loadTemplate(tmpl);
+                  }}
+                >
+                  <option value="">Load template...</option>
+                  {Object.entries(templatesByDomain).map(([domain, templates]) => (
+                    <optgroup key={domain} label={domain}>
+                      {templates.map(t => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.complexity})</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+
+                {selectedTemplate && (
+                  <button
+                    onClick={() => setShowTemplateInfo(!showTemplateInfo)}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-[10px] font-medium border transition-colors ${
+                      showTemplateInfo
+                        ? 'border-[#7c3aed]/20 bg-[#7c3aed]/5 text-[#7c3aed]'
+                        : 'border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Info className="h-3 w-3" /> Template Info
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Template info panel (collapsible) */}
+            {showTemplateInfo && selectedTemplate && (
+              <div className="px-5 py-3 border-b border-border bg-[#7c3aed]/5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-semibold text-[#7c3aed] uppercase tracking-wider">
+                    {selectedTemplate.name}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {selectedTemplate.tcvRange} &middot; {selectedTemplate.durationRange}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-[10px]">
+                  <div>
+                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                      <Users className="h-3 w-3" /> Typical Team
+                    </div>
+                    <div className="space-y-0.5">
+                      {selectedTemplate.typicalTeam.map(t => (
+                        <div key={t.role} className="text-foreground">
+                          {t.count}x {t.role} <span className="text-muted-foreground">({t.geo})</span>
                         </div>
-                      )}
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                      <Package className="h-3 w-3" /> Deliverables
+                    </div>
+                    <div className="space-y-0.5">
+                      {selectedTemplate.deliverables.slice(0, 5).map(d => (
+                        <div key={d} className="text-foreground">{d}</div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                      <AlertTriangle className="h-3 w-3" /> Risks
+                    </div>
+                    <div className="space-y-0.5">
+                      {selectedTemplate.risks.slice(0, 4).map(r => (
+                        <div key={r} className="text-foreground">{r}</div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
-                      {!isDrafting && !content && !isEditing && (
-                        <div className="flex flex-col items-center justify-center py-16 text-center">
-                          <sec.icon className="h-8 w-8 text-muted-foreground opacity-20 mb-3" />
-                          <div className="text-sm text-muted-foreground mb-1">No content yet</div>
-                          <div className="text-xs text-muted-foreground">
-                            Click &quot;AI Draft&quot; to generate this section using deal context, or start typing.
-                          </div>
-                        </div>
-                      )}
+            {/* Proposal body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+              {sections.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <FileText className="h-10 w-10 text-muted-foreground opacity-20 mb-4" />
+                  <div className="text-sm font-medium text-foreground mb-1">Proposal will build here</div>
+                  <div className="text-xs text-muted-foreground max-w-sm">
+                    Start a conversation on the left. As the AI drafts content, click &quot;Add to Proposal&quot; to build up your document. Or load a template to get started with a structure.
+                  </div>
+                </div>
+              )}
 
-                      {isEditing && (
-                        <div className="space-y-3">
+              {sections.map((section, idx) => {
+                const statusInfo = STATUS_STYLE[section.status];
+                const isEditing = editingSectionId === section.id;
+
+                return (
+                  <div
+                    key={section.id}
+                    className="rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-[#7c3aed]/20"
+                  >
+                    {/* Section header */}
+                    <div className="px-4 py-2.5 border-b border-border flex items-center justify-between bg-secondary/30">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground font-mono w-5">{idx + 1}.</span>
+                        <span className="text-xs font-semibold text-foreground">{section.title}</span>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${statusInfo.bg} ${statusInfo.text}`}>
+                          {statusInfo.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {section.content && !isEditing && (
+                          <>
+                            <button
+                              onClick={() => moveSection(section.id, 'up')}
+                              disabled={idx === 0}
+                              className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-20"
+                              title="Move up"
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => moveSection(section.id, 'down')}
+                              disabled={idx === sections.length - 1}
+                              className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-20"
+                              title="Move down"
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => startEditSection(section.id)}
+                              className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                            {section.status !== 'approved' && (
+                              <button
+                                onClick={() => approveSection(section.id)}
+                                className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                                title="Approve"
+                              >
+                                <Check className="h-3 w-3" />
+                              </button>
+                            )}
+                          </>
+                        )}
+                        <button
+                          onClick={() => removeSection(section.id)}
+                          className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          title="Remove"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Section content */}
+                    <div className="px-4 py-3">
+                      {isEditing ? (
+                        <div className="space-y-2">
                           <textarea
                             value={editBuffer}
                             onChange={e => setEditBuffer(e.target.value)}
-                            className="w-full h-[400px] p-4 rounded-lg bg-card border border-[#7c3aed]/20 text-sm text-foreground leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-[#7c3aed]/30"
-                            placeholder="Write your proposal content here..."
+                            className="w-full h-48 px-3 py-2.5 rounded-lg bg-secondary border border-[#7c3aed]/20 text-xs text-foreground leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-[#7c3aed]/30"
                           />
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={handleSaveEdit}
-                              className="px-4 py-2 rounded-lg bg-[#7c3aed] text-white text-xs font-medium hover:bg-[#6d28d9] transition-colors"
+                              onClick={saveEditSection}
+                              className="px-3 py-1.5 rounded-lg bg-[#7c3aed] text-white text-[10px] font-medium hover:bg-[#6d28d9] transition-colors"
                             >
-                              Save Changes
+                              Save
                             </button>
                             <button
-                              onClick={() => { setEditingSection(null); setEditBuffer(''); }}
-                              className="px-4 py-2 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() => { setEditingSectionId(null); setEditBuffer(''); }}
+                              className="px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                             >
                               Cancel
                             </button>
                             <span className="text-[10px] text-muted-foreground ml-auto">
-                              {editBuffer.split(/\s+/).filter(Boolean).length} words
+                              {wordCount(editBuffer)} words
                             </span>
                           </div>
                         </div>
-                      )}
-
-                      {!isDrafting && content && !isEditing && (
-                        <div className="prose-sm">
-                          <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                            {content}
-                          </div>
-                          <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
-                            <span className="text-[10px] text-muted-foreground">
-                              {content.split(/\s+/).filter(Boolean).length} words
-                            </span>
-                            <span className="text-[10px] text-muted-foreground">
-                              AI-generated &middot; Review before use
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════
-          SOLUTIONING TAB
-         ═══════════════════════════════════════════════════════════════ */}
-      {activeTab === 'solutioning' && (
-        <div className="space-y-5">
-          {/* Deal context */}
-          {selectedDeal ? (
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20">
-              <div className="w-2 h-2 rounded-full bg-[#7c3aed]" />
-              <span className="text-xs font-medium text-foreground">{selectedDeal.customerName}</span>
-              <span className="text-xs text-muted-foreground">{selectedDeal.opportunityName}</span>
-              <span className="text-xs text-muted-foreground ml-auto">
-                TCV: ${((selectedDeal.tcv || 0) / 1000).toFixed(0)}k
-              </span>
-            </div>
-          ) : (
-            <div className="p-3 rounded-lg bg-secondary border border-border text-center">
-              <span className="text-xs text-muted-foreground">Select a pursuit to see deal-specific solutioning.</span>
-            </div>
-          )}
-
-          {/* Effort Estimator */}
-          <div className="g-surface g-elevated p-6">
-            <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-4">
-              Effort Estimator
-            </div>
-            <div className="grid grid-cols-5 gap-3">
-              {EFFORT_ROLES.map(item => (
-                <div key={item.role} className="p-4 rounded-lg bg-card border border-border text-center">
-                  <div className="text-[10px] text-muted-foreground mb-1">{item.role}</div>
-                  <div className="text-xl font-bold text-foreground font-display">{item.weeks}w</div>
-                  <div className="text-[10px] text-muted-foreground mt-1">${item.rate}/hr</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex items-center justify-between p-4 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20">
-              <span className="text-xs text-foreground font-medium">Total Estimated Effort</span>
-              <span className="text-sm font-bold text-[#7c3aed] font-display">
-                {EFFORT_ROLES.reduce((s, r) => s + r.weeks, 0)} person-weeks &middot; ~${(totalEffortCost / 1000).toFixed(0)}K
-              </span>
-            </div>
-          </div>
-
-          {/* Team Composition */}
-          <div className="g-surface g-elevated p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Team Composition
-              </div>
-              <a
-                href="/pricing"
-                className="flex items-center gap-1 text-[10px] text-[#7c3aed] font-medium hover:underline"
-              >
-                Detailed Pricing <ExternalLink className="h-2.5 w-2.5" />
-              </a>
-            </div>
-            <div className="space-y-2">
-              {EFFORT_ROLES.map(role => {
-                const costTotal = role.weeks * role.rate * 40;
-                const pctOfTotal = Math.round((costTotal / totalEffortCost) * 100);
-
-                return (
-                  <div key={role.role} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
-                    <div className="w-8 h-8 rounded-full bg-[#7c3aed]/10 flex items-center justify-center text-[#7c3aed] text-[10px] font-bold">
-                      {role.role.split(' ').map(w => w[0]).join('')}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-foreground">{role.role}</div>
-                      <div className="text-[10px] text-muted-foreground">{role.weeks} weeks @ ${role.rate}/hr</div>
-                    </div>
-                    <div className="w-24">
-                      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                      ) : section.content ? (
                         <div
-                          className="h-full rounded-full bg-[#7c3aed]"
-                          style={{ width: `${pctOfTotal}%` }}
-                        />
-                      </div>
+                          className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap cursor-pointer"
+                          onClick={() => startEditSection(section.id)}
+                          title="Click to edit"
+                        >
+                          {section.content}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between py-4">
+                          <span className="text-[10px] text-muted-foreground italic">No content yet</span>
+                          <button
+                            onClick={() => sendMessage(`Draft the "${section.title}" section`)}
+                            disabled={chatMutation.isPending}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors disabled:opacity-40"
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            Ask AI to draft
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <span className="text-xs font-bold text-foreground w-16 text-right font-display">
-                      ${(costTotal / 1000).toFixed(0)}K
-                    </span>
+
+                    {/* Section footer */}
+                    {section.content && !isEditing && (
+                      <div className="px-4 py-1.5 border-t border-border bg-secondary/20 flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground">
+                          {wordCount(section.content)} words
+                        </span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(section.content);
+                          }}
+                          className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Copy section
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
-          </div>
 
-          {/* Link to pricing page */}
-          <div className="flex justify-center">
-            <a
-              href="/pricing"
-              className="flex items-center gap-2 px-6 py-3 rounded-lg bg-card border border-border hover:border-[#7c3aed]/20 transition-colors"
-            >
-              <DollarSign className="h-4 w-4 text-[#7c3aed]" />
-              <span className="text-xs font-medium text-foreground">Open Full Pricing Calculator</span>
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-            </a>
+            {/* Proposal footer stats */}
+            {sections.length > 0 && (
+              <div className="px-5 py-2.5 border-t border-border flex items-center justify-between bg-card/50">
+                <div className="flex items-center gap-4">
+                  <span className="text-[10px] text-muted-foreground">
+                    {sections.length} sections
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {totalWords.toLocaleString()} words
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    ~{totalPages} {totalPages === 1 ? 'page' : 'pages'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {Object.entries(STATUS_STYLE).map(([status, info]) => {
+                      const count = sections.filter(s => s.status === status).length;
+                      if (count === 0) return null;
+                      return (
+                        <span key={status} className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${info.bg} ${info.text}`}>
+                          {count} {info.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
