@@ -124,7 +124,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen g-scene text-foreground">
       {/* ── Sidebar ── */}
-      <aside className="fixed left-0 top-0 bottom-0 w-52 z-50 hidden md:flex flex-col"
+      <aside className="fixed left-0 top-0 bottom-0 w-52 z-50 hidden md:flex flex-col g-hex"
         style={{ background: 'var(--g-bg)', borderRight: '1px solid var(--g-line)' }}>
 
         {/* Logo */}
