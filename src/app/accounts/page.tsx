@@ -396,6 +396,28 @@ function AccountRow({ account, expanded, onToggle, onEdit, onDelete, scoreIntent
                 <p className="text-sm text-muted-foreground">{account.description}</p>
               )}
 
+              {/* Account Revenue */}
+              {(() => {
+                const acctWonDeals = opportunities.filter((o: any) => o.status === 'Won');
+                const acctWonRevenue = acctWonDeals.reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+                return acctWonDeals.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Won Revenue</div>
+                      <div className="text-lg font-semibold text-emerald-400">${(acctWonRevenue / 1000).toFixed(0)}k</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Monthly Run Rate</div>
+                      <div className="text-lg font-semibold text-emerald-400">${(acctWonRevenue / 12 / 1000).toFixed(0)}k</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Active Engagements</div>
+                      <div className="text-lg font-semibold text-emerald-400">{acctWonDeals.length}</div>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
               {/* Linked Opportunities */}
               <div>
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground g-section-label">Linked Opportunities ({opportunities.length})</span>

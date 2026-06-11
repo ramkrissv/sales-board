@@ -61,6 +61,8 @@ function HomeContent() {
   const totalPipeline = activeDeals.reduce((sum, o) => sum + (o.tcv || 0), 0);
   const wonDeals = opportunities.filter(o => o.status === 'Won');
   const lostDeals = opportunities.filter(o => o.status === 'Lost');
+  const wonRevenue = wonDeals.reduce((sum, o) => sum + (o.tcv || 0), 0);
+  const monthlyRevenue = wonRevenue / 12;
   const winRate = wonDeals.length + lostDeals.length > 0 ? Math.round((wonDeals.length / (wonDeals.length + lostDeals.length)) * 100) : 0;
   const negotiationDeals = opportunities.filter(o => o.status === 'Negotiation');
   const allTasks = opportunities.flatMap(o => o.subTasks || []);
@@ -175,12 +177,13 @@ function HomeContent() {
       </div>
 
       {/* KPI Row with visual indicators */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-flow-in animate-flow-in-delay-2">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 animate-flow-in animate-flow-in-delay-2">
         {[
           { label: 'Pipeline', value: `$${(totalPipeline/1e6).toFixed(1)}M`, icon: DollarSign, color: '#7c3aed', sub: `${activeDeals.length} active` },
           { label: 'Win Rate', value: `${winRate}%`, icon: Target, color: '#22c55e', sub: `${wonDeals.length}W / ${lostDeals.length}L` },
           { label: 'Closing Soon', value: `${closingSoonDeals.length}`, icon: Clock, color: '#f59e0b', sub: 'within 30 days' },
           { label: 'At Risk', value: `${atRiskDeals.length}`, icon: AlertTriangle, color: '#ef4444', sub: 'need attention' },
+          { label: 'Monthly Revenue', value: `$${(monthlyRevenue/1000).toFixed(0)}k`, icon: DollarSign, color: '#10b981', sub: `${wonDeals.length} active engagements` },
         ].map(kpi => (
           <div key={kpi.label} className="p-4 rounded-xl g-surface g-elevated hover-lift">
             <div className="flex items-center gap-2 mb-2">

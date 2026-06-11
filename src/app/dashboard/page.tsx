@@ -94,10 +94,11 @@ function AnalyticsContent() {
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           { label: 'Total Pipeline', value: `$${(totalPipeline / 1e6).toFixed(1)}M`, sub: `${activeDeals.length} active`, color: 'text-purple-400' },
           { label: 'Won Revenue', value: `$${(wonTcv / 1e6).toFixed(1)}M`, sub: `${wonDeals.length} deals`, color: 'text-emerald-400' },
+          { label: 'Monthly Revenue', value: `$${(wonTcv / 12 / 1000).toFixed(0)}k`, sub: `${wonDeals.length} engagements`, color: 'text-green-400' },
           { label: 'Win Rate', value: `${winRate}%`, sub: `${wonDeals.length}W / ${lostDeals.length}L`, color: 'text-blue-400' },
           { label: 'Avg Deal Size', value: `$${activeDeals.length > 0 ? Math.round(totalPipeline / activeDeals.length / 1000) : 0}k`, sub: 'active deals', color: 'text-amber-400' },
         ].map(kpi => (
