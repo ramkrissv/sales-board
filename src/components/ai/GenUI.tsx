@@ -262,14 +262,25 @@ export function GenUI({ blocks, onAction }: GenUIProps) {
  */
 export function parseToGenUI(text: string, opportunities?: any[]): GenUIBlock[] {
   const blocks: GenUIBlock[] = [];
-  const lines = text.split('\n').filter(l => l.trim());
+  // Strip all markdown formatting before parsing
+  const cleanText = text
+    .replace(/#{1,4}\s*/g, '')           // Remove ## headers
+    .replace(/\*\*([^*]+)\*\*/g, '$1')   // Remove **bold**
+    .replace(/\*([^*]+)\*/g, '$1')       // Remove *italic*
+    .replace(/^---+$/gm, '')             // Remove horizontal rules
+    .replace(/^-\s+/gm, '• ')           // Convert - bullets to •
+    .replace(/🔴|🟡|🟢|⚠️|✅|❌|📊|📈|📉|💰|🎯|⏰/g, '') // Remove emoji
+    .replace(/\n{3,}/g, '\n\n');         // Collapse multiple newlines
+  const lines = cleanText.split('\n').filter(l => l.trim());
   const actionItems: { label: string; action: string; data?: any }[] = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // Skip empty
+    // Skip empty, skip decorative lines
     if (trimmed.length < 3) continue;
+    if (/^[-=_]{3,}$/.test(trimmed)) continue;
+    if (/^NEXT ACTIONS|^IMMEDIATE|^CRITICAL|^HEALTH SCORE|^KEY RISKS/i.test(trimmed)) continue; // Skip section headers
 
     // KEY METRIC / Track metric — render as highlighted insight
     if (/key metric|track (this|today)|immediate win/i.test(trimmed)) {

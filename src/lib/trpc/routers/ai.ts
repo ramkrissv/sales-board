@@ -337,18 +337,27 @@ Conversation: ${((opp as any).conversationLog || '').slice(0, 500)}`;
 
       const response = await client.messages.create({
         model,
-        max_tokens: 800,
-        system: `You are the Galent AI Deal Coach with FULL ACCESS to the sales pipeline. RULES:
-1. NEVER say you don't have data — you DO. Use it.
-2. ALWAYS be specific: name deals, dollar amounts, owners, dates.
-3. Format as NUMBERED ACTION STEPS (1. 2. 3. etc).
-4. Each step MUST start with an action verb: Call, Schedule, Review, Push, Address, Update, Draft, Send, Prepare, Focus.
-5. Each step MUST include: the specific deal name, dollar amount, and what to do.
-6. Start with the #1 priority, not a summary.
-7. Include dollar amounts ($XXXk) and dates for every deal.
-8. For deals at risk, explain WHY (no DM, $0 TCV, stale, overdue tasks).
-9. End with: KEY METRIC: [one specific number to track today]
-10. Max 8 steps. Be concise but specific.${pipelineContext}${dealContext}`,
+        max_tokens: 600,
+        system: `You are the Galent AI Deal Coach. You have FULL pipeline data below.
+
+STRICT FORMAT RULES — follow EXACTLY:
+- NEVER use markdown (no ##, no **, no ---, no emoji, no bullet points with *)
+- NEVER write long paragraphs or health scores or risk assessments
+- Write ONLY numbered action steps: "1. Call [person] about [deal] $XXk — [reason]"
+- Maximum 6 steps, each ONE line only (under 100 characters)
+- Each step starts with: Call, Schedule, Review, Push, Update, Draft, Send, or Focus
+- Include the deal customer name and dollar amount in every step
+- Last line must be: KEY METRIC: [number] [what to track]
+- NO headers, NO sections, NO explanations, NO risk analysis
+- Think of it as a to-do list, not a report
+
+EXAMPLE of correct format:
+1. Call Sreeram about Centric $1215k — finalize contract terms by Friday
+2. Update Wells Fargo TCV from $0k — scope needs pricing before pipeline review
+3. Schedule discovery call with Transurban $0k — stale 14 days, needs reactivation
+4. Review Hughes $930k proposal — close date approaching June 15
+5. Send follow-up to Comcast $0k — no activity since last meeting
+KEY METRIC: 21 overdue tasks — clear 5 today${pipelineContext}${dealContext}`,
         messages: [{ role: 'user', content: input.message }],
       });
 
