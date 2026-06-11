@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { DollarSign, Plus, Trash2, Calculator, Download, Link2, Globe, Users, Percent } from 'lucide-react';
@@ -124,9 +125,22 @@ function PricingContent() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      {/* Presales flow navigation */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 w-fit">
+        <Link href="/presales" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+          Proposal Studio
+        </Link>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-card text-foreground shadow-sm border border-border">
+          Pricing
+        </div>
+        <Link href="/contracts" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+          Contracts
+        </Link>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Pricing Engine</h1>
+          <h1 className="text-xl font-semibold text-foreground font-display">Pricing Engine</h1>
           <p className="text-sm text-muted-foreground">Build pricing for deals based on team, geo, and engagement type</p>
         </div>
       </div>
