@@ -289,10 +289,17 @@ function HomeContent() {
             </p>
           </div>
 
+          {/* Scope indicator */}
+          {filters.scope === 'org' && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--g-amber-soft)] border border-[var(--g-amber)]/20 text-xs text-[var(--g-amber)]">
+              Showing <strong>all org</strong> data. Switch to <button onClick={() => setFilters(prev => ({ ...prev, scope: 'my', scopeOwner: session?.user?.name || '' }))} className="underline font-semibold hover:text-foreground">"My"</button> scope (top right) to see only your deals.
+            </div>
+          )}
+
           {/* KPI Strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 rounded-xl g-surface g-elevated">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">My Pipeline</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{filters.scope === 'my' ? 'My Pipeline' : 'Pipeline (Org)'}</div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-bold text-[#7c3aed] g-kpi">${(totalPipeline/1e6).toFixed(1)}M</span>
                 <span className="text-xs text-muted-foreground">{activeDeals.length} deals</span>
