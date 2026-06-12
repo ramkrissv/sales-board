@@ -5,7 +5,8 @@ import {
   Bot, Shield, Sparkles, Zap, Play, Loader2, CheckSquare,
   AlertTriangle, Search, Clock, ArrowRight, Brain, Eye,
   Mail, Target, GitBranch, ChevronDown, ChevronRight,
-  BarChart3, RefreshCw, FileText, Globe
+  BarChart3, RefreshCw, FileText, Globe, TrendingUp,
+  GraduationCap, Radio, Megaphone
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { DEFAULT_AGENT_CONFIGS, AVAILABLE_MODELS } from '@/lib/ai/config';
@@ -31,12 +32,16 @@ export default function AgentsPage() {
     'hygiene-agent': Shield, 'forecast-agent': BarChart3,
     'intake-processor': Globe, 'proposal-drafter': FileText,
     'account-intelligence': Eye, 'competitive-intel': Target,
+    'growth-agent': TrendingUp, 'enablement-agent': GraduationCap,
+    'signal-processor': Radio, 'campaign-agent': Megaphone,
   };
   const agentColors: Record<string, string> = {
     'deal-coach': '#7c3aed', 'research-agent': '#3b82f6', 'outreach-agent': '#22c55e',
     'hygiene-agent': '#f59e0b', 'forecast-agent': '#06b6d4',
     'intake-processor': '#8b5cf6', 'proposal-drafter': '#10b981',
     'account-intelligence': '#ec4899', 'competitive-intel': '#ef4444',
+    'growth-agent': '#14b8a6', 'enablement-agent': '#f97316',
+    'signal-processor': '#6366f1', 'campaign-agent': '#e11d48',
   };
 
   const quickActions = [
@@ -48,6 +53,10 @@ export default function AgentsPage() {
     { id: 'draft_proposals', label: 'Check Proposals', desc: 'Identify deals missing proposal artifacts', agent: 'proposal-drafter', icon: FileText },
     { id: 'enrich_accounts', label: 'Enrich Accounts', desc: 'Find missing data and expansion opportunities', agent: 'account-intelligence', icon: Search },
     { id: 'process_intake', label: 'Process Queue', desc: 'Review deals needing follow-up from recent activity', agent: 'intake-processor', icon: Zap },
+    { id: 'whitespace_analysis', label: 'Growth Map', desc: 'Identify whitespace and expansion plays across accounts', agent: 'growth-agent', icon: TrendingUp },
+    { id: 'coaching_tips', label: 'Sales Coaching', desc: 'Get deal-specific coaching and objection handling tips', agent: 'enablement-agent', icon: GraduationCap },
+    { id: 'process_signals', label: 'Process Signals', desc: 'Ingest and classify signals from Teams, Outlook, voice', agent: 'signal-processor', icon: Radio },
+    { id: 'campaign_insights', label: 'Campaign Review', desc: 'Analyze outreach campaigns and optimize sequences', agent: 'campaign-agent', icon: Megaphone },
   ];
 
   const handleRunAgent = (agentId: string, goal: string) => {

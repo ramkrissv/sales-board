@@ -30,6 +30,8 @@ interface EmailMessage {
   subject: string;
   text: string;
   html?: string;
+  cc?: string;
+  bcc?: string;
   inReplyTo?: string;
   references?: string;
 }
@@ -98,6 +100,8 @@ export class EmailConnector {
       const info = await transporter.sendMail({
         from: `"Galent SalesPilot" <${this.config.email}>`,
         to: message.to,
+        cc: message.cc || process.env.GALENT_CC_EMAIL || undefined,
+        bcc: message.bcc,
         subject: message.subject,
         text: message.text,
         html: message.html,
