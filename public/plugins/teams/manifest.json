@@ -1,0 +1,64 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "a0746e51-15c5-4a2e-867a-dae137e724f7",
+  "developer": {
+    "name": "Galent",
+    "websiteUrl": "https://salespilot.galent.ai",
+    "privacyUrl": "https://salespilot.galent.ai/guide",
+    "termsOfUseUrl": "https://salespilot.galent.ai/guide"
+  },
+  "name": {
+    "short": "SalesPilot",
+    "full": "Galent SalesPilot — AI Sales Intelligence"
+  },
+  "description": {
+    "short": "AI-powered sales intelligence for your pipeline",
+    "full": "Galent SalesPilot brings AI-powered deal coaching, pipeline intelligence, and signal capture directly into Microsoft Teams. Capture meeting notes, get deal recommendations, and manage your pipeline without leaving Teams."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#7c3aed",
+  "staticTabs": [
+    {
+      "entityId": "pipeline",
+      "name": "Pipeline",
+      "contentUrl": "https://salespilot.galent.ai/pipeline",
+      "websiteUrl": "https://salespilot.galent.ai/pipeline",
+      "scopes": ["personal"]
+    },
+    {
+      "entityId": "ask",
+      "name": "Ask Galent",
+      "contentUrl": "https://salespilot.galent.ai/ask",
+      "websiteUrl": "https://salespilot.galent.ai/ask",
+      "scopes": ["personal"]
+    },
+    {
+      "entityId": "intake",
+      "name": "Signal Capture",
+      "contentUrl": "https://salespilot.galent.ai/intake",
+      "websiteUrl": "https://salespilot.galent.ai/intake",
+      "scopes": ["personal"]
+    }
+  ],
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://salespilot.galent.ai/pipeline",
+      "canUpdateConfiguration": false,
+      "scopes": ["team", "groupchat"]
+    }
+  ],
+  "connectors": [
+    {
+      "connectorId": "galent-salespilot-connector",
+      "scopes": ["team"],
+      "configurationUrl": "https://salespilot.galent.ai/integrations"
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["salespilot.galent.ai"]
+}
