@@ -645,77 +645,73 @@ function HomeContent() {
             <div className="g-gradient-line mt-4" />
           </div>
 
-          {/* AI-Prioritized Deal Feed -- not just "recent", but AI-ranked */}
+          {/* Pipeline by Stage — opportunity cards in columns */}
           <div className="animate-flow-in animate-flow-in-delay-4">
-            <span className="g-section-label flex items-center gap-1.5 mb-3">
-              <Sparkles className="h-3 w-3" /> AI-Prioritized Deals
-            </span>
-            <div className="space-y-2">
-              {/* Sort by: negotiation first, then high-value, then at-risk, then rest */}
-              {[...opportunities]
-                .sort((a, b) => {
-                  const priority = (o: typeof a) => {
-                    if (o.status === 'Negotiation') return 0;
-                    if (o.tcv >= 100000) return 1;
-                    if (atRiskDeals.some(r => r.id === o.id)) return 2;
-                    return 3;
-                  };
-                  return priority(a) - priority(b);
-                })
-                .slice(0, 8)
-                .map((opp, i) => {
-                  const isAtRisk = atRiskDeals.some(r => r.id === opp.id);
-                  const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
-                    'Discovery': { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-500' },
-                    'Qualification': { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-500' },
-                    'Proposal': { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-500' },
-                    'Negotiation': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-500' },
-                    'Won': { bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-500' },
-                    'Lost': { bg: 'bg-zinc-500/10', text: 'text-zinc-400', dot: 'bg-zinc-500' },
-                    'On Hold': { bg: 'bg-orange-500/10', text: 'text-orange-400', dot: 'bg-orange-500' },
-                  };
-                  const sc = statusColors[opp.status] || statusColors['Discovery'];
-                  const tasks = opp.subTasks || [];
-                  const completedTasks = tasks.filter(t => t.status === 'complete').length;
+            <div className="flex items-center justify-between mb-3">
+              <span className="g-section-label flex items-center gap-1.5">
+                <Eye className="h-3 w-3" /> Opportunities by Stage
+              </span>
+              <div className="text-xs text-muted-foreground g-metric">
+                {opportunities.length} total · ${(opportunities.reduce((s, o) => s + (o.tcv || 0), 0) / 1e6).toFixed(1)}M
+              </div>
+            </div>
 
-                  return (
-                    <button
-                      key={opp.id}
-                      onClick={() => setSelectedOppId(opp.id)}
-                      className="flex items-center gap-4 p-3 rounded-xl g-surface g-elevated w-full text-left transition-all group hover:!border-[#7c3aed]/20 reveal hover-lift"
-                      style={{ animationDelay: `${i * 0.05}s` }}
-                    >
-                      {/* Status dot */}
-                      <div className="flex flex-col items-center gap-1 w-6 flex-shrink-0">
-                        <div className={`w-2.5 h-2.5 rounded-full ${sc.dot} ${opp.status === 'Negotiation' ? 'animate-pulse-live' : ''}`} />
-                        {isAtRisk && <AlertTriangle className="h-3 w-3 text-orange-400" />}
-                      </div>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {(['Qualification', 'Proposal', 'Negotiation', 'Won'] as const).map(stage => {
+                const stageDeals = opportunities.filter(o => o.status === stage);
+                const stageTcv = stageDeals.reduce((s, o) => s + (o.tcv || 0), 0);
+                const stageColors: Record<string, string> = { Qualification: '#f59e0b', Proposal: '#7c3aed', Negotiation: '#22c55e', Won: '#10b981' };
+                const color = stageColors[stage] || '#7c3aed';
 
-                      {/* Deal info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-foreground group-hover:text-[#7c3aed] transition-colors truncate">
-                          {opp.customerName}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">{opp.opportunityName}</div>
+                return (
+                  <div key={stage} className="min-w-[220px] flex-1">
+                    {/* Column header */}
+                    <div className="flex items-center justify-between mb-2 px-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                        <span className="text-xs font-semibold text-foreground">{stage}</span>
+                        <span className="text-[10px] text-muted-foreground">({stageDeals.length})</span>
                       </div>
+                      <span className="text-[10px] text-muted-foreground g-metric">${(stageTcv / 1000).toFixed(0)}k</span>
+                    </div>
 
-                      {/* Visual metrics */}
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        {opp.tcv > 0 && <span className="g-metric text-sm font-semibold text-foreground">${(opp.tcv/1000).toFixed(0)}k</span>}
-                        <span className={`g-chip ${sc.bg} ${sc.text}`}>{opp.status}</span>
-                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <CheckSquare className="h-3 w-3" />
-                          <span className="g-metric">{completedTasks}/{tasks.length}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <Users className="h-3 w-3" />
-                          <span className="g-metric">{(opp.customerStakeholders || []).length}</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-[#7c3aed] transition-colors" />
-                      </div>
-                    </button>
-                  );
-                })}
+                    {/* Cards */}
+                    <div className="space-y-2">
+                      {stageDeals.slice(0, 5).map(opp => {
+                        const ageDays = Math.max(0, Math.ceil((Date.now() - new Date(opp.createdAt || opp.startDate).getTime()) / 86400000));
+                        const daysToClose = Math.ceil((new Date(opp.expectedCloseDate).getTime() - Date.now()) / 86400000);
+
+                        return (
+                          <button key={opp.id} onClick={() => setSelectedOppId(opp.id)}
+                            className="w-full p-3 rounded-xl bg-card border border-border hover:border-[#7c3aed]/30 text-left transition-all hover-lift group"
+                            style={{ borderTopColor: color, borderTopWidth: '2px' }}>
+                            <div className="text-xs font-semibold text-foreground group-hover:text-[#7c3aed] truncate">{opp.customerName}</div>
+                            <div className="text-[10px] text-muted-foreground truncate mt-0.5">{opp.opportunityName}</div>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-xs font-bold text-foreground g-metric">${((opp.tcv || 0) / 1000).toFixed(0)}k</span>
+                              <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
+                                <span>{ageDays}d age</span>
+                                <span className={daysToClose < 14 ? 'text-[var(--g-amber)]' : daysToClose < 0 ? 'text-[var(--g-red)]' : ''}>
+                                  {daysToClose > 0 ? `${daysToClose}d to close` : 'Overdue'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-[9px] text-muted-foreground mt-1">{opp.primaryOwner}</div>
+                          </button>
+                        );
+                      })}
+                      {stageDeals.length > 5 && (
+                        <Link href="/pipeline" className="block text-center text-[10px] text-[#7c3aed] hover:underline py-1">
+                          +{stageDeals.length - 5} more →
+                        </Link>
+                      )}
+                      {stageDeals.length === 0 && (
+                        <div className="text-[10px] text-muted-foreground text-center py-4 italic">No deals</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
