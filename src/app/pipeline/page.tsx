@@ -26,10 +26,9 @@ const KanbanBoard = dynamic(
 
 const VIEW_MODES = [
   { id: 'kanban', label: 'Board', icon: Kanban, href: '/pipeline' },
+  { id: 'funnel', label: 'Funnel', icon: TrendingUp, href: '/funnel' },
   { id: 'table', label: 'Table', icon: TableIcon, href: '/table' },
   { id: 'calendar', label: 'Calendar', icon: CalendarDays, href: '/calendar' },
-  { id: 'timeline', label: 'Timeline', icon: TrendingUp, href: '/timeline' },
-  { id: 'schedule', label: 'Schedule', icon: Clock, href: '/schedule' },
   { id: 'graph', label: 'Graph', icon: Eye, href: '/graph' },
 ];
 
