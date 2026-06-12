@@ -6,10 +6,7 @@ import { trpc } from '@/lib/trpc/client';
 import { DealDetail } from '@/components/modals/DealDetail';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Kanban, Table as TableIcon, CalendarDays, TrendingUp, Eye,
-  Sparkles, Loader2, ChevronRight, DollarSign, Users, ArrowDown
-} from 'lucide-react';
+import { Kanban, Table as TableIcon, CalendarDays, TrendingUp, Eye, Sparkles, Loader2, ArrowDown } from 'lucide-react';
 
 const VIEW_MODES = [
   { id: 'kanban', label: 'Board', icon: Kanban, href: '/pipeline' },
@@ -21,19 +18,11 @@ const VIEW_MODES = [
 
 const STAGES = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'] as const;
 const STAGE_COLORS = ['#3b82f6', '#f59e0b', '#7c3aed', '#22c55e', '#10b981'];
-const STAGE_GRADIENTS = [
-  ['#60a5fa', '#3b82f6'], // blue
-  ['#fbbf24', '#f59e0b'], // amber
-  ['#a78bfa', '#7c3aed'], // purple
-  ['#4ade80', '#22c55e'], // green
-  ['#34d399', '#10b981'], // emerald
-];
 
 function FunnelContent() {
   const { opportunities } = useOpportunities();
   const pathname = usePathname();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
-  const [hoveredStage, setHoveredStage] = useState<number | null>(null);
   const [aiRead, setAiRead] = useState('');
   const chatMutation = trpc.ai.chat.useMutation();
 
@@ -44,21 +33,23 @@ function FunnelContent() {
     const nextStage = STAGES[i + 1];
     const nextCount = nextStage ? opportunities.filter(o => o.status === nextStage).length : 0;
     const convRate = deals.length > 0 && nextStage ? Math.round((nextCount / deals.length) * 100) : null;
-    return { stage, count: deals.length, tcv, weighted, color: STAGE_COLORS[i], gradient: STAGE_GRADIENTS[i], convRate, deals };
+    return { stage, count: deals.length, tcv, weighted, color: STAGE_COLORS[i], convRate, deals };
   });
+
+  const maxCount = Math.max(...stageData.map(s => s.count), 1);
 
   useEffect(() => {
     if (opportunities.length > 0 && !aiRead && !chatMutation.isPending) {
-      const ctx = stageData.map(s => `${s.stage}: ${s.count} deals $${(s.tcv/1000).toFixed(0)}k`).join(', ');
+      const ctx = stageData.map(s => `${s.stage}: ${s.count} deals $${(s.tcv / 1000).toFixed(0)}k`).join(', ');
       chatMutation.mutate({
-        message: `Two sentences only. What is the biggest funnel bottleneck and what is the one action to fix it? ${ctx}`,
+        message: `Two sentences only. Biggest funnel issue and one fix. No markdown. ${ctx}`,
         context: { page: 'funnel' },
-      }, { onSuccess: (d) => setAiRead(d.response.replace(/\*\*/g, '').replace(/#{1,3}\s/g, '')) });
+      }, { onSuccess: (d) => setAiRead(d.response.replace(/\*\*/g, '').replace(/#{1,3}\s/g, '').slice(0, 200)) });
     }
   }, [opportunities.length]); // eslint-disable-line
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* View mode tabs */}
       <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 w-fit">
         {VIEW_MODES.map(mode => (
@@ -72,187 +63,100 @@ function FunnelContent() {
         ))}
       </div>
 
-      <h1 className="text-xl font-semibold text-foreground font-display">Pipeline Funnel</h1>
-
-      {/* Main layout: funnel center with side info panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
-
-        {/* LEFT info panels */}
-        <div className="lg:col-span-2 space-y-3 flex flex-col justify-center">
-          {stageData.filter((_, i) => i % 2 === 0).map((s, idx) => {
-            const i = idx * 2;
-            return (
-              <div key={s.stage} className="flex items-center gap-0">
-                <button onClick={() => s.deals[0] && setSelectedOppId(s.deals[0].id)}
-                  onMouseEnter={() => setHoveredStage(i)} onMouseLeave={() => setHoveredStage(null)}
-                  className={`flex-1 p-3 rounded-xl text-left transition-all ${hoveredStage === i ? 'g-surface g-elevated scale-[1.02]' : 'bg-card/50 border border-border/50'}`}
-                  style={hoveredStage === i ? { borderColor: s.color + '60' } : undefined}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
-                    <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">{s.stage}</span>
-                    <span className="ml-auto text-lg font-bold text-foreground g-metric">${(s.tcv/1000).toFixed(0)}k</span>
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">{s.count} deals · ${(s.weighted/1000).toFixed(0)}k wtd</div>
-                  {s.deals.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {s.deals.slice(0, 3).map(d => (
-                        <span key={d.id} onClick={(e) => { e.stopPropagation(); setSelectedOppId(d.id); }}
-                          className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground cursor-pointer truncate max-w-[90px]">
-                          {d.customerName}
-                        </span>
-                      ))}
-                      {s.deals.length > 3 && <span className="text-[9px] text-muted-foreground">+{s.deals.length - 3}</span>}
-                    </div>
-                  )}
-                </button>
-                {/* Connector line to funnel */}
-                <div className="w-6 border-t border-dashed" style={{ borderColor: s.color + '50' }} />
-              </div>
-            );
-          })}
-        </div>
-
-        {/* CENTER: 3D Funnel SVG */}
-        <div className="lg:col-span-3 flex items-center justify-center">
-          <svg viewBox="0 0 400 480" width="100%" style={{ maxWidth: '380px' }}>
-            <defs>
-              {STAGE_GRADIENTS.map((g, i) => (
-                <linearGradient key={i} id={`funnel-grad-${i}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={g[0]} />
-                  <stop offset="100%" stopColor={g[1]} />
-                </linearGradient>
-              ))}
-              {/* 3D shadow */}
-              <filter id="funnel-shadow">
-                <feDropShadow dx="0" dy="3" stdDeviation="4" floodOpacity="0.15" />
-              </filter>
-            </defs>
-
-            {stageData.map((s, i) => {
-              const totalStages = stageData.length;
-              const stageH = 70;
-              const gapH = 12;
-              const y = i * (stageH + gapH) + 20;
-
-              // Funnel widths: 360 → 100 (narrowing)
-              const topW = 360 - (i * (260 / (totalStages - 1)));
-              const botW = 360 - ((i + 1) * (260 / (totalStages - 1)));
-              const topX = (400 - topW) / 2;
-              const botX = (400 - botW) / 2;
-
-              // Curved trapezoid using quadratic bezier for 3D effect
-              const curveY = y + 8; // slight curve at top
-              const path = `
-                M${topX},${curveY}
-                Q${200},${y - 5} ${topX + topW},${curveY}
-                L${botX + botW},${y + stageH}
-                Q${200},${y + stageH + 5} ${botX},${y + stageH}
-                Z
-              `;
-
-              // Ellipse at top for 3D rim
-              const rimRx = topW / 2;
-              const rimRy = 10;
-
-              const isHovered = hoveredStage === i;
-
-              return (
-                <g key={s.stage}
-                  className="cursor-pointer transition-all"
-                  style={{ transform: isHovered ? 'scale(1.03)' : 'scale(1)', transformOrigin: '200px ' + (y + stageH / 2) + 'px' }}
-                  onMouseEnter={() => setHoveredStage(i)}
-                  onMouseLeave={() => setHoveredStage(null)}
-                  onClick={() => s.deals[0] && setSelectedOppId(s.deals[0].id)}
-                  filter="url(#funnel-shadow)"
-                >
-                  {/* Main trapezoid body */}
-                  <path d={path} fill={`url(#funnel-grad-${i})`} opacity={isHovered ? 1 : 0.85} />
-
-                  {/* Top rim ellipse for 3D depth */}
-                  <ellipse cx={200} cy={curveY} rx={rimRx} ry={rimRy} fill={s.gradient[0]} opacity={0.6} />
-
-                  {/* Stage number circle */}
-                  <circle cx={200} cy={y + stageH / 2 + 2} r={16} fill="rgba(0,0,0,0.25)" />
-                  <text x={200} y={y + stageH / 2 + 7} fontSize="13" fontWeight="700" fill="white" textAnchor="middle">
-                    {String(i + 1).padStart(2, '0')}
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* Conversion arrows between stages */}
-            {stageData.map((s, i) => {
-              if (s.convRate === null) return null;
-              const y = (i + 1) * (70 + 12) + 12;
-              return (
-                <text key={`conv-${i}`} x={200} y={y} fontSize="9" fill="var(--g-fg-3)" textAnchor="middle" fontWeight="500">
-                  ↓ {s.convRate}%
-                </text>
-              );
-            })}
-          </svg>
-        </div>
-
-        {/* RIGHT info panels */}
-        <div className="lg:col-span-2 space-y-3 flex flex-col justify-center">
-          {stageData.filter((_, i) => i % 2 === 1).map((s, idx) => {
-            const i = idx * 2 + 1;
-            return (
-              <div key={s.stage} className="flex items-center gap-0">
-                {/* Connector line from funnel */}
-                <div className="w-6 border-t border-dashed" style={{ borderColor: s.color + '50' }} />
-                <button onClick={() => s.deals[0] && setSelectedOppId(s.deals[0].id)}
-                  onMouseEnter={() => setHoveredStage(i)} onMouseLeave={() => setHoveredStage(null)}
-                  className={`flex-1 p-3 rounded-xl text-left transition-all ${hoveredStage === i ? 'g-surface g-elevated scale-[1.02]' : 'bg-card/50 border border-border/50'}`}
-                  style={hoveredStage === i ? { borderColor: s.color + '60' } : undefined}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
-                    <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">{s.stage}</span>
-                    <span className="ml-auto text-lg font-bold text-foreground g-metric">${(s.tcv/1000).toFixed(0)}k</span>
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">{s.count} deals · ${(s.weighted/1000).toFixed(0)}k wtd</div>
-                  {s.deals.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {s.deals.slice(0, 3).map(d => (
-                        <span key={d.id} onClick={(e) => { e.stopPropagation(); setSelectedOppId(d.id); }}
-                          className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground cursor-pointer truncate max-w-[90px]">
-                          {d.customerName}
-                        </span>
-                      ))}
-                      {s.deals.length > 3 && <span className="text-[9px] text-muted-foreground">+{s.deals.length - 3}</span>}
-                    </div>
-                  )}
-                </button>
-              </div>
-            );
-          })}
-
-          {/* AI Funnel Read */}
-          <div className="p-4 rounded-xl border border-[#7c3aed]/20 bg-[#7c3aed]/5">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles className="h-3.5 w-3.5 text-[#7c3aed]" />
-              <span className="text-[10px] font-bold text-[#7c3aed] uppercase tracking-wider">AI Funnel Read</span>
-            </div>
-            {chatMutation.isPending ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" /> Analyzing...
-              </div>
-            ) : aiRead ? (
-              <p className="text-xs text-foreground leading-relaxed">{aiRead}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Loading analysis...</p>
-            )}
-          </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-foreground font-display">Pipeline Funnel</h1>
+        <div className="text-xs text-muted-foreground">
+          {opportunities.filter(o => !['Won', 'Lost'].includes(o.status)).length} active · ${(stageData.reduce((s, d) => s + d.tcv, 0) / 1e6).toFixed(1)}M total
         </div>
       </div>
 
-      {/* Summary strip */}
-      <div className="flex items-center justify-center gap-6 py-3 border-t border-border">
+      {/* Funnel — each stage is a full-width row with narrowing colored block + deals */}
+      <div className="space-y-0">
+        {stageData.map((s, i) => {
+          // Block width narrows: 100% → 30%
+          const widthPct = Math.max(30, 100 - (i * 70 / (stageData.length - 1)));
+
+          return (
+            <div key={s.stage}>
+              {/* Stage row */}
+              <div className="flex items-stretch gap-0">
+                {/* Stage label — fixed width left */}
+                <div className="w-28 shrink-0 flex flex-col justify-center text-right pr-4 py-3">
+                  <div className="text-sm font-semibold text-foreground">{s.stage}</div>
+                  <div className="text-[10px] text-muted-foreground g-metric">${(s.tcv / 1000).toFixed(0)}k</div>
+                </div>
+
+                {/* Colored funnel block — centered, width narrows */}
+                <div className="flex-1 flex items-center" style={{ paddingLeft: `${(100 - widthPct) / 2}%`, paddingRight: `${(100 - widthPct) / 2}%` }}>
+                  <div
+                    className="w-full rounded-lg py-3 px-4 flex items-center justify-between cursor-pointer transition-all hover:brightness-110"
+                    style={{ backgroundColor: s.color, minHeight: '48px' }}
+                    onClick={() => s.deals[0] && setSelectedOppId(s.deals[0].id)}
+                  >
+                    <span className="text-white font-bold text-lg g-metric">{s.count}</span>
+                    <span className="text-white/70 text-xs">${(s.weighted / 1000).toFixed(0)}k wtd</span>
+                  </div>
+                </div>
+
+                {/* Deal names — right side */}
+                <div className="w-56 shrink-0 flex flex-col justify-center pl-4 py-2">
+                  {s.deals.length > 0 ? (
+                    <div className="space-y-0.5">
+                      {s.deals.slice(0, 4).map(d => (
+                        <button key={d.id} onClick={() => setSelectedOppId(d.id)}
+                          className="block text-[11px] text-foreground hover:text-[#7c3aed] transition-colors truncate w-full text-left">
+                          {d.customerName} <span className="text-muted-foreground">${((d.tcv || 0) / 1000).toFixed(0)}k</span>
+                        </button>
+                      ))}
+                      {s.deals.length > 4 && (
+                        <span className="text-[10px] text-muted-foreground">+{s.deals.length - 4} more</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground italic">No deals</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Conversion arrow */}
+              {s.convRate !== null && (
+                <div className="flex items-center py-1">
+                  <div className="w-28 shrink-0" />
+                  <div className="flex-1 flex items-center justify-center">
+                    <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground ml-1">{s.convRate}% conversion</span>
+                  </div>
+                  <div className="w-56 shrink-0" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* AI Funnel Read */}
+      {aiRead && (
+        <div className="p-4 rounded-xl bg-[#7c3aed]/5 border border-[#7c3aed]/20">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-[#7c3aed]" />
+            <span className="text-[10px] font-bold text-[#7c3aed] uppercase tracking-wider">AI Insight</span>
+          </div>
+          <p className="text-xs text-foreground leading-relaxed">{aiRead}</p>
+        </div>
+      )}
+      {chatMutation.isPending && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin text-[#7c3aed]" /> Analyzing funnel...
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-6 py-2">
         {stageData.map(s => (
-          <div key={s.stage} className="flex items-center gap-2 text-xs">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+          <div key={s.stage} className="flex items-center gap-1.5 text-[10px]">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: s.color }} />
             <span className="text-muted-foreground">{s.stage}</span>
-            <span className="font-semibold text-foreground g-metric">{s.count}</span>
+            <span className="font-semibold text-foreground">{s.count}</span>
           </div>
         ))}
       </div>
