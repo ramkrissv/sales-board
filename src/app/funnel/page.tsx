@@ -77,56 +77,71 @@ function FunnelContent() {
 
       {/* Split layout: funnel left, AI read right */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        {/* LEFT: Stacked funnel blocks */}
-        <div className="md:col-span-3 space-y-2">
-          {stageData.map((s, i) => {
-            const widthPct = Math.max(40, (s.tcv / maxTcv) * 100);
+        {/* LEFT: SVG Trapezoid Funnel */}
+        <div className="md:col-span-3 g-surface g-elevated rounded-xl p-6">
+          {(() => {
+            const W = 560, stageH = 72, gap = 4, padding = 40;
+            const totalH = stageData.length * (stageH + gap) + padding;
+            const maxW = W - 80; // max width for widest stage
+            const minW = 120; // min width for narrowest
+
             return (
-              <div key={s.stage}>
-                <div
-                  className="relative rounded-xl p-4 cursor-pointer transition-all hover:scale-[1.01] group"
-                  style={{
-                    width: `${widthPct}%`,
-                    backgroundColor: s.color + '20',
-                    borderLeft: `4px solid ${s.color}`,
-                    marginLeft: `${(100 - widthPct) / 2}%`,
-                  }}
-                  onClick={() => s.deals.length > 0 && setSelectedOppId(s.deals[0].id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-bold text-foreground">{s.stage}</span>
-                      <span className="text-xs text-muted-foreground ml-2">{s.count} deal{s.count !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-bold text-foreground g-metric">${(s.tcv/1000).toFixed(0)}k</div>
-                      <div className="text-[10px] text-muted-foreground">${(s.weighted/1000).toFixed(0)}k wtd</div>
-                    </div>
-                  </div>
-                  {/* Deal chips */}
-                  {s.deals.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {s.deals.slice(0, 4).map(d => (
-                        <button key={d.id} onClick={(e) => { e.stopPropagation(); setSelectedOppId(d.id); }}
-                          className="text-[10px] px-2 py-0.5 rounded-full bg-card/80 text-foreground hover:bg-card transition-colors truncate max-w-[120px]">
-                          {d.customerName}
-                        </button>
+              <svg viewBox={`0 0 ${W} ${totalH}`} width="100%" className="overflow-visible">
+                {stageData.map((s, i) => {
+                  // Funnel narrows: top is widest, bottom narrowest
+                  const topW = maxW - (i * (maxW - minW) / (stageData.length - 1 || 1));
+                  const botW = maxW - ((i + 1) * (maxW - minW) / (stageData.length - 1 || 1));
+                  const y = i * (stageH + gap) + 10;
+                  const topX = (W - topW) / 2;
+                  const botX = (W - botW) / 2;
+
+                  // Trapezoid path
+                  const path = `M${topX},${y} L${topX + topW},${y} L${botX + botW},${y + stageH} L${botX},${y + stageH} Z`;
+
+                  return (
+                    <g key={s.stage} className="cursor-pointer" onClick={() => s.deals.length > 0 && setSelectedOppId(s.deals[0].id)}>
+                      {/* Trapezoid shape */}
+                      <path d={path} fill={s.color + '25'} stroke={s.color} strokeWidth="1.5" rx="8"
+                        className="transition-all hover:fill-opacity-40" style={{ filter: `drop-shadow(0 2px 4px ${s.color}20)` }} />
+
+                      {/* Stage label — left */}
+                      <text x={topX + 16} y={y + 28} fontSize="13" fontWeight="600" fill="var(--g-fg)" fontFamily="var(--font-display)">
+                        {s.stage}
+                      </text>
+                      <text x={topX + 16} y={y + 46} fontSize="10" fill="var(--g-fg-3)">
+                        {s.count} deal{s.count !== 1 ? 's' : ''}
+                      </text>
+
+                      {/* Values — right */}
+                      <text x={topX + topW - 16} y={y + 28} fontSize="14" fontWeight="700" fill="var(--g-fg)" textAnchor="end" fontFamily="var(--font-mono)">
+                        ${(s.tcv / 1000).toFixed(0)}k
+                      </text>
+                      <text x={topX + topW - 16} y={y + 46} fontSize="10" fill="var(--g-fg-3)" textAnchor="end">
+                        ${(s.weighted / 1000).toFixed(0)}k weighted
+                      </text>
+
+                      {/* Deal name chips inside the trapezoid */}
+                      {s.deals.slice(0, 3).map((d, j) => (
+                        <g key={d.id} onClick={(e) => { e.stopPropagation(); setSelectedOppId(d.id); }}>
+                          <rect x={topX + 16 + j * 100} y={y + 52} width={92} height={14} rx="7" fill="var(--g-card)" stroke="var(--g-line)" strokeWidth="0.5" />
+                          <text x={topX + 62 + j * 100} y={y + 62} fontSize="8" fill="var(--g-fg-2)" textAnchor="middle" className="pointer-events-none">
+                            {d.customerName.length > 14 ? d.customerName.slice(0, 14) + '…' : d.customerName}
+                          </text>
+                        </g>
                       ))}
-                      {s.deals.length > 4 && (
-                        <span className="text-[10px] px-2 py-0.5 text-muted-foreground">+{s.deals.length - 4} more</span>
+
+                      {/* Conversion arrow between stages */}
+                      {s.convRate !== null && (
+                        <text x={W / 2} y={y + stageH + gap / 2 + 3} fontSize="9" fill="var(--g-fg-3)" textAnchor="middle">
+                          → {s.convRate}% conversion
+                        </text>
                       )}
-                    </div>
-                  )}
-                </div>
-                {/* Conversion arrow */}
-                {s.convRate !== null && (
-                  <div className="flex items-center justify-center py-1 text-[10px] text-muted-foreground">
-                    <ArrowRight className="h-3 w-3 mr-1" /> {s.convRate}% historical conversion
-                  </div>
-                )}
-              </div>
+                    </g>
+                  );
+                })}
+              </svg>
             );
-          })}
+          })()}
         </div>
 
         {/* RIGHT: AI Funnel Read */}
