@@ -84,13 +84,43 @@ function GrowthContent() {
     } as any);
   };
 
-  // Open deal for an account (first active deal, or first won)
-  const handleActivatePlay = (accountName: string) => {
+  // Activate expansion play: create new opp if none active, navigate to presales
+  const handleActivatePlay = (accountName: string, whitespaceLines: string[]) => {
     const acctOpps = opportunities.filter(o => o.customerName === accountName);
     const active = acctOpps.find(o => !['Won', 'Lost'].includes(o.status));
-    const won = acctOpps.find(o => o.status === 'Won');
-    const target = active || won;
-    if (target) setSelectedOppId(target.id);
+
+    if (active) {
+      // Has active deal — go straight to presales with it
+      router.push('/presales');
+    } else {
+      // No active deal — create expansion opportunity first, then navigate
+      const topWhitespace = whitespaceLines[0] || 'IT Services';
+      const year = new Date().getFullYear();
+      const id = `EN-${year}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+      createOppMutation.mutate({
+        id,
+        customerName: accountName,
+        opportunityName: `${accountName} — ${topWhitespace} Expansion`,
+        status: 'Discovery',
+        tcv: 0,
+        dealDuration: '12 months',
+        expectedCloseDate: new Date(Date.now() + 90 * 86400000).toISOString(),
+        startDate: new Date().toISOString(),
+        primaryOwner: 'Sreeram',
+        industry: 'Technology',
+        region: 'North America',
+        source: 'Expansion Play',
+        serviceLine: topWhitespace,
+        salesPOCs: [],
+        presalesPOCs: [],
+        customTags: ['expansion', 'EN', topWhitespace.toLowerCase()],
+        conversationLog: `Expansion play activated from Growth page. Target service line: ${topWhitespace}. Whitespace opportunities: ${whitespaceLines.join(', ')}.`,
+        activityLog: [],
+        lifecyclePhase: 'opportunity',
+      } as any, {
+        onSuccess: () => router.push('/presales'),
+      });
+    }
   };
 
   /* ── compute EE accounts (2+ won deals) and their service-line coverage ── */
@@ -336,13 +366,11 @@ function GrowthContent() {
                   </div>
 
                   <div className="mt-2.5 flex items-center gap-2">
-                    <button onClick={() => handleActivatePlay(acct.name)}
-                      className="flex items-center gap-1 text-[11px] font-medium text-purple-400 hover:text-purple-300 transition-colors">
-                      Activate play <ArrowRight className="h-3 w-3" />
-                    </button>
-                    <button onClick={() => router.push('/presales')}
-                      className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
-                      Open Presales
+                    <button onClick={() => handleActivatePlay(acct.name, acct.white)}
+                      disabled={createOppMutation.isPending}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors disabled:opacity-50">
+                      {createOppMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRight className="h-3 w-3" />}
+                      {acct.white.length > 0 ? `Expand into ${acct.white[0]}` : 'Open in Presales'}
                     </button>
                   </div>
                 </div>
