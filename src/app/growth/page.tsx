@@ -1,10 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
+import { DealDetail } from '@/components/modals/DealDetail';
+import { trpc } from '@/lib/trpc/client';
 import {
   Grid3X3, Sparkles, TrendingUp, ShieldAlert, DollarSign,
-  Plus, ArrowRight, CheckCircle2, CircleDot,
+  Plus, ArrowRight, CheckCircle2, CircleDot, Loader2,
 } from 'lucide-react';
 
 /* ── service-line columns for the whitespace map ── */
@@ -43,6 +46,52 @@ function suggestExpansion(
 
 function GrowthContent() {
   const { opportunities, isLoading } = useOpportunities();
+  const router = useRouter();
+  const utils = trpc.useUtils();
+  const createOppMutation = trpc.opportunity.create.useMutation({
+    onSuccess: (data) => {
+      utils.opportunity.list.invalidate();
+      setSelectedOppId((data as any).id);
+    },
+  });
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+  const [creating, setCreating] = useState<{ account: string; serviceLine: string } | null>(null);
+
+  // Create opportunity from whitespace cell
+  const handleWhitespaceClick = (accountName: string, serviceLine: string) => {
+    const year = new Date().getFullYear();
+    const id = `EN-${year}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    createOppMutation.mutate({
+      id,
+      customerName: accountName,
+      opportunityName: `${accountName} — ${serviceLine} Expansion`,
+      status: 'Discovery',
+      tcv: 0,
+      dealDuration: '12 months',
+      expectedCloseDate: new Date(Date.now() + 90 * 86400000).toISOString(),
+      startDate: new Date().toISOString(),
+      primaryOwner: 'Sreeram',
+      industry: 'Technology',
+      region: 'North America',
+      source: 'Expansion Play',
+      serviceLine: serviceLine,
+      salesPOCs: [],
+      presalesPOCs: [],
+      customTags: ['expansion', 'EN', serviceLine.toLowerCase()],
+      conversationLog: `Expansion opportunity created from Growth whitespace map for ${serviceLine} service line.`,
+      activityLog: [],
+      lifecyclePhase: 'opportunity',
+    } as any);
+  };
+
+  // Open deal for an account (first active deal, or first won)
+  const handleActivatePlay = (accountName: string) => {
+    const acctOpps = opportunities.filter(o => o.customerName === accountName);
+    const active = acctOpps.find(o => !['Won', 'Lost'].includes(o.status));
+    const won = acctOpps.find(o => o.status === 'Won');
+    const target = active || won;
+    if (target) setSelectedOppId(target.id);
+  };
 
   /* ── compute EE accounts (2+ won deals) and their service-line coverage ── */
   const { accounts, kpis } = useMemo(() => {
@@ -194,10 +243,12 @@ function GrowthContent() {
                               </div>
                             ) : (
                               <button
-                                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-dashed border-zinc-600 text-zinc-500 hover:border-purple-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
-                                title={`${sl}: Whitespace — click to create opportunity`}
+                                onClick={() => handleWhitespaceClick(acct.name, sl)}
+                                disabled={createOppMutation.isPending}
+                                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-dashed border-zinc-600 text-zinc-500 hover:border-purple-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all disabled:opacity-50"
+                                title={`Create ${sl} opportunity for ${acct.name}`}
                               >
-                                <Plus className="h-3 w-3" />
+                                {createOppMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
                               </button>
                             )}
                           </td>
@@ -284,15 +335,24 @@ function GrowthContent() {
                     <p className="text-[11px] text-foreground/80 leading-relaxed">{suggestion}</p>
                   </div>
 
-                  <button className="mt-2.5 flex items-center gap-1 text-[11px] font-medium text-purple-400 hover:text-purple-300 transition-colors">
-                    Activate play <ArrowRight className="h-3 w-3" />
-                  </button>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <button onClick={() => handleActivatePlay(acct.name)}
+                      className="flex items-center gap-1 text-[11px] font-medium text-purple-400 hover:text-purple-300 transition-colors">
+                      Activate play <ArrowRight className="h-3 w-3" />
+                    </button>
+                    <button onClick={() => router.push('/presales')}
+                      className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
+                      Open Presales
+                    </button>
+                  </div>
                 </div>
               );
             })
           )}
         </div>
       </div>
+
+      {selectedOppId && <DealDetail opportunityId={selectedOppId} onClose={() => setSelectedOppId(null)} />}
     </div>
   );
 }
