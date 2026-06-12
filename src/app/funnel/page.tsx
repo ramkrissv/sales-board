@@ -51,7 +51,7 @@ function FunnelContent() {
     if (opportunities.length > 0 && !aiRead && !chatMutation.isPending) {
       const ctx = stageData.map(s => `${s.stage}: ${s.count} deals $${(s.tcv/1000).toFixed(0)}k`).join(', ');
       chatMutation.mutate({
-        message: `Brief funnel analysis (3 sentences max). Focus on biggest bottleneck and one action. ${ctx}`,
+        message: `Two sentences only. What is the biggest funnel bottleneck and what is the one action to fix it? ${ctx}`,
         context: { page: 'funnel' },
       }, { onSuccess: (d) => setAiRead(d.response.replace(/\*\*/g, '').replace(/#{1,3}\s/g, '')) });
     }
@@ -82,26 +82,32 @@ function FunnelContent() {
           {stageData.filter((_, i) => i % 2 === 0).map((s, idx) => {
             const i = idx * 2;
             return (
-              <button key={s.stage} onClick={() => s.deals[0] && setSelectedOppId(s.deals[0].id)}
-                onMouseEnter={() => setHoveredStage(i)} onMouseLeave={() => setHoveredStage(null)}
-                className={`p-4 rounded-xl text-left transition-all ${hoveredStage === i ? 'g-surface g-elevated scale-[1.02]' : 'bg-card/50 border border-border/50'}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
-                  <span className="text-xs font-bold text-foreground uppercase tracking-wider">{s.stage}</span>
-                </div>
-                <div className="g-metric text-lg font-bold text-foreground">${(s.tcv/1000).toFixed(0)}k</div>
-                <div className="text-[10px] text-muted-foreground">{s.count} deals · ${(s.weighted/1000).toFixed(0)}k weighted</div>
-                {s.deals.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {s.deals.slice(0, 3).map(d => (
-                      <span key={d.id} onClick={(e) => { e.stopPropagation(); setSelectedOppId(d.id); }}
-                        className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground cursor-pointer truncate max-w-[100px]">
-                        {d.customerName}
-                      </span>
-                    ))}
+              <div key={s.stage} className="flex items-center gap-0">
+                <button onClick={() => s.deals[0] && setSelectedOppId(s.deals[0].id)}
+                  onMouseEnter={() => setHoveredStage(i)} onMouseLeave={() => setHoveredStage(null)}
+                  className={`flex-1 p-3 rounded-xl text-left transition-all ${hoveredStage === i ? 'g-surface g-elevated scale-[1.02]' : 'bg-card/50 border border-border/50'}`}
+                  style={hoveredStage === i ? { borderColor: s.color + '60' } : undefined}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
+                    <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">{s.stage}</span>
+                    <span className="ml-auto text-lg font-bold text-foreground g-metric">${(s.tcv/1000).toFixed(0)}k</span>
                   </div>
-                )}
-              </button>
+                  <div className="text-[10px] text-muted-foreground">{s.count} deals · ${(s.weighted/1000).toFixed(0)}k wtd</div>
+                  {s.deals.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {s.deals.slice(0, 3).map(d => (
+                        <span key={d.id} onClick={(e) => { e.stopPropagation(); setSelectedOppId(d.id); }}
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground cursor-pointer truncate max-w-[90px]">
+                          {d.customerName}
+                        </span>
+                      ))}
+                      {s.deals.length > 3 && <span className="text-[9px] text-muted-foreground">+{s.deals.length - 3}</span>}
+                    </div>
+                  )}
+                </button>
+                {/* Connector line to funnel */}
+                <div className="w-6 border-t border-dashed" style={{ borderColor: s.color + '50' }} />
+              </div>
             );
           })}
         </div>
@@ -192,26 +198,32 @@ function FunnelContent() {
           {stageData.filter((_, i) => i % 2 === 1).map((s, idx) => {
             const i = idx * 2 + 1;
             return (
-              <button key={s.stage} onClick={() => s.deals[0] && setSelectedOppId(s.deals[0].id)}
-                onMouseEnter={() => setHoveredStage(i)} onMouseLeave={() => setHoveredStage(null)}
-                className={`p-4 rounded-xl text-left transition-all ${hoveredStage === i ? 'g-surface g-elevated scale-[1.02]' : 'bg-card/50 border border-border/50'}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
-                  <span className="text-xs font-bold text-foreground uppercase tracking-wider">{s.stage}</span>
-                </div>
-                <div className="g-metric text-lg font-bold text-foreground">${(s.tcv/1000).toFixed(0)}k</div>
-                <div className="text-[10px] text-muted-foreground">{s.count} deals · ${(s.weighted/1000).toFixed(0)}k weighted</div>
-                {s.deals.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {s.deals.slice(0, 3).map(d => (
-                      <span key={d.id} onClick={(e) => { e.stopPropagation(); setSelectedOppId(d.id); }}
-                        className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground cursor-pointer truncate max-w-[100px]">
-                        {d.customerName}
-                      </span>
-                    ))}
+              <div key={s.stage} className="flex items-center gap-0">
+                {/* Connector line from funnel */}
+                <div className="w-6 border-t border-dashed" style={{ borderColor: s.color + '50' }} />
+                <button onClick={() => s.deals[0] && setSelectedOppId(s.deals[0].id)}
+                  onMouseEnter={() => setHoveredStage(i)} onMouseLeave={() => setHoveredStage(null)}
+                  className={`flex-1 p-3 rounded-xl text-left transition-all ${hoveredStage === i ? 'g-surface g-elevated scale-[1.02]' : 'bg-card/50 border border-border/50'}`}
+                  style={hoveredStage === i ? { borderColor: s.color + '60' } : undefined}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
+                    <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">{s.stage}</span>
+                    <span className="ml-auto text-lg font-bold text-foreground g-metric">${(s.tcv/1000).toFixed(0)}k</span>
                   </div>
-                )}
-              </button>
+                  <div className="text-[10px] text-muted-foreground">{s.count} deals · ${(s.weighted/1000).toFixed(0)}k wtd</div>
+                  {s.deals.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {s.deals.slice(0, 3).map(d => (
+                        <span key={d.id} onClick={(e) => { e.stopPropagation(); setSelectedOppId(d.id); }}
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground cursor-pointer truncate max-w-[90px]">
+                          {d.customerName}
+                        </span>
+                      ))}
+                      {s.deals.length > 3 && <span className="text-[9px] text-muted-foreground">+{s.deals.length - 3}</span>}
+                    </div>
+                  )}
+                </button>
+              </div>
             );
           })}
 
