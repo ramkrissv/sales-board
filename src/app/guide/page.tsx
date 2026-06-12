@@ -159,20 +159,77 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
     ${sopHTML}
 
     <hr class="section-divider" />
-    <h2>Platform Capabilities</h2>
+    <h2>Platform Features</h2>
+
+    <h3>Core Sales</h3>
     <ul>
-      <li><strong>33 Routes</strong> — Full-featured pages</li>
-      <li><strong>9 AI Agents</strong> — Claude-powered deal coaching, research, outreach, pipeline hygiene, forecasting, intake processing, proposal drafting, account intel, competitive intel</li>
-      <li><strong>21 tRPC Routers</strong> — Type-safe API layer</li>
-      <li><strong>8 Deal Tabs</strong> — Single source of truth per deal</li>
-      <li><strong>6 Pipeline Views</strong> — Board, Table, Calendar, Graph, Sankey, List</li>
-      <li><strong>Real-time Events</strong> — Socket.IO powered</li>
-      <li><strong>MCP Tools</strong> — Agent-callable integrations</li>
-      <li><strong>150+ Templates</strong> — Proposal & solutioning library</li>
+      <li><strong>Pipeline Management</strong> — Board, Funnel, Table, Calendar, Graph views. Drag-drop with AI gate analysis.</li>
+      <li><strong>Conversational Lead Capture</strong> — Describe leads naturally (voice or text), AI extracts all fields.</li>
+      <li><strong>Deal Room</strong> — AI-powered conversational deal management with inline forms.</li>
+      <li><strong>Contacts Intelligence</strong> — Auto-categorized: Executive, Champion, Influencer, Gatekeeper, End User.</li>
+      <li><strong>Tasks</strong> — AI auto-creates tasks on stage changes. Overdue tracking.</li>
     </ul>
 
+    <h3>Presales & Pricing</h3>
+    <ul>
+      <li><strong>Proposal Studio</strong> — Conversational AI drafts proposals. 150+ templates across 12 domains.</li>
+      <li><strong>Pricing Desk</strong> — Rate cards by geo (NA/India/LATAM/EU). Blended team builder. CSV export.</li>
+      <li><strong>Solutioning</strong> — Effort estimator, SA assignments, architecture notes.</li>
+      <li><strong>Contracts</strong> — SOW, MSA, NDA lifecycle with approval chains.</li>
+      <li><strong>Export</strong> — PDF, DOCX, Markdown export for proposals.</li>
+    </ul>
+
+    <h3>Intelligence & Analytics</h3>
+    <ul>
+      <li><strong>Dashboard</strong> — Recharts: funnel, forecast, industry distribution.</li>
+      <li><strong>Growth Whitespace</strong> — Account × service line grid. Click "+" to create expansion opportunities.</li>
+      <li><strong>Insights</strong> — Lessons learnt from won/lost deals. AI pattern detection.</li>
+      <li><strong>Forecasting</strong> — Commit/Best Case/Pipeline categories. Weighted forecast.</li>
+      <li><strong>EE/EN/NN Classification</strong> — Existing-Existing (repeat), Existing-New (expand), New-New.</li>
+      <li><strong>Revenue Tracking</strong> — Monthly/quarterly/YTD across all surfaces.</li>
+    </ul>
+
+    <h3>AI & Automation</h3>
+    <ul>
+      <li><strong>9 AI Agents</strong> — Deal Coach, Research, Outreach, Hygiene, Forecast, Intake, Proposal, Account Intel, Competitive Intel.</li>
+      <li><strong>Sales Enablement</strong> — 3 AI coaches (Platform, Offerings, Objection), battle cards, playbooks.</li>
+      <li><strong>Ask Galent</strong> — Natural language pipeline queries with GenUI action buttons.</li>
+      <li><strong>Agentic Auto-Actions</strong> — Stage changes auto-create tasks (SOW, pricing, contracts, kickoff).</li>
+    </ul>
+
+    <h3>Integrations & Plugins</h3>
+    <ul>
+      <li><strong>Outlook Add-in</strong> — "Send to SalesPilot" sidebar in Outlook. Manifest: /plugins/outlook/manifest.xml</li>
+      <li><strong>Teams App</strong> — Pipeline, Ask Galent, Signal tabs in Teams. Manifest: /plugins/teams/manifest.json</li>
+      <li><strong>SharePoint</strong> — Sync proposals and SOWs to SharePoint libraries.</li>
+      <li><strong>CRM Sync</strong> — Salesforce, HubSpot, Pipedrive, Zoho, Freshsales bidirectional sync.</li>
+      <li><strong>Email</strong> — Gmail/Outlook IMAP+SMTP connector (App Password, no OAuth needed).</li>
+      <li><strong>Webhooks</strong> — /api/webhooks/teams, /api/webhooks/outlook for external integrations.</li>
+    </ul>
+
+    <h3>Admin & Users</h3>
+    <ul>
+      <li><strong>User Management</strong> — Create users, assign roles (Admin/Manager/Rep/SDR/Presales/Viewer).</li>
+      <li><strong>O365 Directory</strong> — Search organization directory, invite users from Azure AD.</li>
+      <li><strong>Microsoft SSO</strong> — Sign in with Microsoft O365 via Azure AD OAuth.</li>
+      <li><strong>Smart Matching</strong> — Users auto-matched to their deals by fuzzy name matching.</li>
+    </ul>
+
+    <hr class="section-divider" />
+    <h2>Getting Started</h2>
+    <ol>
+      <li>Sign in at <strong>https://salespilot.galent.ai</strong> with Microsoft or email.</li>
+      <li>Check the <strong>"My Day"</strong> tab for your daily brief and deal stories.</li>
+      <li>Open <strong>Pipeline</strong> to see your deals on the Board or Funnel view.</li>
+      <li>Click any deal to open the <strong>Deal Detail</strong> with 8 tabs (Details, Stakeholders, Tasks, Pricing, Presales, Contracts, Docs, Log).</li>
+      <li>Use <strong>Ask Galent</strong> (top bar) to query your pipeline in natural language.</li>
+      <li>Go to <strong>Presales</strong> to build proposals with the AI Proposal Studio.</li>
+      <li>Check <strong>Growth</strong> for whitespace expansion opportunities.</li>
+      <li>Visit <strong>Enablement</strong> for AI coaching, battle cards, and playbooks.</li>
+    </ol>
+
     <div class="footer">
-      Generated from Galent SalesPilot on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+      Galent SalesPilot v1.4 · ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} · https://salespilot.galent.ai
     </div>
   </body></html>`;
 }
