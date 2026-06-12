@@ -163,13 +163,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-purple-950/20">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-green-500 mb-4">
-            <Sparkles className="h-7 w-7 text-white" />
-          </div>
+          <img src="/galent-logo.svg" alt="Galent" className="w-16 h-16 mx-auto mb-3 rounded-2xl" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Galent <span className="text-purple-600">SalesPilot</span>
+            SalesPilot
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">AI-Native Sales Board</p>
         </div>
 
         <Suspense fallback={
