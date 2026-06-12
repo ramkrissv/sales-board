@@ -51,8 +51,8 @@ const navItems: { icon: any; label: string; href: string; children?: { icon: any
   { icon: BarChart, label: 'Analytics', href: '/dashboard',
     children: [
       { icon: BarChart3, label: 'Forecast', href: '/forecasting' },
-      { icon: TrendingUp, label: 'Waterfall', href: '/waterfall' },
-      { icon: Eye, label: 'Deal Graph', href: '/graph' },
+      { icon: TrendingUp, label: 'Growth', href: '/growth' },
+      { icon: Eye, label: 'Insights', href: '/insights' },
     ],
   },
   { icon: Sparkles, label: 'AI Agents', href: '/agents',
