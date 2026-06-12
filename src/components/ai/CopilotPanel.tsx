@@ -56,22 +56,38 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
       return;
     }
 
-    // Navigation actions
-    if (label.includes('pipeline') || label.includes('deal')) {
-      router.push('/pipeline');
+    // Dynamic navigation based on action type or label content
+    const routes: Record<string, string> = {
+      'open_pipeline': '/pipeline', 'open_presales': '/presales', 'open_pricing': '/pricing',
+      'open_growth': '/growth', 'open_enablement': '/enablement', 'open_tasks': '/tasks',
+      'open_insights': '/insights', 'open_deal': '/pipeline', 'create_lead': '/leads',
+    };
+    const matchedRoute = routes[action] || routes[Object.keys(routes).find(k => label.includes(k.replace('open_', ''))) || ''];
+    if (matchedRoute) {
+      router.push(matchedRoute);
       onClose();
+    } else if (label.includes('pipeline') || label.includes('deal')) {
+      router.push('/pipeline'); onClose();
+    } else if (label.includes('presales') || label.includes('proposal')) {
+      router.push('/presales'); onClose();
+    } else if (label.includes('pricing') || label.includes('rate')) {
+      router.push('/pricing'); onClose();
+    } else if (label.includes('growth') || label.includes('expand')) {
+      router.push('/growth'); onClose();
     } else if (label.includes('task')) {
-      router.push('/tasks');
-      onClose();
-    } else if (label.includes('forecast')) {
-      router.push('/forecasting');
-      onClose();
+      router.push('/tasks'); onClose();
+    } else if (label.includes('lead') || label.includes('capture')) {
+      router.push('/leads'); onClose();
+    } else if (label.includes('insight') || label.includes('lesson')) {
+      router.push('/insights'); onClose();
     } else if (label.includes('account')) {
-      router.push('/accounts');
-      onClose();
+      router.push('/accounts'); onClose();
+    } else if (label.includes('forecast')) {
+      router.push('/forecasting'); onClose();
+    } else if (label.includes('enable') || label.includes('coach')) {
+      router.push('/enablement'); onClose();
     } else {
-      // Default: create a task
-      setActionFeedback(`Action: "${action}" — added to your task queue`);
+      setActionFeedback(`Action: "${action}"`);
       setTimeout(() => setActionFeedback(null), 3000);
     }
   };
@@ -177,7 +193,10 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
         }
       );
     } else {
-      chatMutation.mutate({ message: input.trim(), context: { page: 'copilot' } });
+      chatMutation.mutate({
+        message: input.trim() + '\n\nAFTER your response, suggest 2-3 platform actions the user can take right now. Format as: [ACTION: label | type]. Types: open_pipeline, open_presales, create_lead, open_deal, open_growth, open_enablement, open_tasks, create_task, open_pricing, open_insights.',
+        context: { page: 'copilot' },
+      });
     }
 
     setInput('');
