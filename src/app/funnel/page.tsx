@@ -23,6 +23,7 @@ function FunnelContent() {
   const { opportunities } = useOpportunities();
   const pathname = usePathname();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+  const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [aiRead, setAiRead] = useState('');
   const chatMutation = trpc.ai.chat.useMutation();
 
@@ -91,32 +92,68 @@ function FunnelContent() {
                   <div
                     className="w-full rounded-lg py-3 px-4 flex items-center justify-between cursor-pointer transition-all hover:brightness-110"
                     style={{ backgroundColor: s.color, minHeight: '48px' }}
-                    onClick={() => s.deals[0] && setSelectedOppId(s.deals[0].id)}
+                    onClick={() => setExpandedStage(expandedStage === s.stage ? null : s.stage)}
                   >
                     <span className="text-white font-bold text-lg g-metric">{s.count}</span>
                     <span className="text-white/70 text-xs">${(s.weighted / 1000).toFixed(0)}k wtd</span>
                   </div>
                 </div>
 
-                {/* Deal names — right side */}
-                <div className="w-56 shrink-0 flex flex-col justify-center pl-4 py-2">
+                {/* Arrow connector → deal cards */}
+                <div className="w-8 shrink-0 flex items-center justify-center">
+                  {s.deals.length > 0 && (
+                    <svg width="32" height="2" className="overflow-visible">
+                      <line x1="0" y1="1" x2="28" y2="1" stroke={s.color} strokeWidth="1.5" opacity="0.5" />
+                      <polygon points="26,-3 32,1 26,5" fill={s.color} opacity="0.5" />
+                    </svg>
+                  )}
+                </div>
+
+                {/* Deal cards — right side */}
+                <div className="w-60 shrink-0 flex flex-col justify-center py-1">
                   {s.deals.length > 0 ? (
-                    <div className="space-y-0.5">
-                      {s.deals.slice(0, 4).map(d => (
+                    <div className="space-y-1">
+                      {s.deals.slice(0, 3).map(d => (
                         <button key={d.id} onClick={() => setSelectedOppId(d.id)}
-                          className="block text-[11px] text-foreground hover:text-[#7c3aed] transition-colors truncate w-full text-left">
-                          {d.customerName} <span className="text-muted-foreground">${((d.tcv || 0) / 1000).toFixed(0)}k</span>
+                          className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-card border border-border hover:border-[#7c3aed]/30 transition-all text-left group">
+                          <span className="text-[11px] font-medium text-foreground group-hover:text-[#7c3aed] truncate max-w-[140px]">{d.customerName}</span>
+                          <span className="text-[10px] text-muted-foreground g-metric shrink-0 ml-2">${((d.tcv || 0) / 1000).toFixed(0)}k</span>
                         </button>
                       ))}
-                      {s.deals.length > 4 && (
-                        <span className="text-[10px] text-muted-foreground">+{s.deals.length - 4} more</span>
+                      {s.deals.length > 3 && (
+                        <span className="text-[10px] text-muted-foreground pl-3">+{s.deals.length - 3} more deals</span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground italic">No deals</span>
+                    <span className="text-[10px] text-muted-foreground italic pl-3">No deals</span>
                   )}
                 </div>
               </div>
+
+              {/* Expanded stage detail */}
+              {expandedStage === s.stage && s.deals.length > 0 && (
+                <div className="ml-28 mr-8 mt-2 mb-2 p-4 rounded-xl g-surface g-elevated animate-flow-in" style={{ borderLeft: `3px solid ${s.color}` }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-foreground">{s.stage} — {s.count} deals · ${(s.tcv/1000).toFixed(0)}k</span>
+                    <button onClick={() => setExpandedStage(null)} className="text-xs text-muted-foreground hover:text-foreground">Close</button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {s.deals.map(d => (
+                      <button key={d.id} onClick={() => setSelectedOppId(d.id)}
+                        className="flex items-center justify-between p-3 rounded-lg bg-card border border-border hover:border-[#7c3aed]/30 transition-all text-left">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-foreground truncate">{d.customerName}</div>
+                          <div className="text-[10px] text-muted-foreground truncate">{d.opportunityName}</div>
+                        </div>
+                        <div className="text-right ml-3 shrink-0">
+                          <div className="text-xs font-bold text-foreground g-metric">${((d.tcv || 0)/1000).toFixed(0)}k</div>
+                          <div className="text-[10px] text-muted-foreground">{d.primaryOwner}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Conversion arrow */}
               {s.convRate !== null && (
@@ -126,7 +163,7 @@ function FunnelContent() {
                     <ArrowDown className="h-3 w-3 text-muted-foreground" />
                     <span className="text-[10px] text-muted-foreground ml-1">{s.convRate}% conversion</span>
                   </div>
-                  <div className="w-56 shrink-0" />
+                  <div className="w-68 shrink-0" />
                 </div>
               )}
             </div>
