@@ -39,6 +39,7 @@ const navItems: { icon: any; label: string; href: string; children?: { icon: any
   { icon: Network, label: 'Accounts', href: '/accounts',
     children: [
       { icon: Users, label: 'Contacts', href: '/stakeholders' },
+      { icon: TrendingUp, label: 'Growth', href: '/growth' },
     ],
   },
   { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
@@ -51,11 +52,11 @@ const navItems: { icon: any; label: string; href: string; children?: { icon: any
   { icon: BarChart, label: 'Analytics', href: '/dashboard',
     children: [
       { icon: BarChart3, label: 'Forecast', href: '/forecasting' },
-      { icon: TrendingUp, label: 'Growth', href: '/growth' },
-      { icon: Eye, label: 'Insights', href: '/insights' },
+      { icon: Eye, label: 'Deal Graph', href: '/graph' },
+      { icon: Sparkles, label: 'Insights', href: '/insights' },
     ],
   },
-  { icon: Sparkles, label: 'AI Agents', href: '/agents',
+  { icon: Bot, label: 'AI & Automation', href: '/agents',
     children: [
       { icon: MessageSquare, label: 'Ask Galent', href: '/ask' },
       { icon: BookOpen, label: 'Enablement', href: '/enablement' },
