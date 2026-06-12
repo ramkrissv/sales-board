@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc/client';
-import { Trash2, UserPlus, Shield, Mail, Copy, Check, Users, Sparkles, Link2 } from 'lucide-react';
+import { Trash2, UserPlus, Shield, Mail, Copy, Check, Users, Sparkles, Link2, Search, Loader2, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const ROLES = ['admin', 'manager', 'rep', 'sdr', 'presales', 'viewer'] as const;
@@ -24,8 +24,32 @@ export default function UsersAdminPage() {
   const deleteUser = trpc.user.delete.useMutation({ onSuccess: () => utils.user.list.invalidate() });
 
   const [showInvite, setShowInvite] = useState(false);
+  const [showDirectory, setShowDirectory] = useState(false);
+  const [directorySearch, setDirectorySearch] = useState('');
+  const [directoryResults, setDirectoryResults] = useState<any>(null);
+  const directoryMutation = trpc.directory.searchUsers.useMutation();
   const [form, setForm] = useState({ email: '', firstName: '', lastName: '', role: 'rep' as string, team: '' });
   const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
+
+  const handleDirectorySearch = () => {
+    if (!directorySearch.trim()) return;
+    directoryMutation.mutate({ query: directorySearch.trim() }, {
+      onSuccess: (data) => setDirectoryResults(data),
+    });
+  };
+
+  const addFromDirectory = (user: { name: string; email: string; title: string; department: string }) => {
+    const parts = user.name.split(' ');
+    setForm({
+      email: user.email,
+      firstName: parts[0] || '',
+      lastName: parts.slice(1).join(' ') || '',
+      role: user.title?.toLowerCase().includes('director') || user.title?.toLowerCase().includes('vp') ? 'manager' : 'rep',
+      team: user.department || '',
+    });
+    setShowDirectory(false);
+    setShowInvite(true);
+  };
 
   // Intelligent matching: map users to their deals based on name fuzzy match
   const userDealMap = useMemo(() => {
@@ -88,13 +112,18 @@ export default function UsersAdminPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-1">{users?.length || 0} users · {ROLES.length} roles</p>
         </div>
-        <button
-          onClick={() => setShowInvite(!showInvite)}
-          className="px-3 py-1.5 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
-        >
-          <UserPlus className="h-3.5 w-3.5" />
-          Invite User
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setShowDirectory(!showDirectory); setShowInvite(false); }}
+            className="px-3 py-1.5 rounded-lg border border-border text-foreground text-xs font-medium flex items-center gap-1.5 hover:bg-secondary transition-colors">
+            <Building2 className="h-3.5 w-3.5" />
+            Find from O365
+          </button>
+          <button onClick={() => { setShowInvite(!showInvite); setShowDirectory(false); }}
+            className="px-3 py-1.5 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-xs font-medium flex items-center gap-1.5 transition-colors">
+            <UserPlus className="h-3.5 w-3.5" />
+            Invite User
+          </button>
+        </div>
       </div>
 
       {/* Role legend */}
@@ -108,6 +137,54 @@ export default function UsersAdminPage() {
           );
         })}
       </div>
+
+      {/* O365 Directory Search */}
+      {showDirectory && (
+        <div className="p-5 rounded-xl g-surface g-elevated space-y-4 animate-flow-in">
+          <div className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-[#0078d4]" />
+            Find Users from Organization Directory
+          </div>
+          <div className="flex gap-2">
+            <input value={directorySearch} onChange={e => setDirectorySearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleDirectorySearch()}
+              placeholder="Search by name or email..."
+              className="flex-1 px-3 py-2.5 text-sm rounded-lg bg-card border border-border text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+            <button onClick={handleDirectorySearch} disabled={directoryMutation.isPending || !directorySearch.trim()}
+              className="px-4 py-2.5 rounded-lg bg-[#0078d4] text-white text-sm font-medium hover:bg-[#106ebe] disabled:opacity-50 transition-colors">
+              {directoryMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            </button>
+          </div>
+
+          {directoryResults?.error && (
+            <div className="p-3 rounded-lg bg-[var(--g-amber-soft)] border border-[var(--g-amber)]/20 text-xs">
+              <p className="text-[var(--g-amber)] font-medium">{directoryResults.error}</p>
+              {directoryResults.hint && <p className="text-muted-foreground mt-1">{directoryResults.hint}</p>}
+            </div>
+          )}
+
+          {directoryResults?.users?.length > 0 && (
+            <div className="space-y-1.5">
+              {directoryResults.users.map((u: any, i: number) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-card border border-border hover:border-[#7c3aed]/30 transition-all">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">{u.name}</div>
+                    <div className="text-[10px] text-muted-foreground">{u.email} {u.title && `· ${u.title}`} {u.department && `· ${u.department}`}</div>
+                  </div>
+                  <button onClick={() => addFromDirectory(u)}
+                    className="px-3 py-1.5 text-[10px] rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] font-medium hover:bg-[#7c3aed]/20 transition-colors">
+                    <UserPlus className="h-3 w-3 inline mr-1" /> Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {directoryResults?.users?.length === 0 && !directoryResults?.error && (
+            <p className="text-xs text-muted-foreground text-center py-4">No users found matching "{directorySearch}"</p>
+          )}
+        </div>
+      )}
 
       {/* Invite form */}
       {showInvite && (
