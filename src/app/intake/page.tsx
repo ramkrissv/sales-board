@@ -205,10 +205,17 @@ function IntakeContent() {
                 )}
                 <select value={linkedDealId} onChange={e => setLinkedDealId(e.target.value)}
                   className="px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground">
-                  <option value="">Auto-detect deal (or select)</option>
-                  {opportunities.filter(o => !['Won','Lost'].includes(o.status)).map(o => (
-                    <option key={o.id} value={o.id}>{o.customerName} — {o.opportunityName}</option>
-                  ))}
+                  <option value="">Auto-detect deal (or new opportunity)</option>
+                  <optgroup label="Active Pipeline">
+                    {opportunities.filter(o => !['Won','Lost'].includes(o.status)).map(o => (
+                      <option key={o.id} value={o.id}>{o.customerName} — {o.opportunityName}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Existing Engagements">
+                    {opportunities.filter(o => o.status === 'Won').map(o => (
+                      <option key={o.id} value={o.id}>{o.customerName} — {o.opportunityName} (Won)</option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 
@@ -233,7 +240,7 @@ function IntakeContent() {
                 rows={8}
                 className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground resize-y font-mono" />}
 
-              <button onClick={handleProcess} disabled={processMutation.isPending || !content.trim()}
+              <button onClick={handleProcess} disabled={processMutation.isPending || !content.trim() || !selectedChannel}
                 className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium transition-colors disabled:opacity-50 w-full justify-center">
                 {processMutation.isPending ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> AI is processing your {channels.find(c => c.id === selectedChannel)?.label.toLowerCase()}...</>
