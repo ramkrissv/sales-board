@@ -140,9 +140,46 @@ function PricingContent() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground font-display">Pricing Engine</h1>
-          <p className="text-sm text-muted-foreground">Build pricing for deals based on team, geo, and engagement type</p>
+          <h1 className="text-xl font-semibold text-foreground font-display">Pricing Desk</h1>
+          <p className="text-sm text-muted-foreground">Region-wise rate cards · blended team builder · embedded into proposals & deal gates</p>
         </div>
+      </div>
+
+      {/* Rate Card Table */}
+      <div className="g-surface g-elevated p-5 rounded-xl">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-sm font-semibold text-foreground font-display">Rate Card</span>
+          <div className="flex gap-0.5 p-0.5 rounded-lg bg-secondary">
+            {Object.entries(GEO_RATES).map(([k, v]) => (
+              <button key={k} className="px-3 py-1 text-[10px] font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-card transition-colors">
+                {v.label.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left py-2 text-muted-foreground font-medium uppercase tracking-wider text-[10px]">Role</th>
+              <th className="text-right py-2 text-muted-foreground font-medium uppercase tracking-wider text-[10px]">Cost/mo</th>
+              <th className="text-right py-2 text-muted-foreground font-medium uppercase tracking-wider text-[10px]">Rate @Floor</th>
+              <th className="text-right py-2 text-muted-foreground font-medium uppercase tracking-wider text-[10px]">$/hr (US)</th>
+              <th className="text-right py-2 text-muted-foreground font-medium uppercase tracking-wider text-[10px]">$/hr (India)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ROLES.map(r => (
+              <tr key={r.role} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                <td className="py-2 text-foreground font-medium">{r.role}</td>
+                <td className="py-2 text-right text-muted-foreground g-metric">${(r.baseRate * 160 / 1000).toFixed(0)}K</td>
+                <td className="py-2 text-right text-muted-foreground g-metric">${(r.baseRate * 160 * 1.28 / 1000).toFixed(0)}K</td>
+                <td className="py-2 text-right text-foreground g-metric font-semibold">${r.baseRate}</td>
+                <td className="py-2 text-right text-foreground g-metric">${r.indiaRate > 0 ? r.indiaRate : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="text-[10px] text-muted-foreground mt-2">Onsite premium +18% for NYC/SF metros · Rates effective FY2026</div>
       </div>
 
       {/* Config Row */}
