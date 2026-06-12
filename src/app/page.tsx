@@ -373,8 +373,38 @@ function HomeContent() {
                 </div>
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground py-8 text-center">
-                No deal stories to show. Add some opportunities to get started.
+              <div className="space-y-4 py-4">
+                {/* Show general pipeline summary when no specific stories */}
+                <div className="p-4 rounded-xl bg-card border border-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="h-4 w-4 text-[#7c3aed]" />
+                    <span className="text-sm font-semibold text-foreground">Pipeline Overview</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {opportunities.length} total opportunities across {[...new Set(opportunities.map(o => o.customerName))].length} accounts.
+                    {wonDeals.length > 0 && ` ${wonDeals.length} won ($${(wonRevenue/1e6).toFixed(1)}M revenue).`}
+                    {activeDeals.length > 0 && ` ${activeDeals.length} active ($${(totalPipeline/1e6).toFixed(1)}M pipeline).`}
+                    {overdueTasks.length > 0 && ` ${overdueTasks.length} overdue tasks need attention.`}
+                  </p>
+                </div>
+                {/* Quick actions */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <Link href="/pipeline" className="flex items-center gap-2 p-3 rounded-xl bg-card border border-border hover:border-[#7c3aed]/30 transition-all text-sm text-foreground">
+                    <Target className="h-4 w-4 text-[#7c3aed]" /> View Pipeline
+                  </Link>
+                  <Link href="/presales" className="flex items-center gap-2 p-3 rounded-xl bg-card border border-border hover:border-[#7c3aed]/30 transition-all text-sm text-foreground">
+                    <FileText className="h-4 w-4 text-[#7c3aed]" /> Open Presales
+                  </Link>
+                  <Link href="/leads" className="flex items-center gap-2 p-3 rounded-xl bg-card border border-border hover:border-[#7c3aed]/30 transition-all text-sm text-foreground">
+                    <Zap className="h-4 w-4 text-[#7c3aed]" /> Capture a Lead
+                  </Link>
+                </div>
+                {/* Show scope hint */}
+                {filters.scope === 'my' && (
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    Showing "My" view — switch to "Org" scope (top right) to see all deals.
+                  </p>
+                )}
               </div>
             )}
           </div>
