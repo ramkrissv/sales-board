@@ -51,9 +51,9 @@ const PLUGINS: PluginDef[] = [
     icon: Video,
     status: 'available',
     description: 'Capture meeting transcripts and chat messages. Bot posts deal updates to channels.',
-    downloadUrl: '/plugins/teams/manifest.json',
-    downloadLabel: 'Download App Package (JSON)',
-    installGuide: 'Upload to Teams Admin Center → Manage apps → Upload new app',
+    downloadUrl: '/plugins/teams/SalesPilot-Teams.zip',
+    downloadLabel: 'Download App Package (ZIP)',
+    installGuide: 'Teams → Apps → Manage your apps → Upload an app → Submit to your org',
     features: ['Auto-capture meeting transcripts', 'Chat message signal extraction', 'Deal update notifications in channels', 'Embedded SalesPilot tab in Teams'],
     setupSteps: ['Download the Teams app manifest below', 'Go to Teams Admin Center → Manage apps', 'Click "Upload new app" and select the manifest', 'Create a Bot registration in Azure Bot Service', 'Set messaging endpoint to your Galent webhook URL', 'Configure which channels to monitor'],
     configFields: [

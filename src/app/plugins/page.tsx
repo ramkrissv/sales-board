@@ -55,8 +55,8 @@ const PLUGINS: PluginDef[] = [
     icon: Video,
     status: 'available',
     description: 'Capture meeting transcripts and chat messages. Bot posts deal updates to channels.',
-    downloadUrl: '/plugins/teams/manifest.json',
-    downloadLabel: 'Download App Package (JSON)',
+    downloadUrl: '/plugins/teams/SalesPilot-Teams.zip',
+    downloadLabel: 'Download App Package (ZIP)',
     installGuide: 'Upload to Teams Admin Center → Manage apps → Upload new app',
     features: [
       'Auto-capture meeting transcripts',
