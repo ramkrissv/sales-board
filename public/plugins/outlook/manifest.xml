@@ -8,8 +8,8 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Galent SalesPilot"/>
   <Description DefaultValue="Send emails to SalesPilot for AI processing. Capture deal signals, log meeting notes, and track client communications."/>
-  <IconUrl DefaultValue="https://salespilot.galent.ai/galent-logo.svg"/>
-  <HighResolutionIconUrl DefaultValue="https://salespilot.galent.ai/galent-logo.svg"/>
+  <IconUrl DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-128.png"/>
   <SupportUrl DefaultValue="https://salespilot.galent.ai/guide"/>
 
   <Hosts>
