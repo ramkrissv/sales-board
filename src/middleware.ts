@@ -7,6 +7,7 @@ export async function middleware(request: NextRequest) {
   // Skip auth check for public paths
   if (
     pathname.startsWith('/login') ||
+    pathname.startsWith('/auth/') ||
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
@@ -30,6 +31,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // RBAC page-level checks happen client-side via the AppShell
+  // (middleware can't decode JWT without the secret in edge runtime)
   return NextResponse.next();
 }
 

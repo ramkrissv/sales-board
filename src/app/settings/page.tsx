@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import {
   Bot, Shield, Palette, Bell, Check, Puzzle, Copy, Download,
   ExternalLink, Mail, Video, Mic, Globe, FolderOpen, CheckCircle2,
-  ArrowRight, Zap, Terminal, Code2, Server
+  ArrowRight, Zap, Terminal, Code2, Server, Lock, Loader2, Smartphone,
+  AlertTriangle
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { AVAILABLE_MODELS, DEFAULT_AGENT_CONFIGS } from '@/lib/ai/config';
 import { trpc } from '@/lib/trpc/client';
 
@@ -134,7 +136,7 @@ const MCP_TOOLS = [
   { name: 'invoke_agent', description: 'Invoke any of the 13 AI agents', category: 'Agents' },
 ];
 
-type TabId = 'ai' | 'plugins' | 'mcp' | 'appearance' | 'notifications';
+type TabId = 'ai' | 'plugins' | 'mcp' | 'security' | 'appearance' | 'notifications';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('ai');
@@ -142,6 +144,15 @@ export default function SettingsPage() {
   const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null);
   const [pluginConfigs, setPluginConfigs] = useState<Record<string, Record<string, string>>>({});
   const [toast, setToast] = useState<string | null>(null);
+  const { data: session } = useSession();
+
+  // 2FA state
+  const [tfaStatus, setTfaStatus] = useState<'checking' | 'off' | 'on' | 'setup'>('checking');
+  const [tfaQr, setTfaQr] = useState('');
+  const [tfaSecret, setTfaSecret] = useState('');
+  const [tfaCode, setTfaCode] = useState('');
+  const [tfaLoading, setTfaLoading] = useState(false);
+  const [tfaError, setTfaError] = useState('');
   const [mcpCopied, setMcpCopied] = useState<string | null>(null);
 
   const { data: settings, isLoading } = trpc.settings.get.useQuery();
@@ -168,6 +179,7 @@ export default function SettingsPage() {
     { id: 'ai', label: 'AI & Agents', icon: Bot },
     { id: 'plugins', label: 'Plugins', icon: Puzzle },
     { id: 'mcp', label: 'MCP Tools', icon: Terminal },
+    { id: 'security', label: 'Security', icon: Lock },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'notifications', label: 'Notifications', icon: Bell },
   ];
@@ -558,12 +570,167 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* ─── Security Tab (2FA) ─── */}
+      {activeTab === 'security' && (
+        <div className="space-y-6">
+          <div className="g-surface g-elevated p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#7c3aed]/10 flex items-center justify-center">
+                <Lock className="h-5 w-5 text-[#7c3aed]" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-foreground">Two-Factor Authentication (TOTP)</div>
+                <div className="text-xs text-muted-foreground">
+                  Add an extra layer of security with an authenticator app (Google Authenticator, Microsoft Authenticator)
+                </div>
+              </div>
+            </div>
+
+            <SecurityTFA email={session?.user?.email || ''} />
+          </div>
+
+          <div className="g-surface g-elevated p-5 space-y-4">
+            <div className="g-section-label">Microsoft MFA (Azure AD)</div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              If your organization uses Azure AD, MFA can also be enforced at the identity provider level.
+              This is configured by your IT admin in Microsoft Entra → Per-user MFA or Conditional Access policies.
+              When enabled, users are prompted by Microsoft before the OAuth token reaches SalesPilot.
+            </p>
+            <a href="https://account.activedirectory.windowsazure.com/usermanagement/multifactorverification.aspx"
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-[#7c3aed] hover:underline">
+              <ExternalLink className="h-3 w-3" /> Open Microsoft MFA Portal (admin)
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 right-6 px-4 py-3 rounded-lg bg-emerald-600 text-white text-sm font-medium shadow-lg animate-in fade-in slide-in-from-bottom-4 z-50">
           {toast}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Security 2FA Component ──
+function SecurityTFA({ email }: { email: string }) {
+  const [status, setStatus] = useState<'checking' | 'off' | 'on' | 'setup'>('checking');
+  const [qrCode, setQrCode] = useState('');
+  const [secret, setSecret] = useState('');
+  const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!email) return;
+    fetch('/api/auth/totp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'check', email }),
+    }).then(r => r.json()).then(d => setStatus(d.hasTotp ? 'on' : 'off')).catch(() => setStatus('off'));
+  }, [email]);
+
+  const handleSetup = async () => {
+    setLoading(true);
+    const res = await fetch('/api/auth/totp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'setup', email }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.alreadyEnabled) { setStatus('on'); return; }
+    setQrCode(data.qrCode);
+    setSecret(data.secret);
+    setStatus('setup');
+  };
+
+  const handleVerify = async () => {
+    if (code.length !== 6) return;
+    setLoading(true); setError('');
+    const res = await fetch('/api/auth/totp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'verify', email, token: code }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.valid) { setStatus('on'); } else { setError('Invalid code. Try again.'); setCode(''); }
+  };
+
+  const handleDisable = async () => {
+    if (!confirm('Disable 2FA? You will no longer be prompted for a code on login.')) return;
+    await fetch('/api/auth/totp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'disable', email }),
+    });
+    setStatus('off');
+    setQrCode(''); setSecret(''); setCode('');
+  };
+
+  if (status === 'checking') {
+    return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Checking 2FA status...</div>;
+  }
+
+  if (status === 'on') {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+          <div>
+            <div className="text-sm font-semibold text-foreground">2FA is enabled</div>
+            <div className="text-xs text-muted-foreground">You'll be prompted for an authenticator code on each login</div>
+          </div>
+        </div>
+        <button onClick={handleDisable} className="text-xs text-red-400 hover:underline">Disable 2FA</button>
+      </div>
+    );
+  }
+
+  if (status === 'setup') {
+    return (
+      <div className="space-y-4">
+        <div className="text-sm text-foreground">Scan this QR code with your authenticator app:</div>
+        {qrCode && <img src={qrCode} alt="2FA QR" className="w-48 h-48 mx-auto rounded-xl border border-border" />}
+        <div className="text-center">
+          <div className="text-[10px] text-muted-foreground">Manual entry code:</div>
+          <code className="text-xs font-mono text-foreground bg-card border border-border px-3 py-1 rounded select-all">{secret}</code>
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground">Enter 6-digit code to verify</label>
+          <input type="text" inputMode="numeric" maxLength={6} value={code}
+            onChange={e => { setCode(e.target.value.replace(/\D/g, '')); setError(''); }}
+            onKeyDown={e => e.key === 'Enter' && handleVerify()}
+            placeholder="000000"
+            className="w-full mt-1 px-3 py-2 text-center text-lg font-mono tracking-[0.3em] bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+        </div>
+        {error && <div className="flex items-center gap-1.5 text-xs text-red-400"><AlertTriangle className="h-3 w-3" />{error}</div>}
+        <button onClick={handleVerify} disabled={loading || code.length !== 6}
+          className="w-full px-4 py-2 rounded-lg bg-[#7c3aed] text-white text-sm font-medium hover:bg-[#6d28d9] disabled:opacity-50 transition-colors">
+          {loading ? 'Verifying...' : 'Verify & Enable 2FA'}
+        </button>
+      </div>
+    );
+  }
+
+  // status === 'off'
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+        <Shield className="h-5 w-5 text-amber-400" />
+        <div>
+          <div className="text-sm font-semibold text-foreground">2FA is not enabled</div>
+          <div className="text-xs text-muted-foreground">Secure your account with an authenticator app</div>
+        </div>
+      </div>
+      <button onClick={handleSetup} disabled={loading}
+        className="px-4 py-2 rounded-lg bg-[#7c3aed] text-white text-xs font-medium hover:bg-[#6d28d9] disabled:opacity-50 transition-colors">
+        {loading ? 'Setting up...' : 'Set Up 2FA'}
+      </button>
     </div>
   );
 }
