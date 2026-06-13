@@ -3,7 +3,7 @@
 import { signIn } from 'next-auth/react';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Loader2 } from 'lucide-react';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -17,17 +17,75 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isInIframe, setIsInIframe] = useState(false);
+  const [teamsSSO, setTeamsSSO] = useState<'checking' | 'authenticating' | 'failed' | 'none'>('checking');
 
   const isAdminEmail = email.toLowerCase() === 'admin@galent.com';
 
-  // Detect if running inside an iframe (Teams, Outlook, etc.)
+  // Detect Teams context and attempt silent SSO
   useEffect(() => {
+    let isIframe = false;
     try {
-      setIsInIframe(window.self !== window.top);
+      isIframe = window.self !== window.top;
     } catch {
-      setIsInIframe(true); // cross-origin iframe
+      isIframe = true;
     }
-  }, []);
+    setIsInIframe(isIframe);
+
+    if (!isIframe) {
+      setTeamsSSO('none');
+      return;
+    }
+
+    // Try Teams SSO
+    (async () => {
+      try {
+        const teamsSDK = await import('@microsoft/teams-js');
+        await teamsSDK.app.initialize();
+        setTeamsSSO('authenticating');
+
+        // Get SSO token from Teams
+        const token = await teamsSDK.authentication.getAuthToken();
+
+        // Exchange token for SalesPilot session
+        const res = await fetch('/api/auth/teams-sso', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        const data = await res.json();
+
+        if (data.success && data.user?.email) {
+          // Sign in with credentials using the Teams-authenticated email
+          const result = await signIn('credentials', {
+            email: data.user.email,
+            password: '', // No password needed for Teams SSO users
+            redirect: false,
+          });
+          if (!result?.error) {
+            window.location.href = callbackUrl;
+            return;
+          }
+        }
+        setTeamsSSO('failed');
+      } catch {
+        // Not in Teams or SSO failed — show normal login
+        setTeamsSSO('failed');
+      }
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Show loading while Teams SSO is in progress
+  if (teamsSSO === 'checking' || teamsSSO === 'authenticating') {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-8 shadow-lg shadow-purple-500/5 flex flex-col items-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-[#7c3aed]" />
+        <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          {teamsSSO === 'checking' ? 'Detecting environment...' : 'Signing in with Teams...'}
+        </div>
+        <div className="text-xs text-slate-400">Using your Microsoft Teams identity</div>
+      </div>
+    );
+  }
 
   const handleDevLogin = async () => {
     setLoading(true);
