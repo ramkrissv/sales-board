@@ -10,14 +10,25 @@ function LoginForm() {
   const callbackUrl = searchParams.get('callbackUrl') || '/';
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('admin@galent.com');
+  const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [team, setTeam] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const isAdminEmail = email.toLowerCase() === 'admin@galent.com';
 
   const handleDevLogin = async () => {
     setLoading(true);
-    await signIn('credentials', { email, callbackUrl });
+    setError('');
+    const result = await signIn('credentials', { email, password, callbackUrl, redirect: false });
+    if (result?.error) {
+      setError(isAdminEmail ? 'Invalid password' : 'Login failed');
+      setLoading(false);
+    } else {
+      window.location.href = callbackUrl;
+    }
   };
 
   const handleSignUp = async () => {
@@ -79,14 +90,30 @@ function LoginForm() {
       {/* Sign In Form */}
       {activeTab === 'signin' && (
         <div className="space-y-3">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-            placeholder="admin@galent.com"
-          />
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(''); }}
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+              placeholder="admin@galent.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              onKeyDown={(e) => e.key === 'Enter' && handleDevLogin()}
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+              placeholder="Enter password"
+            />
+          </div>
+          {error && (
+            <p className="text-xs text-red-500 text-center">{error}</p>
+          )}
           <button
             onClick={handleDevLogin}
             disabled={loading}

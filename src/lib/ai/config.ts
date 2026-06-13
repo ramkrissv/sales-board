@@ -315,6 +315,98 @@ Be specific to the client and deal, never generic.`,
     schedule: '0 3 * * *', // 3am daily
     tools: ['list_opportunities', 'query_graph', 'send_notification', 'log_activity'],
   },
+  {
+    id: 'growth-agent',
+    name: 'Growth & Expansion',
+    description: 'Identifies whitespace opportunities in existing accounts. Suggests cross-sell and upsell plays based on service line gaps.',
+    systemPrompt: `You are the Growth Agent for Galent SalesPilot. You:
+1. Analyze EE accounts for service line whitespace
+2. Suggest expansion plays based on current engagement success
+3. Calculate potential ARR uplift from cross-sell opportunities
+4. Identify renewal risks and recommend retention actions
+5. Generate QBR talking points for account reviews`,
+    modelConfig: AVAILABLE_MODELS[0],
+    guardrails: {
+      maxActionsPerMinute: 5,
+      requireApprovalFor: ['create_opportunity'],
+      blockedActions: ['delete_opportunity', 'send_email'],
+      maxTokenBudgetPerDay: 200000,
+      deterministicMode: false,
+      contentFilters: [],
+    },
+    isActive: true,
+    autoInvoke: false,
+    tools: ['list_opportunities', 'list_accounts', 'query_graph', 'create_task', 'send_notification'],
+  },
+  {
+    id: 'enablement-agent',
+    name: 'Sales Enablement Coach',
+    description: 'AI sales coach that helps reps with objection handling, deal strategy, pricing guidance, and competitive positioning.',
+    systemPrompt: `You are the Sales Enablement Coach for Galent SalesPilot. You:
+1. Provide real-time objection handling during client conversations
+2. Suggest competitive counter-positioning based on deal context
+3. Guide pricing strategy within margin guardrails
+4. Recommend relevant case studies and battle cards
+5. Coach reps through discovery, demo, and negotiation stages`,
+    modelConfig: AVAILABLE_MODELS[0],
+    guardrails: {
+      maxActionsPerMinute: 20,
+      requireApprovalFor: [],
+      blockedActions: ['change_stage', 'delete_opportunity'],
+      maxTokenBudgetPerDay: 300000,
+      deterministicMode: false,
+      contentFilters: ['pricing_details'],
+    },
+    isActive: true,
+    autoInvoke: false,
+    tools: ['query_deals', 'get_stakeholder_context', 'log_activity'],
+  },
+  {
+    id: 'signal-processor',
+    name: 'Signal Processor',
+    description: 'Processes incoming signals from Teams, Outlook, voice notes. Extracts entities, matches to deals, and routes to the right workflow.',
+    systemPrompt: `You are the Signal Processor for Galent SalesPilot. When signals arrive from any channel, you:
+1. Extract company names, contact names, deal references
+2. Match signals to existing opportunities in the pipeline
+3. Identify new lead signals from unmatched entities
+4. Extract action items and next steps
+5. Route to appropriate workflow (follow-up, task, meeting)`,
+    modelConfig: AVAILABLE_MODELS[2], // Haiku for speed
+    guardrails: {
+      maxActionsPerMinute: 30,
+      requireApprovalFor: [],
+      blockedActions: ['delete_opportunity'],
+      maxTokenBudgetPerDay: 200000,
+      deterministicMode: false,
+      contentFilters: [],
+    },
+    isActive: true,
+    autoInvoke: true,
+    tools: ['query_deals', 'create_task', 'log_activity', 'send_notification', 'add_stakeholder'],
+  },
+  {
+    id: 'campaign-agent',
+    name: 'Campaign Manager',
+    description: 'Manages outreach campaigns. Drafts sequences, tracks responses, optimizes send times, and measures campaign ROI.',
+    systemPrompt: `You are the Campaign Manager Agent for Galent SalesPilot. You:
+1. Draft personalized outreach sequences based on target persona
+2. Optimize send timing based on engagement patterns
+3. Track campaign performance (open rate, reply rate, meetings booked)
+4. Suggest campaign adjustments based on A/B test results
+5. Calculate and report campaign ROI against pipeline generated`,
+    modelConfig: AVAILABLE_MODELS[0],
+    guardrails: {
+      maxActionsPerMinute: 10,
+      requireApprovalFor: ['send_email'],
+      blockedActions: ['delete_opportunity', 'change_stage'],
+      maxTokenBudgetPerDay: 200000,
+      deterministicMode: false,
+      contentFilters: [],
+    },
+    isActive: true,
+    autoInvoke: false,
+    tools: ['draft_email', 'create_task', 'log_activity', 'send_notification'],
+  },
 ];
 
 /**

@@ -76,6 +76,10 @@ export const harnessRouter = router({
         'draft_proposals',
         'enrich_accounts',
         'process_intake',
+        'whitespace_analysis',
+        'coaching_tips',
+        'process_signals',
+        'campaign_insights',
       ]),
     }))
     .mutation(async ({ input }) => {
@@ -90,6 +94,10 @@ export const harnessRouter = router({
         draft_proposals: { agentId: 'deal-coach', goal: 'For each deal in Proposal stage, check if a SOW exists. If not, list what proposal artifacts are missing based on the stage ontology.' },
         enrich_accounts: { agentId: 'deal-coach', goal: 'Review all accounts. For each, identify: missing data fields, deals without stakeholders, and opportunities for expansion.' },
         process_intake: { agentId: 'deal-coach', goal: 'Review recent activity and identify any deals that need follow-up based on meeting notes, stage transitions, or overdue tasks.' },
+        whitespace_analysis: { agentId: 'growth-agent', goal: 'Analyze all accounts and identify whitespace opportunities. For each account, map which service lines are live, which are in pipeline, and where expansion plays exist. Calculate potential ARR uplift.' },
+        coaching_tips: { agentId: 'enablement-agent', goal: 'Review deals in Negotiation and Proposal stages. For each, provide deal-specific coaching: objection handling tips, competitive positioning, and recommended talk tracks.' },
+        process_signals: { agentId: 'signal-processor', goal: 'Process recent signals from email, Teams, and voice channels. Extract entities (contacts, companies, deal references), classify signal type, and route to appropriate deals.' },
+        campaign_insights: { agentId: 'campaign-agent', goal: 'Review active outreach campaigns. Analyze open rates, response rates, and conversion. Suggest sequence optimizations and best send times.' },
       };
 
       const config = goals[input.action];

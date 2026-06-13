@@ -4,6 +4,7 @@ import './globals.css';
 import { TRPCProvider } from '@/lib/trpc/provider';
 import { AppShell } from '@/components/layout/AppShell';
 import { Providers } from './providers';
+import { InsightProvider } from '@/lib/intelligence/InsightStore';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -31,9 +32,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <Providers>
           <TRPCProvider>
-            <AppShell>
-              {children}
-            </AppShell>
+            <InsightProvider>
+              <AppShell>
+                {children}
+              </AppShell>
+            </InsightProvider>
           </TRPCProvider>
         </Providers>
       </body>

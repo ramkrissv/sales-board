@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { CheckSquare, AlertTriangle, Search, Plus, Trash2, Loader2, Sparkles } from 'lucide-react';
 import { format, isPast } from 'date-fns';
 import { DealDetail } from '@/components/modals/DealDetail';
+import TaskPriorities from '@/components/ai/TaskPriorities';
 
 function TasksContent() {
   const { opportunities, isLoading } = useOpportunities();
@@ -116,6 +117,9 @@ function TasksContent() {
           Add Task
         </button>
       </div>
+
+      {/* Pilot Priorities — AI-ranked tasks */}
+      <TaskPriorities opportunities={opportunities} onDealClick={setSelectedOppId} />
 
       {/* Add Task Form */}
       {showAddForm && (

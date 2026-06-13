@@ -56,7 +56,7 @@ const navItems: { icon: any; label: string; href: string; children?: { icon: any
       { icon: Sparkles, label: 'Insights', href: '/insights' },
     ],
   },
-  { icon: Bot, label: 'AI & Automation', href: '/agents',
+  { icon: Bot, label: 'Pilot', href: '/agents',
     children: [
       { icon: MessageSquare, label: 'Ask Galent', href: '/ask' },
       { icon: BookOpen, label: 'Enablement', href: '/enablement' },
@@ -65,7 +65,6 @@ const navItems: { icon: any; label: string; href: string; children?: { icon: any
 ];
 
 const platformItems: { icon: any; label: string; href: string }[] = [
-  { icon: Link2, label: 'Integrations', href: '/integrations' },
   { icon: GitBranch, label: 'Workflows', href: '/workflows' },
   { icon: Users, label: 'Users', href: '/admin/users' },
   { icon: BookOpen, label: 'Guide', href: '/guide' },
