@@ -81,17 +81,42 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async signIn({ user }) {
+      // Check if user has 2FA enabled — if so, redirect to verification
+      if (user?.email) {
+        try {
+          await connectDB();
+          const TOTPModel = mongoose.models.TOTPSecret;
+          if (TOTPModel) {
+            const totp = await TOTPModel.findOne({ email: user.email, enabled: true });
+            if (totp) {
+              // Store flag in token — will be checked client-side
+              (user as any).requires2FA = true;
+            }
+          }
+        } catch { /* continue without 2FA check */ }
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.userId = user.id;
+        if ((user as any).requires2FA) token.requires2FA = true;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.userId;
+        (session.user as any).requires2FA = !!token.requires2FA;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // If coming from sign-in and 2FA is needed, the client will handle redirect
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      if (url.startsWith(baseUrl)) return url;
+      return baseUrl;
     },
   },
   pages: {
