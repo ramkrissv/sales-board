@@ -60,5 +60,9 @@
     }
   ],
   "permissions": ["identity", "messageTeamMembers"],
-  "validDomains": ["salespilot.galent.ai"]
+  "validDomains": ["salespilot.galent.ai"],
+  "webApplicationInfo": {
+    "id": "a0746e51-15c5-4a2e-867a-dae137e724f7",
+    "resource": "api://salespilot.galent.ai/a0746e51-15c5-4a2e-867a-dae137e724f7"
+  }
 }
