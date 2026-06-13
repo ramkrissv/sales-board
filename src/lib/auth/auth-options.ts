@@ -41,9 +41,20 @@ export const authOptions: NextAuthOptions = {
       name: 'Email',
       credentials: {
         email: { label: 'Email', type: 'email', placeholder: 'admin@galent.com' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email) return null;
+
+        // Admin login requires password
+        const isAdmin = credentials.email.toLowerCase() === 'admin@galent.com';
+        if (isAdmin) {
+          const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@246';
+          if (!credentials.password || credentials.password !== adminPassword) {
+            throw new Error('Invalid admin password');
+          }
+        }
+
         try {
           await connectDB();
           const User = getUserModel();
@@ -51,9 +62,9 @@ export const authOptions: NextAuthOptions = {
           if (!user) {
             user = await User.create({
               email: credentials.email,
-              firstName: credentials.email.split('@')[0],
+              firstName: isAdmin ? 'Admin' : credentials.email.split('@')[0],
               lastName: '',
-              role: 'rep',
+              role: isAdmin ? 'admin' : 'rep',
             });
           }
           return {
