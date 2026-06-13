@@ -10,9 +10,12 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
+    pathname.startsWith('/plugins/') ||
     pathname.endsWith('.svg') ||
     pathname.endsWith('.png') ||
-    pathname.endsWith('.ico')
+    pathname.endsWith('.ico') ||
+    pathname.endsWith('.xml') ||
+    pathname.endsWith('.zip')
   ) {
     return NextResponse.next();
   }
