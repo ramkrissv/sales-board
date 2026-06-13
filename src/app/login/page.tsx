@@ -1,7 +1,7 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 
@@ -16,8 +16,18 @@ function LoginForm() {
   const [team, setTeam] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isInIframe, setIsInIframe] = useState(false);
 
   const isAdminEmail = email.toLowerCase() === 'admin@galent.com';
+
+  // Detect if running inside an iframe (Teams, Outlook, etc.)
+  useEffect(() => {
+    try {
+      setIsInIframe(window.self !== window.top);
+    } catch {
+      setIsInIframe(true); // cross-origin iframe
+    }
+  }, []);
 
   const handleDevLogin = async () => {
     setLoading(true);
@@ -38,20 +48,50 @@ function LoginForm() {
   };
 
   const handleAzureLogin = () => {
-    signIn('azure-ad', { callbackUrl });
+    if (isInIframe) {
+      // Inside Teams/Outlook iframe — open auth in a popup window
+      const width = 500;
+      const height = 700;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+      const authUrl = `/api/auth/signin/azure-ad?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+      const popup = window.open(
+        authUrl,
+        'SalesPilot Login',
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`
+      );
+
+      // Poll for popup close (indicates auth complete)
+      const pollTimer = setInterval(() => {
+        try {
+          if (!popup || popup.closed) {
+            clearInterval(pollTimer);
+            // Auth completed — reload the iframe
+            window.location.href = callbackUrl;
+          }
+        } catch {
+          // cross-origin — popup still open
+        }
+      }, 500);
+    } else {
+      // Normal browser — standard redirect
+      signIn('azure-ad', { callbackUrl });
+    }
   };
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-lg shadow-purple-500/5 space-y-4">
-      {/* Azure AD Login - Always visible */}
+      {/* Azure AD Login */}
       <button
         onClick={handleAzureLogin}
-        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#0078d4] hover:bg-[#106ebe] text-white rounded-lg font-medium transition-colors"
+        disabled={loading}
+        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#0078d4] hover:bg-[#106ebe] text-white rounded-lg font-medium transition-colors disabled:opacity-50"
       >
         <svg className="h-5 w-5" viewBox="0 0 21 21" fill="currentColor">
           <path d="M0 0h10v10H0zm11 0h10v10H11zM0 11h10v10H0zm11 0h10v10H11z" />
         </svg>
         Sign in with Microsoft
+        {isInIframe && <span className="text-[10px] opacity-70 ml-1">(popup)</span>}
       </button>
 
       <div className="relative">
