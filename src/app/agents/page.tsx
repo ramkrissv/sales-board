@@ -11,6 +11,7 @@ import {
 import { trpc } from '@/lib/trpc/client';
 import { DEFAULT_AGENT_CONFIGS, AVAILABLE_MODELS } from '@/lib/ai/config';
 import type { AgentConfig } from '@/lib/ai/config';
+import AgentResultView from '@/components/ai/AgentResultView';
 
 export default function AgentsPage() {
   const [agents] = useState<AgentConfig[]>(DEFAULT_AGENT_CONFIGS);
@@ -109,9 +110,9 @@ export default function AgentsPage() {
         </div>
       </div>
 
-      {/* Agent Run Result — shows reasoning + tool calls */}
+      {/* Agent Run Result */}
       {(runResult || isRunning) && (
-        <div className="g-surface g-elevated p-5 space-y-4 ai-glow animate-flow-in">
+        <div className="g-surface g-elevated p-5 ai-glow animate-flow-in">
           {isRunning ? (
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -126,104 +127,15 @@ export default function AgentsPage() {
               </div>
             </div>
           ) : runResult && (
-            <>
-              {/* Result header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-[#7c3aed]" />
-                  <span className="text-sm font-semibold text-foreground">Agent: {runResult.agentId}</span>
-                  <span className="g-chip bg-emerald-500/10 text-emerald-400">{runResult.toolCalls?.length || 0} tool calls</span>
-                </div>
-                <button onClick={() => setRunResult(null)} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
-              </div>
-
-              {/* Visual reasoning chain — compact timeline */}
-              {runResult.toolCalls?.length > 0 && (
-                <div className="flex items-center gap-1 flex-wrap">
-                  {runResult.toolCalls.map((call: any, i: number) => {
-                    const toolLabels: Record<string, { label: string; icon: any; color: string }> = {
-                      list_opportunities: { label: 'Scanned pipeline', icon: Eye, color: '#3b82f6' },
-                      get_opportunity: { label: `Checked ${call.params?.opportunityId || 'deal'}`, icon: Target, color: '#7c3aed' },
-                      get_forecast: { label: 'Ran forecast', icon: BarChart3, color: '#06b6d4' },
-                      create_task: { label: 'Created task', icon: CheckSquare, color: '#22c55e' },
-                      complete_task: { label: 'Completed task', icon: CheckSquare, color: '#10b981' },
-                      update_opportunity: { label: 'Updated deal', icon: ArrowRight, color: '#f59e0b' },
-                      list_stakeholders: { label: 'Checked contacts', icon: Target, color: '#8b5cf6' },
-                      send_notification: { label: 'Sent alert', icon: Zap, color: '#ef4444' },
-                      list_accounts: { label: 'Scanned accounts', icon: Eye, color: '#3b82f6' },
-                    };
-                    const info = toolLabels[call.tool] || { label: call.tool, icon: GitBranch, color: '#71717a' };
-                    const Icon = info.icon;
-                    return (
-                      <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium reveal"
-                        style={{ backgroundColor: `${info.color}10`, color: info.color, animationDelay: `${i * 0.08}s` }}>
-                        <Icon className="h-3 w-3" />
-                        {info.label}
-                        {i < runResult.toolCalls.length - 1 && <span className="text-muted-foreground ml-1">→</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Final answer — rendered as structured cards, not raw text */}
-              {runResult.finalAnswer && (
-                <div className="space-y-3">
-                  {/* Parse numbered items from the answer */}
-                  {runResult.finalAnswer.split(/\n/).filter((l: string) => l.trim()).map((line: string, i: number) => {
-                    const trimmed = line.trim();
-                    // Check if it's a numbered action step
-                    const isNumbered = /^\d+[\.\)]\s/.test(trimmed);
-                    const isHeader = trimmed.startsWith('**') || trimmed.startsWith('#');
-                    const isDealMention = /\$[\d,]+[kKmM]?/.test(trimmed);
-                    const isWarning = /risk|overdue|stale|missing|urgent|critical/i.test(trimmed);
-                    const isPositive = /close|won|strong|healthy|ready/i.test(trimmed);
-
-                    if (isNumbered) {
-                      const text = trimmed.replace(/^\d+[\.\)]\s*/, '');
-                      return (
-                        <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border transition-all reveal ${
-                          isWarning ? 'bg-amber-500/5 border-amber-500/20' :
-                          isPositive ? 'bg-emerald-500/5 border-emerald-500/20' :
-                          'bg-card border-border'
-                        }`} style={{ animationDelay: `${i * 0.06}s` }}>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${
-                            isWarning ? 'bg-amber-500/15 text-amber-400' :
-                            isPositive ? 'bg-emerald-500/15 text-emerald-400' :
-                            'bg-[#7c3aed]/10 text-[#7c3aed]'
-                          }`}>
-                            {trimmed.match(/^\d+/)?.[0]}
-                          </div>
-                          <div className="flex-1 text-sm text-foreground">{text.replace(/\*\*/g, '')}</div>
-                        </div>
-                      );
-                    }
-
-                    if (isHeader) {
-                      return <div key={i} className="g-section-label mt-2">{trimmed.replace(/[#*]/g, '').trim()}</div>;
-                    }
-
-                    if (trimmed.length > 10) {
-                      return <p key={i} className="text-sm text-foreground leading-relaxed">{trimmed.replace(/\*\*/g, '')}</p>;
-                    }
-
-                    return null;
-                  })}
-                </div>
-              )}
-
-              {/* Expand raw reasoning */}
-              {runResult.reasoning?.length > 1 && (
-                <details className="text-xs">
-                  <summary className="text-muted-foreground cursor-pointer hover:text-foreground">Raw reasoning ({runResult.reasoning.length} steps)</summary>
-                  <div className="mt-2 p-2 rounded-lg bg-card border border-border font-mono text-muted-foreground max-h-32 overflow-y-auto text-[10px]">
-                    {runResult.reasoning.map((r: string, i: number) => (
-                      <div key={i} className="whitespace-pre-wrap mb-1">{r.slice(0, 200)}</div>
-                    ))}
-                  </div>
-                </details>
-              )}
-            </>
+            <AgentResultView
+              result={runResult}
+              onClose={() => setRunResult(null)}
+              onAgentInvoke={(agentId, goal) => handleRunAgent(agentId, goal)}
+              onCreateTask={(task) => {
+                // Could wire to trpc.task.create here
+                setRunResult((prev: any) => prev);
+              }}
+            />
           )}
         </div>
       )}

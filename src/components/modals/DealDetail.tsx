@@ -18,6 +18,7 @@ import { DealLifecycle } from '@/components/views/DealLifecycle';
 import { Target } from 'lucide-react';
 import type { Status } from '@/lib/types';
 import DealPilotActions from '@/components/ai/DealPilotActions';
+import AgentResultView from '@/components/ai/AgentResultView';
 
 interface DealDetailProps {
   opportunityId: string;
@@ -73,6 +74,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [analysis, setAnalysis] = useState<any>(null);
+  const [agentRunResult, setAgentRunResult] = useState<any>(null);
   const [sowContent, setSowContent] = useState<string | null>(null);
   const [showStageSelector, setShowStageSelector] = useState(false);
   const [showMeetingNotes, setShowMeetingNotes] = useState(false);
@@ -620,15 +622,27 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
             customerName={opp.customerName}
             onResult={(result) => {
               if (result?.finalAnswer) {
-                setAnalysis((prev: any) => ({
-                  ...prev,
-                  summary: result.finalAnswer,
-                  agentId: result.agentId,
-                }));
+                setAgentRunResult(result);
               }
             }}
           />
         </div>
+
+        {/* Agent Result View — rich interactive output */}
+        {agentRunResult && (
+          <div className="px-5 pt-3">
+            <AgentResultView
+              result={agentRunResult}
+              compact
+              onClose={() => setAgentRunResult(null)}
+              onDealClick={(id) => { /* already in deal detail */ }}
+              onAgentInvoke={(agentId, goal) => {
+                setAgentRunResult(null);
+                // Re-trigger via DealPilotActions pattern
+              }}
+            />
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
