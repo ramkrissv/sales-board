@@ -6,6 +6,8 @@ import { ScopeSwitch, type Scope } from '@/components/shared/ScopeSwitch';
 import { TrendingUp, Target, Percent, DollarSign, CheckCircle, TrendingDown, Clock, EyeOff, LayoutDashboard, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import ForecastInsightCard from '@/components/ai/ForecastInsightCard';
+import { useForecastInsight } from '@/lib/intelligence/useInsight';
 
 const CATEGORY_META: Record<string, { label: string; color: string; bgColor: string; icon: any; description: string }> = {
   commit: { label: 'Commit', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', icon: CheckCircle, description: 'Owner says will close' },
@@ -18,6 +20,7 @@ export default function ForecastingPage() {
   const [scope, setScope] = useState<Scope>('org');
   const utils = trpc.useUtils();
   const { data, isLoading } = trpc.forecast.getSummary.useQuery();
+  const { insights: forecastInsights, isLoading: forecastAILoading, refresh: refreshForecast } = useForecastInsight({ autoFetch: true });
   const updateOpp = trpc.opportunity.update.useMutation({
     onSuccess: () => { utils.forecast.getSummary.invalidate(); },
   });
@@ -63,6 +66,9 @@ export default function ForecastingPage() {
         </div>
         <ScopeSwitch value={scope} onChange={setScope} />
       </div>
+
+      {/* Pilot Forecast Brief */}
+      <ForecastInsightCard insights={forecastInsights} isLoading={forecastAILoading} onRefresh={refreshForecast} />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

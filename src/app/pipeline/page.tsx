@@ -11,6 +11,8 @@ import { usePathname } from 'next/navigation';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 import { useOpportunities } from '@/lib/store';
+import PipelineInsightBar from '@/components/ai/PipelineInsightBar';
+import { usePipelineInsight } from '@/lib/intelligence/useInsight';
 
 const KanbanBoard = dynamic(
   () => import('@/components/kanban/KanbanBoard').then(m => ({ default: m.KanbanBoard })),
@@ -76,6 +78,12 @@ function PipelineHeader() {
   );
 }
 
+function PipelineInsightSection({ onDealClick }: { onDealClick: (id: string) => void }) {
+  const { filteredOpportunities } = useOpportunities();
+  const { insights, isLoading } = usePipelineInsight(filteredOpportunities);
+  return <PipelineInsightBar insights={insights} isLoading={isLoading} onDealClick={onDealClick} />;
+}
+
 export default function PipelinePage() {
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
@@ -83,6 +91,7 @@ export default function PipelinePage() {
     <OpportunityProvider>
       <FilterPanel />
       <PipelineHeader />
+      <PipelineInsightSection onDealClick={setSelectedOppId} />
       <KanbanBoard onCardClick={setSelectedOppId} />
       {selectedOppId && (
         <DealDetail

@@ -56,7 +56,7 @@ const navItems: { icon: any; label: string; href: string; children?: { icon: any
       { icon: Sparkles, label: 'Insights', href: '/insights' },
     ],
   },
-  { icon: Bot, label: 'AI & Automation', href: '/agents',
+  { icon: Bot, label: 'Pilot', href: '/agents',
     children: [
       { icon: MessageSquare, label: 'Ask Galent', href: '/ask' },
       { icon: BookOpen, label: 'Enablement', href: '/enablement' },

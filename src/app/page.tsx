@@ -16,6 +16,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { DealDetail } from '@/components/modals/DealDetail';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
+import PilotNudges from '@/components/ai/PilotNudges';
+import { usePipelineInsight } from '@/lib/intelligence/useInsight';
 
 function getRelativeTime(date: Date): string {
   const now = new Date();
@@ -55,6 +57,9 @@ function HomeContent() {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [homeView, setHomeView] = useState<'myday' | 'dashboard'>('myday');
   const { data: activities = [] } = trpc.activity.list.useQuery();
+
+  // Pilot Intelligence — cached insights
+  const { insights: pilotInsights, isLoading: pilotLoading, refresh: refreshPilot } = usePipelineInsight(opportunities);
 
   const pipelineMutation = trpc.ai.analyzePipeline.useMutation({
     onSuccess: (data) => setAiSummary(data.summary),
@@ -327,6 +332,18 @@ function HomeContent() {
               </div>
             </div>
           </div>
+
+          {/* Pilot Nudges — AI-detected insights */}
+          {pilotInsights && pilotInsights.nudges.length > 0 && (
+            <PilotNudges
+              nudges={pilotInsights.nudges}
+              isLoading={pilotLoading}
+              onNudgeClick={(nudge) => {
+                if (nudge.dealIds?.[0]) setSelectedOppId(nudge.dealIds[0]);
+              }}
+              onRefresh={refreshPilot}
+            />
+          )}
 
           {/* AI Daily Brief — Timeline of deal stories */}
           <div>

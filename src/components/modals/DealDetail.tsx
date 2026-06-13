@@ -17,6 +17,7 @@ import { MeetingNotesModal } from './MeetingNotesModal';
 import { DealLifecycle } from '@/components/views/DealLifecycle';
 import { Target } from 'lucide-react';
 import type { Status } from '@/lib/types';
+import DealPilotActions from '@/components/ai/DealPilotActions';
 
 interface DealDetailProps {
   opportunityId: string;
@@ -609,6 +610,24 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               {tab.label}
             </button>
           ))}
+        </div>
+
+        {/* Pilot Actions — stage-aware agent triggers */}
+        <div className="px-5 pt-3">
+          <DealPilotActions
+            opportunityId={opp.id}
+            dealStage={opp.status}
+            customerName={opp.customerName}
+            onResult={(result) => {
+              if (result?.finalAnswer) {
+                setAnalysis((prev: any) => ({
+                  ...prev,
+                  summary: result.finalAnswer,
+                  agentId: result.agentId,
+                }));
+              }
+            }}
+          />
         </div>
 
         {/* Content */}
