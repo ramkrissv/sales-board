@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Mic, Square, Loader2, Play, Pause, Upload, Trash2 } from 'lucide-react';
+import { Mic, Square, Loader2, Play, Pause, Trash2, Sparkles } from 'lucide-react';
 
 interface VoiceRecorderProps {
   onTranscript: (transcript: string, audioBlob?: Blob) => void;
@@ -14,11 +14,13 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [playbackTime, setPlaybackTime] = useState(0);
   const [transcript, setTranscript] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const startRecording = useCallback(async () => {
     try {
@@ -60,14 +62,22 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
     if (!audioUrl) return;
     if (!audioRef.current) {
       audioRef.current = new Audio(audioUrl);
-      audioRef.current.onended = () => setIsPlaying(false);
+      audioRef.current.onended = () => {
+        setIsPlaying(false);
+        setPlaybackTime(0);
+        if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+      };
     }
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
+      if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
     } else {
       audioRef.current.play();
       setIsPlaying(true);
+      playbackTimerRef.current = setInterval(() => {
+        if (audioRef.current) setPlaybackTime(Math.floor(audioRef.current.currentTime));
+      }, 200);
     }
   };
 
@@ -75,17 +85,19 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
     setAudioBlob(null);
     setAudioUrl(null);
     setDuration(0);
+    setPlaybackTime(0);
     setTranscript('');
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
   };
 
   const handleSubmit = () => {
-    if (transcript.trim()) {
-      onTranscript(transcript.trim(), audioBlob || undefined);
-    }
+    // Allow submission with just recording (no transcript required)
+    const text = transcript.trim() || `[Voice recording — ${formatDuration(duration)}]`;
+    onTranscript(text, audioBlob || undefined);
   };
 
-  const formatDuration = (s: number) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   return (
     <div className="space-y-4">
@@ -108,18 +120,30 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
-            <button onClick={togglePlayback}
-              className="w-12 h-12 rounded-full bg-card border border-border flex items-center justify-center text-foreground hover:bg-secondary transition-colors">
-              {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-            </button>
-            <div>
-              <div className="text-sm text-foreground">Recording captured</div>
-              <div className="text-xs text-muted-foreground">{formatDuration(duration)}</div>
+          /* Post-recording: playback controls */
+          <div className="w-full">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border">
+              <button onClick={togglePlayback}
+                className="w-10 h-10 rounded-full bg-[#5B4FE9] flex items-center justify-center text-white hover:bg-[#4A3ED4] transition-colors flex-shrink-0">
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+              </button>
+
+              {/* Progress bar */}
+              <div className="flex-1">
+                <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
+                  <div className="h-full rounded-full bg-[#5B4FE9] transition-all"
+                    style={{ width: `${duration > 0 ? (playbackTime / duration) * 100 : 0}%` }} />
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-[10px] font-mono text-muted-foreground">{formatDuration(playbackTime)}</span>
+                  <span className="text-[10px] font-mono text-muted-foreground">{formatDuration(duration)}</span>
+                </div>
+              </div>
+
+              <button onClick={discard} className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0">
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
-            <button onClick={discard} className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors">
-              <Trash2 className="h-4 w-4" />
-            </button>
           </div>
         )}
       </div>
@@ -127,10 +151,10 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
       {!isRecording && (
         <>
           <div className="text-center text-xs text-muted-foreground">
-            {!audioBlob ? 'Click to start recording \u00b7 or paste transcript below' : 'Add transcript or notes about this recording'}
+            {!audioBlob ? 'Click to start recording' : 'Add context or notes (optional) then process'}
           </div>
 
-          {/* Transcript input */}
+          {/* Transcript / notes input */}
           <textarea
             value={transcript}
             onChange={e => setTranscript(e.target.value)}
@@ -138,15 +162,16 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
               ? "Add context, key points, or full transcript of the recording..."
               : "Or paste your voice note transcript / meeting notes here..."
             }
-            rows={5}
-            className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground resize-y font-mono"
+            rows={4}
+            className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground resize-y"
           />
 
-          {transcript.trim() && (
+          {/* Process button — enabled after recording OR transcript */}
+          {(audioBlob || transcript.trim()) && (
             <button onClick={handleSubmit} disabled={isProcessing}
               className="w-full flex items-center gap-2 justify-center px-4 py-3 rounded-xl bg-[#5B4FE9] hover:bg-[#4A3ED4] text-white font-medium transition-colors disabled:opacity-50">
-              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {isProcessing ? 'Processing...' : 'Process Voice Note'}
+              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {isProcessing ? 'Processing...' : 'Process with AI'}
             </button>
           )}
         </>
