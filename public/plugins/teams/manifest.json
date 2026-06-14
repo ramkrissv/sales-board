@@ -14,8 +14,8 @@
     "full": "Galent SalesPilot — AI Sales Intelligence"
   },
   "description": {
-    "short": "AI sales assistant — paste meeting notes, deal updates, client conversations. AI extracts signals, matches deals, creates tasks.",
-    "full": "SalesPilot AI assistant for Microsoft Teams. Send meeting transcripts, deal updates, or client conversations to the bot — it extracts action items, matches to deals in your pipeline, creates follow-up tasks, and posts deal intelligence. Works in DMs, channels, and group chats."
+    "short": "AI sales assistant for deal signals and pipeline intelligence",
+    "full": "SalesPilot AI assistant for Microsoft Teams. Send meeting transcripts, deal updates, or client conversations to the bot. It extracts action items, matches to deals in your pipeline, creates follow-up tasks, and posts deal intelligence. Works in DMs, channels, and group chats."
   },
   "icons": {
     "color": "color.png",
@@ -30,7 +30,7 @@
       "isNotificationOnly": false,
       "commandLists": [
         {
-          "scopes": ["personal", "team", "groupChat"],
+          "scopes": ["personal"],
           "commands": [
             {
               "title": "help",
@@ -50,9 +50,5 @@
     }
   ],
   "permissions": ["identity", "messageTeamMembers"],
-  "validDomains": ["salespilot.galent.ai"],
-  "webApplicationInfo": {
-    "id": "a0746e51-15c5-4a2e-867a-dae137e724f7",
-    "resource": "api://salespilot.galent.ai/a0746e51-15c5-4a2e-867a-dae137e724f7"
-  }
+  "validDomains": ["salespilot.galent.ai"]
 }
