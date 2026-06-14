@@ -14,8 +14,8 @@
     "full": "Galent SalesPilot AI Sales Intelligence"
   },
   "description": {
-    "short": "AI sales assistant for deal signals",
-    "full": "SalesPilot AI assistant for Microsoft Teams. Send meeting notes, deal updates, or client conversations. AI extracts action items, matches deals, and creates tasks."
+    "short": "AI sales assistant for deal signals and pipeline intelligence",
+    "full": "SalesPilot AI assistant for Microsoft Teams. Send meeting notes, deal updates, or client conversations. AI extracts action items, matches deals, creates tasks. Works in DMs, channels, and group chats. Includes pipeline dashboard tab and signal capture."
   },
   "icons": {
     "color": "color.png",
@@ -25,20 +25,58 @@
   "bots": [
     {
       "botId": "a0746e51-15c5-4a2e-867a-dae137e724f7",
-      "scopes": [
-        "personal",
-        "team",
-        "groupChat"
-      ],
-      "supportsFiles": false,
-      "isNotificationOnly": false
+      "scopes": ["personal", "team", "groupChat"],
+      "supportsFiles": true,
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": ["personal"],
+          "commands": [
+            { "title": "help", "description": "What can SalesPilot do?" },
+            { "title": "pipeline", "description": "Get pipeline summary" },
+            { "title": "at-risk", "description": "Show deals at risk" }
+          ]
+        },
+        {
+          "scopes": ["team", "groupChat"],
+          "commands": [
+            { "title": "help", "description": "What can SalesPilot do?" },
+            { "title": "capture", "description": "Capture this conversation as a deal signal" }
+          ]
+        }
+      ]
     }
   ],
-  "permissions": [
-    "identity",
-    "messageTeamMembers"
+  "staticTabs": [
+    {
+      "entityId": "pipeline",
+      "name": "Pipeline",
+      "contentUrl": "https://salespilot.galent.ai/pipeline",
+      "websiteUrl": "https://salespilot.galent.ai/pipeline",
+      "scopes": ["personal"]
+    },
+    {
+      "entityId": "ask",
+      "name": "Ask Galent",
+      "contentUrl": "https://salespilot.galent.ai/ask",
+      "websiteUrl": "https://salespilot.galent.ai/ask",
+      "scopes": ["personal"]
+    },
+    {
+      "entityId": "intake",
+      "name": "Signal Capture",
+      "contentUrl": "https://salespilot.galent.ai/intake",
+      "websiteUrl": "https://salespilot.galent.ai/intake",
+      "scopes": ["personal"]
+    }
   ],
-  "validDomains": [
-    "salespilot.galent.ai"
-  ]
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://salespilot.galent.ai/pipeline",
+      "canUpdateConfiguration": false,
+      "scopes": ["team", "groupChat"]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["salespilot.galent.ai"]
 }
