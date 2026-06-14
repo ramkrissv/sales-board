@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
   "manifestVersion": "1.16",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "id": "a0746e51-15c5-4a2e-867a-dae137e724f7",
   "developer": {
     "name": "Galent",
@@ -14,49 +14,39 @@
     "full": "Galent SalesPilot — AI Sales Intelligence"
   },
   "description": {
-    "short": "AI-powered sales intelligence for your pipeline",
-    "full": "Galent SalesPilot brings AI-powered deal coaching, pipeline intelligence, and signal capture directly into Microsoft Teams. Capture meeting notes, get deal recommendations, and manage your pipeline without leaving Teams."
+    "short": "AI sales assistant — paste meeting notes, deal updates, client conversations. AI extracts signals, matches deals, creates tasks.",
+    "full": "SalesPilot AI assistant for Microsoft Teams. Send meeting transcripts, deal updates, or client conversations to the bot — it extracts action items, matches to deals in your pipeline, creates follow-up tasks, and posts deal intelligence. Works in DMs, channels, and group chats."
   },
   "icons": {
     "color": "color.png",
     "outline": "outline.png"
   },
   "accentColor": "#7c3aed",
-  "staticTabs": [
+  "bots": [
     {
-      "entityId": "pipeline",
-      "name": "Pipeline",
-      "contentUrl": "https://salespilot.galent.ai/pipeline",
-      "websiteUrl": "https://salespilot.galent.ai/pipeline",
-      "scopes": ["personal"]
-    },
-    {
-      "entityId": "ask",
-      "name": "Ask Galent",
-      "contentUrl": "https://salespilot.galent.ai/ask",
-      "websiteUrl": "https://salespilot.galent.ai/ask",
-      "scopes": ["personal"]
-    },
-    {
-      "entityId": "intake",
-      "name": "Signal Capture",
-      "contentUrl": "https://salespilot.galent.ai/intake",
-      "websiteUrl": "https://salespilot.galent.ai/intake",
-      "scopes": ["personal"]
-    }
-  ],
-  "configurableTabs": [
-    {
-      "configurationUrl": "https://salespilot.galent.ai/pipeline",
-      "canUpdateConfiguration": false,
-      "scopes": ["team", "groupchat"]
-    }
-  ],
-  "connectors": [
-    {
-      "connectorId": "galent-salespilot-connector",
-      "scopes": ["team"],
-      "configurationUrl": "https://salespilot.galent.ai/integrations"
+      "botId": "a0746e51-15c5-4a2e-867a-dae137e724f7",
+      "scopes": ["personal", "team", "groupChat"],
+      "supportsFiles": false,
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": ["personal", "team", "groupChat"],
+          "commands": [
+            {
+              "title": "help",
+              "description": "What can SalesPilot do?"
+            },
+            {
+              "title": "pipeline",
+              "description": "Get a quick pipeline summary"
+            },
+            {
+              "title": "at-risk",
+              "description": "Show deals at risk"
+            }
+          ]
+        }
+      ]
     }
   ],
   "permissions": ["identity", "messageTeamMembers"],
