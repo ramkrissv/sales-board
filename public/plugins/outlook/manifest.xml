@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
-           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
-           xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
-           xsi:type="MailApp">
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides"
+  xsi:type="MailApp">
+
   <Id>a0746e51-15c5-4a2e-867a-dae137e724f7</Id>
   <Version>2.0.0</Version>
   <ProviderName>Galent</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Galent SalesPilot"/>
-  <Description DefaultValue="Send emails to SalesPilot for AI processing. Capture deal signals, log meeting notes, and track client communications."/>
+  <Description DefaultValue="Capture emails for AI processing. Extract deal signals, log meeting notes, track client communications."/>
   <IconUrl DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-64.png"/>
   <HighResolutionIconUrl DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-128.png"/>
   <SupportUrl DefaultValue="https://salespilot.galent.ai/guide"/>
@@ -31,12 +33,6 @@
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
-    <Form xsi:type="ItemEdit">
-      <DesktopSettings>
-        <SourceLocation DefaultValue="https://salespilot.galent.ai/plugins/outlook/taskpane"/>
-        <RequestedHeight>450</RequestedHeight>
-      </DesktopSettings>
-    </Form>
   </FormSettings>
 
   <Permissions>ReadWriteItem</Permissions>
@@ -44,15 +40,13 @@
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
-    <Rule xsi:type="ItemIs" ItemType="Appointment" FormType="Read"/>
   </Rule>
 
   <DisableEntityHighlighting>false</DisableEntityHighlighting>
 
-  <!-- VersionOverrides for new Outlook -->
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Requirements>
-      <bt:Sets DefaultMinVersion="1.3">
+      <bt:Sets DefaultMinVersion="1.5">
         <bt:Set Name="Mailbox"/>
       </bt:Sets>
     </Requirements>
@@ -60,14 +54,12 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
-          <FunctionFile resid="residFunctionUrl"/>
 
-          <!-- Message Read -->
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
-              <Group id="msgReadGroup">
+              <Group id="grpRead">
                 <Label resid="groupLabel"/>
-                <Control xsi:type="Button" id="msgReadBtn">
+                <Control xsi:type="Button" id="btnRead">
                   <Label resid="btnLabel"/>
                   <Supertip>
                     <Title resid="btnLabel"/>
@@ -79,19 +71,18 @@
                     <bt:Image size="80" resid="icon80"/>
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <SourceLocation resid="residTaskpaneUrl"/>
+                    <SourceLocation resid="taskpaneUrl"/>
                   </Action>
                 </Control>
               </Group>
             </OfficeTab>
           </ExtensionPoint>
 
-          <!-- Message Compose -->
           <ExtensionPoint xsi:type="MessageComposeCommandSurface">
             <OfficeTab id="TabDefault">
-              <Group id="msgComposeGroup">
+              <Group id="grpCompose">
                 <Label resid="groupLabel"/>
-                <Control xsi:type="Button" id="msgComposeBtn">
+                <Control xsi:type="Button" id="btnCompose">
                   <Label resid="btnLabel"/>
                   <Supertip>
                     <Title resid="btnLabel"/>
@@ -103,7 +94,7 @@
                     <bt:Image size="80" resid="icon80"/>
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <SourceLocation resid="residTaskpaneUrl"/>
+                    <SourceLocation resid="taskpaneUrl"/>
                   </Action>
                 </Control>
               </Group>
@@ -116,13 +107,12 @@
 
     <Resources>
       <bt:Images>
-        <bt:Image id="icon16" DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-64.png"/>
-        <bt:Image id="icon32" DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-64.png"/>
-        <bt:Image id="icon80" DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-128.png"/>
+        <bt:Image id="icon16" DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-16.png"/>
+        <bt:Image id="icon32" DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-32.png"/>
+        <bt:Image id="icon80" DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="residTaskpaneUrl" DefaultValue="https://salespilot.galent.ai/plugins/outlook/taskpane"/>
-        <bt:Url id="residFunctionUrl" DefaultValue="https://salespilot.galent.ai/plugins/outlook/taskpane"/>
+        <bt:Url id="taskpaneUrl" DefaultValue="https://salespilot.galent.ai/plugins/outlook/taskpane"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="SalesPilot"/>
