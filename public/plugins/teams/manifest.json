@@ -1,6 +1,6 @@
 {
-  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
-  "manifestVersion": "1.16",
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
   "version": "2.0.0",
   "id": "a0746e51-15c5-4a2e-867a-dae137e724f7",
   "developer": {
@@ -11,11 +11,11 @@
   },
   "name": {
     "short": "SalesPilot",
-    "full": "Galent SalesPilot — AI Sales Intelligence"
+    "full": "Galent SalesPilot AI Sales Intelligence"
   },
   "description": {
-    "short": "AI sales assistant for deal signals and pipeline intelligence",
-    "full": "SalesPilot AI assistant for Microsoft Teams. Send meeting transcripts, deal updates, or client conversations to the bot. It extracts action items, matches to deals in your pipeline, creates follow-up tasks, and posts deal intelligence. Works in DMs, channels, and group chats."
+    "short": "AI sales assistant for deal signals",
+    "full": "SalesPilot AI assistant for Microsoft Teams. Send meeting notes, deal updates, or client conversations. AI extracts action items, matches deals, and creates tasks."
   },
   "icons": {
     "color": "color.png",
@@ -25,30 +25,20 @@
   "bots": [
     {
       "botId": "a0746e51-15c5-4a2e-867a-dae137e724f7",
-      "scopes": ["personal", "team", "groupChat"],
+      "scopes": [
+        "personal",
+        "team",
+        "groupChat"
+      ],
       "supportsFiles": false,
-      "isNotificationOnly": false,
-      "commandLists": [
-        {
-          "scopes": ["personal"],
-          "commands": [
-            {
-              "title": "help",
-              "description": "What can SalesPilot do?"
-            },
-            {
-              "title": "pipeline",
-              "description": "Get a quick pipeline summary"
-            },
-            {
-              "title": "at-risk",
-              "description": "Show deals at risk"
-            }
-          ]
-        }
-      ]
+      "isNotificationOnly": false
     }
   ],
-  "permissions": ["identity", "messageTeamMembers"],
-  "validDomains": ["salespilot.galent.ai"]
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "salespilot.galent.ai"
+  ]
 }
