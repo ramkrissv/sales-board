@@ -12,9 +12,9 @@ import { connectDB } from '@/lib/db/connection';
 import mongoose from 'mongoose';
 import { getAnthropicClient } from '@/lib/ai/anthropic';
 
-const BOT_APP_ID = process.env.AZURE_AD_CLIENT_ID || 'a0746e51-15c5-4a2e-867a-dae137e724f7';
-const BOT_APP_SECRET = process.env.TEAMS_BOT_SECRET || process.env.AZURE_AD_CLIENT_SECRET || '';
-const BOT_TENANT_ID = process.env.AZURE_AD_TENANT_ID || 'e4de6474-5383-4849-a7f2-8d9620ea93e1';
+const BOT_APP_ID = process.env.TEAMS_BOT_APP_ID || 'fa67f640-441a-4914-bf79-1214f04b71b5';
+const BOT_APP_SECRET = process.env.TEAMS_BOT_SECRET || '';
+const BOT_TENANT_ID = process.env.AZURE_AD_TENANT_ID || '';
 
 // Send a reply back to Teams
 async function sendTeamsReply(serviceUrl: string, conversationId: string, activityId: string, text: string, card?: any) {
