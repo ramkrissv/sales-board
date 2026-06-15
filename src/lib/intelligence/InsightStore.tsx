@@ -155,6 +155,42 @@ function generateNudges(opportunities: any[]): PipelineNudge[] {
     });
   }
 
+  // Ageing hotspots — deals stuck longest in each stage
+  const stageAgeing: Record<string, { deal: any; days: number }> = {};
+  for (const deal of activeDeals) {
+    const days = Math.floor((now - new Date(deal.updatedAt || deal.createdAt || deal.expectedCloseDate).getTime()) / (1000 * 60 * 60 * 24));
+    if (days > 21 && (!stageAgeing[deal.status] || days > stageAgeing[deal.status].days)) {
+      stageAgeing[deal.status] = { deal, days };
+    }
+  }
+  const worstAgeing = Object.entries(stageAgeing).sort((a, b) => b[1].days - a[1].days)[0];
+  if (worstAgeing) {
+    const [stage, { deal, days }] = worstAgeing;
+    nudges.push({
+      id: 'ageing-hotspot',
+      type: 'risk',
+      title: `${deal.customerName} stuck ${days} days in ${stage}`,
+      detail: deal.tcv > 0 ? `$${(deal.tcv / 1000).toFixed(0)}k deal needs intervention` : 'Needs stage review or close-out',
+      dealIds: [deal.id],
+      color: 'red',
+      icon: 'clock',
+    });
+  }
+
+  // Proposal stage without margin (presales hasn't entered pricing)
+  const noMarginProposals = activeDeals.filter(o => o.status === 'Proposal' && (!o.margin || o.margin === 0));
+  if (noMarginProposals.length > 0) {
+    nudges.push({
+      id: 'no-margin-proposal',
+      type: 'action',
+      title: `${noMarginProposals.length} proposal${noMarginProposals.length > 1 ? 's' : ''} without margin`,
+      detail: 'Presales needs to enter resource plan and pricing',
+      dealIds: noMarginProposals.map((d: any) => d.id),
+      color: 'amber',
+      icon: 'dollar',
+    });
+  }
+
   // Overdue tasks
   const overdueTasks = activeDeals.filter(o => {
     const tasks = o.subTasks || [];
