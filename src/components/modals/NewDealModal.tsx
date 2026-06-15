@@ -7,7 +7,7 @@ import { trpc } from '@/lib/trpc/client';
 const STATUSES = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Lost', 'On Hold'];
 const INDUSTRIES = ['Healthcare', 'Financial Services', 'Hospitality', 'Professional Services', 'Manufacturing', 'Retail', 'Technology', 'Energy', 'Telecom', 'Government', 'Other'];
 const REGIONS = ['North America', 'Europe', 'APAC', 'Latin America', 'Middle East'];
-const SERVICE_LINES = ['IT Services', 'AI & Data', 'Cloud & Infrastructure', 'Application Development', 'Managed Services', 'Staffing', 'Consulting'];
+const SERVICE_LINES = ['Legacy Modernization', 'Data & AI', 'Testing & QA', 'Managed Services / SRE', 'Cloud & Infrastructure', 'Staffing'];
 
 const DEAL_CLASSIFICATIONS = [
   { code: 'NN', label: 'New-New', description: 'New client, new engagement', color: 'bg-[#7c3aed]/10 text-[#7c3aed] border-[#7c3aed]/30' },
@@ -277,21 +277,6 @@ Return as JSON: { industry, serviceLine, suggestedTcv, phase, tags, closeMonths,
             </div>
           </div>
 
-          {/* Lifecycle Phase */}
-          <div>
-            <label className="block text-xs text-muted-foreground mb-2">Lifecycle Phase</label>
-            <div className="flex gap-1 p-1 rounded-xl bg-secondary/50">
-              {LIFECYCLE_PHASES.map(phase => (
-                <button key={phase.value} type="button" onClick={() => update('lifecyclePhase', phase.value)}
-                  className={`flex-1 px-2 py-2 text-[10px] font-medium rounded-lg transition-colors text-center ${
-                    form.lifecyclePhase === phase.value ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'
-                  }`} title={phase.description}>
-                  {phase.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Owner + Stage + Classification indicator */}
           <div className="grid grid-cols-3 gap-4">
             <div>
@@ -366,35 +351,27 @@ Return as JSON: { industry, serviceLine, suggestedTcv, phase, tags, closeMonths,
             </div>
           </div>
 
-          {/* Engagement Type + Pricing */}
+          {/* Engagement Type + Account */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-muted-foreground mb-1.5">Engagement Type</label>
-              <select value={form.engagementType} onChange={e => { update('engagementType', e.target.value); update('pricingModel', ''); }}
+              <select value={form.engagementType} onChange={e => update('engagementType', e.target.value)}
                 className="w-full px-3 py-2.5 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40">
                 <option value="">Select type</option>
-                {engagementTypes.map((et: any) => <option key={et.code} value={et.name}>{et.name} ({et.code})</option>)}
+                <option value="Fixed Price">Fixed Price</option>
+                <option value="T&M">T&M</option>
+                <option value="Product Licensing">Product Licensing</option>
+                <option value="Outcome-Based">Outcome-Based</option>
               </select>
             </div>
-            {selectedET && (selectedET as any).pricingModels?.length > 0 ? (
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1.5">Pricing Model</label>
-                <select value={form.pricingModel} onChange={e => update('pricingModel', e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40">
-                  <option value="">Select model</option>
-                  {(selectedET as any).pricingModels.map((pm: string) => <option key={pm} value={pm}>{pm}</option>)}
-                </select>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1.5">Account</label>
-                <select value={form.accountId} onChange={e => update('accountId', e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40">
-                  <option value="">No account linked</option>
-                  {accounts.map((a: any) => <option key={a._id} value={a._id}>{a.companyName}</option>)}
-                </select>
-              </div>
-            )}
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1.5">Account</label>
+              <select value={form.accountId} onChange={e => update('accountId', e.target.value)}
+                className="w-full px-3 py-2.5 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40">
+                <option value="">No account linked</option>
+                {accounts.map((a: any) => <option key={a._id} value={a._id}>{a.companyName}</option>)}
+              </select>
+            </div>
           </div>
 
           {/* Dates */}

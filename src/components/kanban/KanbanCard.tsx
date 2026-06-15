@@ -65,7 +65,12 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
     .replace(/ years?/, 'y');
 
   // Service line abbreviation
-  const slBadge = opp.serviceLine === 'IT Services' ? 'ITS' : opp.serviceLine === 'Staffing' ? 'STF' : '';
+  const slMap: Record<string, string> = {
+    'IT Services': 'ITS', 'Staffing': 'STF', 'Legacy Modernization': 'LM',
+    'Data & AI': 'D&AI', 'Testing & QA': 'QA', 'Managed Services / SRE': 'SRE',
+    'Cloud & Infrastructure': 'Cloud',
+  };
+  const slBadge = (opp.serviceLine && slMap[opp.serviceLine]) || '';
 
   // Owner initials
   const ownerInitials = opp.primaryOwner.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();

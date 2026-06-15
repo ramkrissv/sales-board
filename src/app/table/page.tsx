@@ -260,6 +260,7 @@ function TableContent() {
                     {sortField === 'expectedCloseDate' && (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
                   </div>
                 </th>
+                <th className="px-4 py-3 text-[11px] text-muted-foreground uppercase tracking-wider font-medium text-left">Ageing</th>
                 <th className="px-4 py-3 text-[11px] text-muted-foreground uppercase tracking-wider font-medium text-left">Stakeholders</th>
               </tr>
             </thead>
@@ -317,7 +318,9 @@ function TableContent() {
                           <td className="px-4 py-3 text-sm text-muted-foreground tabular-nums">{opp.margin ? `${opp.margin}%` : '\u2014'}</td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1 flex-wrap">
-                              {opp.serviceLine && <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-500/10 text-muted-foreground">{opp.serviceLine === 'IT Services' ? 'ITS' : 'STF'}</span>}
+                              {opp.serviceLine && <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-500/10 text-muted-foreground">{
+                                ({ 'IT Services': 'ITS', 'Staffing': 'STF', 'Legacy Modernization': 'LM', 'Data & AI': 'D&AI', 'Testing & QA': 'QA', 'Managed Services / SRE': 'SRE', 'Cloud & Infrastructure': 'Cloud' } as any)[opp.serviceLine] || opp.serviceLine
+                              }</span>}
                               {opp.engagementType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#7c3aed]/10 text-[#7c3aed]">{opp.engagementType}</span>}
                             </div>
                           </td>
@@ -329,6 +332,13 @@ function TableContent() {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{format(new Date(opp.expectedCloseDate), 'MMM d')}</td>
+                          <td className="px-4 py-3">
+                            {(() => {
+                              const days = Math.floor((Date.now() - new Date(opp.updatedAt || opp.createdAt || opp.expectedCloseDate).getTime()) / (1000 * 60 * 60 * 24));
+                              const color = days > 14 ? 'text-red-400' : days > 7 ? 'text-amber-400' : 'text-emerald-400';
+                              return <span className={`text-xs font-medium tabular-nums ${color}`}>{days}d</span>;
+                            })()}
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
                               <Users className="h-3 w-3 text-muted-foreground" />
