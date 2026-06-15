@@ -121,8 +121,11 @@ function TableContent() {
   };
 
   const handleExport = () => {
-    const headers = ['Customer', 'Project', 'Stage', 'TCV', 'Margin', 'Service Line', 'Engagement Type', 'Owner', 'Industry', 'Region', 'Close Date'];
-    const rows = sorted.map(o => [o.customerName, o.opportunityName, o.status, o.tcv, o.margin || '', o.serviceLine || '', o.engagementType || o.billingModel || '', o.primaryOwner, o.industry, o.region, o.expectedCloseDate]);
+    const headers = ['Customer', 'Project', 'Stage', 'TCV', 'Margin', 'Service Line', 'Engagement Type', 'Owner', 'Industry', 'Region', 'Close Date', 'Ageing (days)'];
+    const rows = sorted.map(o => {
+      const days = Math.floor((Date.now() - new Date(o.updatedAt || o.createdAt || o.expectedCloseDate).getTime()) / (1000 * 60 * 60 * 24));
+      return [o.customerName, o.opportunityName, o.status, o.tcv, o.margin || '', o.serviceLine || '', o.engagementType || o.billingModel || '', o.primaryOwner, o.industry, o.region, o.expectedCloseDate, days];
+    });
     const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -335,8 +338,12 @@ function TableContent() {
                           <td className="px-4 py-3">
                             {(() => {
                               const days = Math.floor((Date.now() - new Date(opp.updatedAt || opp.createdAt || opp.expectedCloseDate).getTime()) / (1000 * 60 * 60 * 24));
-                              const color = days > 14 ? 'text-red-400' : days > 7 ? 'text-amber-400' : 'text-emerald-400';
-                              return <span className={`text-xs font-medium tabular-nums ${color}`}>{days}d</span>;
+                              const color = days > 14 ? 'text-red-400 bg-red-500/10' : days > 7 ? 'text-amber-400 bg-amber-500/10' : 'text-emerald-400 bg-emerald-500/10';
+                              return (
+                                <span className={`text-[10px] font-bold tabular-nums px-2 py-0.5 rounded-full ${color}`} title={`${days} days in ${opp.status}`}>
+                                  {days}d
+                                </span>
+                              );
                             })()}
                           </td>
                           <td className="px-4 py-3">
