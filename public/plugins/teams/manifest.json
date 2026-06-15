@@ -2,7 +2,7 @@
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
   "version": "2.0.0",
-  "id": "fa67f640-441a-4914-bf79-1214f04b71b5",
+  "id": "a0746e51-15c5-4a2e-867a-dae137e724f7",
   "developer": {
     "name": "Galent",
     "websiteUrl": "https://salespilot.galent.ai",
@@ -24,7 +24,7 @@
   "accentColor": "#7c3aed",
   "bots": [
     {
-      "botId": "fa67f640-441a-4914-bf79-1214f04b71b5",
+      "botId": "a0746e51-15c5-4a2e-867a-dae137e724f7",
       "scopes": ["personal", "team", "groupChat"],
       "supportsFiles": true,
       "isNotificationOnly": false,
