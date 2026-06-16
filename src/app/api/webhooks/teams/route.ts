@@ -149,7 +149,7 @@ async function processMessage(text: string, senderName: string) {
   try {
     const client = getAnthropicClient();
     const aiResponse = await client.messages.create({
-      model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514',
+      model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610',
       max_tokens: 1024,
       messages: [{
         role: 'user',

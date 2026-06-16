@@ -42,14 +42,14 @@ export const AVAILABLE_MODELS: AIModelConfig[] = [
   // Anthropic — Claude 4 (previous gen)
   {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6-20250610',
     displayName: 'Claude Sonnet 4',
     maxTokens: 8192,
     temperature: 0.7,
   },
   {
     provider: 'anthropic',
-    model: 'claude-opus-4-20250514',
+    model: 'claude-opus-4-6-20250610',
     displayName: 'Claude Opus 4',
     maxTokens: 8192,
     temperature: 0.5,
