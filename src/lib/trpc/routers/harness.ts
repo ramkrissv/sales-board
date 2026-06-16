@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { runAgent, PLATFORM_TOOLS } from '@/lib/agents/harness';
 import { DEFAULT_AGENT_CONFIGS } from '@/lib/ai/config';
+import { runWorkflow, WORKFLOWS } from '@/lib/agents/coordinator';
 
 export const harnessRouter = router({
   // List available tools
@@ -111,5 +112,31 @@ export const harnessRouter = router({
         agentConfig.systemPrompt + '\n\nYou have access to the full Galent SalesPilot platform through tools. Use them to observe data, then take actions. Think step by step. Be specific — reference deal names and dollar amounts.',
         5,
       );
+    }),
+
+  // List available workflows
+  getWorkflows: protectedProcedure.query(() => {
+    return WORKFLOWS.map(w => ({
+      id: w.id,
+      name: w.name,
+      description: w.description,
+      trigger: w.trigger,
+      steps: w.steps.map(s => ({ agentId: s.agentId })),
+      stepCount: w.steps.length,
+    }));
+  }),
+
+  // Run a coordinated workflow
+  runWorkflow: protectedProcedure
+    .input(z.object({
+      workflowId: z.string(),
+      opportunityId: z.string().optional(),
+      customerName: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      return runWorkflow(input.workflowId, {
+        opportunityId: input.opportunityId,
+        customerName: input.customerName,
+      });
     }),
 });
