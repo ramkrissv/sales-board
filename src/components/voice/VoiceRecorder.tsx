@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Mic, Square, Loader2, Play, Pause, Trash2, Sparkles } from 'lucide-react';
 
 interface VoiceRecorderProps {
@@ -16,11 +16,60 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
   const [duration, setDuration] = useState(0);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [transcript, setTranscript] = useState('');
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Initialize Web Speech API for real-time transcription
+  const startSpeechRecognition = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return; // Not supported
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    let finalTranscript = '';
+
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript + ' ';
+          setTranscript(finalTranscript.trim());
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+      setLiveTranscript(interim);
+    };
+
+    recognition.onerror = () => { /* Silently handle — user can type manually */ };
+    recognition.onend = () => {
+      setLiveTranscript('');
+      setIsTranscribing(false);
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
+    setIsTranscribing(true);
+  }, []);
+
+  const stopSpeechRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setLiveTranscript('');
+    setIsTranscribing(false);
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
@@ -43,20 +92,26 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
       mediaRecorder.start(100);
       setIsRecording(true);
       setDuration(0);
+      setTranscript('');
+      setLiveTranscript('');
       timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
+
+      // Start real-time transcription
+      startSpeechRecognition();
     } catch (err) {
       console.error('Microphone access denied:', err);
       alert('Please allow microphone access to record voice notes.');
     }
-  }, []);
+  }, [startSpeechRecognition]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (timerRef.current) clearInterval(timerRef.current);
+      stopSpeechRecognition();
     }
-  }, [isRecording]);
+  }, [isRecording, stopSpeechRecognition]);
 
   const togglePlayback = () => {
     if (!audioUrl) return;
@@ -87,12 +142,12 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
     setDuration(0);
     setPlaybackTime(0);
     setTranscript('');
+    setLiveTranscript('');
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
   };
 
   const handleSubmit = () => {
-    // Allow submission with just recording (no transcript required)
     const text = transcript.trim() || `[Voice recording — ${formatDuration(duration)}]`;
     onTranscript(text, audioBlob || undefined);
   };
@@ -109,7 +164,7 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
             <Mic className="h-8 w-8" />
           </button>
         ) : isRecording ? (
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-3 w-full">
             <button onClick={stopRecording}
               className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all animate-pulse shadow-lg shadow-red-500/25">
               <Square className="h-6 w-6" />
@@ -117,7 +172,15 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               <span className="text-sm font-mono text-foreground">{formatDuration(duration)}</span>
+              {isTranscribing && <span className="text-[10px] text-emerald-400">Transcribing live...</span>}
             </div>
+            {/* Live transcript preview */}
+            {(transcript || liveTranscript) && (
+              <div className="w-full p-3 rounded-lg bg-card border border-border text-xs text-foreground max-h-24 overflow-y-auto">
+                {transcript && <span>{transcript} </span>}
+                {liveTranscript && <span className="text-muted-foreground italic">{liveTranscript}</span>}
+              </div>
+            )}
           </div>
         ) : (
           /* Post-recording: playback controls */
@@ -151,7 +214,8 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
       {!isRecording && (
         <>
           <div className="text-center text-xs text-muted-foreground">
-            {!audioBlob ? 'Click to start recording' : 'Add context or notes (optional) then process'}
+            {!audioBlob ? 'Click to start recording — auto-transcribes as you speak' :
+             transcript ? 'Transcript captured — review and edit below' : 'Add notes or context below'}
           </div>
 
           {/* Transcript / notes input */}
@@ -159,7 +223,7 @@ export function VoiceRecorder({ onTranscript, isProcessing }: VoiceRecorderProps
             value={transcript}
             onChange={e => setTranscript(e.target.value)}
             placeholder={audioBlob
-              ? "Add context, key points, or full transcript of the recording..."
+              ? "Review transcript, add context or key points..."
               : "Or paste your voice note transcript / meeting notes here..."
             }
             rows={4}
