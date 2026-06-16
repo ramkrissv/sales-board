@@ -3,16 +3,19 @@
 import { OpportunityProvider, useOpportunities } from '@/lib/store';
 import { trpc } from '@/lib/trpc/client';
 import { useState } from 'react';
-import { CheckSquare, AlertTriangle, Search, Plus, Trash2, Loader2, Sparkles } from 'lucide-react';
+import { CheckSquare, AlertTriangle, Search, Plus, Trash2, Loader2, Sparkles, Users } from 'lucide-react';
 import { format, isPast } from 'date-fns';
+import { useSession } from 'next-auth/react';
 import { DealDetail } from '@/components/modals/DealDetail';
 import TaskPriorities from '@/components/ai/TaskPriorities';
 
 function TasksContent() {
   const { opportunities, isLoading } = useOpportunities();
+  const { data: session } = useSession();
   const utils = trpc.useUtils();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'complete' | 'overdue'>('all');
+  const [ownerFilter, setOwnerFilter] = useState<'all' | 'my' | string>('all');
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTask, setNewTask] = useState({ name: '', owner: '', dueDate: '', priority: 'Medium', oppId: '' });
@@ -50,8 +53,14 @@ function TasksContent() {
     (opp.subTasks || []).map(task => ({ ...task, customerName: opp.customerName, opportunityName: opp.opportunityName, oppId: opp.id }))
   );
 
+  // Unique owners for filter dropdown
+  const allOwners = [...new Set(allTasks.map(t => t.owner).filter(Boolean))].sort();
+  const currentUser = session?.user?.name || '';
+
   const filtered = allTasks.filter(t => {
     if (search && !t.name.toLowerCase().includes(search.toLowerCase()) && !t.customerName.toLowerCase().includes(search.toLowerCase()) && !t.owner.toLowerCase().includes(search.toLowerCase())) return false;
+    if (ownerFilter === 'my' && currentUser && !t.owner.toLowerCase().includes(currentUser.toLowerCase())) return false;
+    if (ownerFilter !== 'all' && ownerFilter !== 'my' && t.owner !== ownerFilter) return false;
     if (statusFilter === 'pending') return t.status === 'pending';
     if (statusFilter === 'complete') return t.status === 'complete';
     if (statusFilter === 'overdue') return t.status === 'pending' && isPast(new Date(t.dueDate));
@@ -153,13 +162,28 @@ function TasksContent() {
       )}
 
       {/* Search + Filters */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search tasks, projects, owners..."
             className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#7c3aed]/40" />
         </div>
+
+        {/* Owner / Person filter */}
+        <div className="flex items-center gap-1">
+          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+          <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}
+            className="px-2 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40">
+            <option value="all">All People</option>
+            {currentUser && <option value="my">My Tasks</option>}
+            {allOwners.map(owner => (
+              <option key={owner} value={owner}>{owner}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Status filter */}
         <div className="flex gap-1">
           {(['all', 'pending', 'overdue', 'complete'] as const).map(f => (
             <button key={f} onClick={() => setStatusFilter(f)}
@@ -171,6 +195,17 @@ function TasksContent() {
           ))}
         </div>
       </div>
+
+      {/* Active filter indicator */}
+      {ownerFilter !== 'all' && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Showing tasks for:</span>
+          <span className="text-xs font-medium text-[#7c3aed] bg-[#7c3aed]/10 px-2 py-0.5 rounded-full">
+            {ownerFilter === 'my' ? currentUser || 'Me' : ownerFilter}
+          </span>
+          <button onClick={() => setOwnerFilter('all')} className="text-[10px] text-muted-foreground hover:text-foreground">Clear</button>
+        </div>
+      )}
 
       {/* Task list */}
       <div className="space-y-2">
