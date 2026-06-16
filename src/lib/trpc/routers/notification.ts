@@ -19,10 +19,11 @@ function getModel() {
 export const notificationRouter = router({
   list: protectedProcedure
     .input(z.object({ limit: z.number().default(20) }).optional())
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       await connectDB();
       const Notification = getModel();
-      let notifications = await Notification.find({ userId: 'default-user' })
+      const uid = ctx.userId || 'default-user';
+      let notifications = await Notification.find({ userId: uid })
         .sort({ createdAt: -1 })
         .limit(input?.limit || 20)
         .lean();
@@ -30,11 +31,10 @@ export const notificationRouter = router({
       // Seed initial notifications if empty
       if (notifications.length === 0) {
         await Notification.insertMany([
-          { userId: 'default-user', type: 'system', title: 'Welcome to Galent SalesPilot', message: 'Your AI-powered sales intelligence platform is ready.', read: false },
-          { userId: 'default-user', type: 'ai_signal', title: 'Pipeline Analysis Complete', message: 'Deal Coach has analyzed 31 opportunities and identified 3 at-risk deals.', read: false },
-          { userId: 'default-user', type: 'deal_stage_change', title: 'Brightspeed moved to Won', message: 'AI-Native Platform Transformation deal has been marked as Won.', read: true },
+          { userId: uid, type: 'system', title: 'Welcome to Galent SalesPilot', message: 'Your AI-powered sales intelligence platform is ready.', read: false },
+          { userId: uid, type: 'ai_signal', title: 'Pipeline Analysis Complete', message: 'Deal Coach has analyzed your opportunities and identified at-risk deals.', read: false },
         ]);
-        notifications = await Notification.find({ userId: 'default-user' })
+        notifications = await Notification.find({ userId: uid })
           .sort({ createdAt: -1 })
           .limit(input?.limit || 20)
           .lean();
@@ -43,10 +43,10 @@ export const notificationRouter = router({
       return notifications;
     }),
 
-  getUnreadCount: protectedProcedure.query(async () => {
+  getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
     await connectDB();
     const Notification = getModel();
-    return Notification.countDocuments({ userId: 'default-user', read: false });
+    return Notification.countDocuments({ userId: ctx.userId || 'default-user', read: false });
   }),
 
   markRead: protectedProcedure
@@ -58,25 +58,25 @@ export const notificationRouter = router({
       return { success: true };
     }),
 
-  markAllRead: protectedProcedure.mutation(async () => {
+  markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
     await connectDB();
     const Notification = getModel();
-    await Notification.updateMany({ userId: 'default-user', read: false }, { read: true });
+    await Notification.updateMany({ userId: ctx.userId || 'default-user', read: false }, { read: true });
     return { success: true };
   }),
 
   create: protectedProcedure
     .input(z.object({
-      userId: z.string().default('default-user'),
+      userId: z.string().optional(),
       type: z.string(),
       title: z.string(),
       message: z.string(),
       metadata: z.any().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       await connectDB();
       const Notification = getModel();
-      return Notification.create(input);
+      return Notification.create({ ...input, userId: input.userId || ctx.userId || 'default-user' });
     }),
 
   createIntentAlert: protectedProcedure
@@ -85,11 +85,11 @@ export const notificationRouter = router({
       signal: z.string(),
       strength: z.enum(['strong', 'moderate', 'weak']),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       await connectDB();
       const Notification = getModel();
       return Notification.create({
-        userId: 'default-user',
+        userId: ctx.userId || 'default-user',
         type: 'ai_signal',
         title: `Intent Signal: ${input.accountName}`,
         message: `${input.strength.toUpperCase()} signal detected: ${input.signal}`,

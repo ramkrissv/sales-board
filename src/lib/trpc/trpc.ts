@@ -5,6 +5,7 @@ import { hasPermission, type Role } from '@/lib/auth/rbac';
 export interface Context {
   userId?: string;
   userRole?: string;
+  userName?: string;
 }
 
 const t = initTRPC.context<Context>().create({
@@ -19,7 +20,8 @@ export const protectedProcedure = t.procedure.use(async ({ next, ctx }) => {
   return next({
     ctx: {
       userId: ctx.userId || 'default-user',
-      userRole: ctx.userRole || 'admin',
+      userRole: ctx.userRole || 'rep', // Safe default — not admin
+      userName: ctx.userName || '',
     },
   });
 });
