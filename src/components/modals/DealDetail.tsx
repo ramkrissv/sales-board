@@ -19,6 +19,7 @@ import { Target } from 'lucide-react';
 import type { Status } from '@/lib/types';
 import DealPilotActions from '@/components/ai/DealPilotActions';
 import AgentResultView from '@/components/ai/AgentResultView';
+import WorkflowRunner from '@/components/ai/WorkflowRunner';
 
 interface DealDetailProps {
   opportunityId: string;
@@ -638,8 +639,17 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               onDealClick={(id) => { /* already in deal detail */ }}
               onAgentInvoke={(agentId, goal) => {
                 setAgentRunResult(null);
-                // Re-trigger via DealPilotActions pattern
               }}
+            />
+          </div>
+        )}
+
+        {/* Workflow Runner — composable multi-agent workflows */}
+        {!agentRunResult && (
+          <div className="px-5 pt-2">
+            <WorkflowRunner
+              opportunityId={opp.id}
+              customerName={opp.customerName}
             />
           </div>
         )}

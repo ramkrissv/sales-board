@@ -12,6 +12,7 @@ import { trpc } from '@/lib/trpc/client';
 import { DEFAULT_AGENT_CONFIGS, AVAILABLE_MODELS } from '@/lib/ai/config';
 import type { AgentConfig } from '@/lib/ai/config';
 import AgentResultView from '@/components/ai/AgentResultView';
+import WorkflowRunner from '@/components/ai/WorkflowRunner';
 
 export default function AgentsPage() {
   const [agents] = useState<AgentConfig[]>(DEFAULT_AGENT_CONFIGS);
@@ -139,6 +140,11 @@ export default function AgentsPage() {
           )}
         </div>
       )}
+
+      {/* Composable Workflows — multi-agent coordination */}
+      <div className="g-surface g-elevated p-5">
+        <WorkflowRunner />
+      </div>
 
       {/* Custom Agent Invocation */}
       <div className="g-surface g-elevated p-4">
