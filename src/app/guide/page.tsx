@@ -191,18 +191,30 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
 
     <h3>SalesPilot Intelligence (Ambient AI)</h3>
     <ul>
-      <li><strong>Pilot Nudges</strong> — AI-detected risk/opportunity cards on Home: stale deals, missing DMs, ready-to-close, $0 TCV.</li>
-      <li><strong>Pilot Actions</strong> — Stage-aware agent buttons in Deal Detail: Research Account, Draft Proposal, Coach Me, Competitive Intel, Draft Follow-up.</li>
-      <li><strong>Pilot Forecast Brief</strong> — AI commit confidence %, slip risk analysis on Forecasting page.</li>
-      <li><strong>Pilot Priorities</strong> — AI-ranked top 5 tasks by urgency on Tasks page.</li>
-      <li><strong>Pipeline Insight Bar</strong> — Collapsible AI insight bar above Pipeline kanban board.</li>
+      <li><strong>Pilot Nudges</strong> (Home → My Day) — AI-detected risk/opportunity cards: stale deals, missing DMs, ready-to-close, $0 TCV, ageing hotspots, proposals without margin.</li>
+      <li><strong>Pilot Actions</strong> (Deal Detail → below tabs) — Stage-aware agent buttons: Research Account, Draft Proposal, Coach Me, Competitive Intel, Draft Follow-up, Next Steps.</li>
+      <li><strong>Agent Workflows</strong> (Deal Detail + Agents page) — Composable multi-agent pipelines: Deal Deep Dive, Proposal Accelerator, Pipeline Health, Lead Enrichment, Deal Rescue, Growth Play.</li>
+      <li><strong>Pilot Forecast Brief</strong> (Forecasting page → top) — AI commit confidence %, slip risk analysis.</li>
+      <li><strong>Pilot Priorities</strong> (Tasks page → top) — AI-ranked top 5 tasks by urgency score.</li>
+      <li><strong>Pipeline Insight Bar</strong> (Pipeline Board → top) — Collapsible AI insight bar with risk/action counts.</li>
+      <li><strong>Ageing Column</strong> (Table view) — Days in current stage, color-coded: green ≤7d, amber ≤14d, red >14d.</li>
       <li><strong>Agent Result View</strong> — Rich interactive output: execution chain, deal cards, action items with task creation, follow-up agent chaining.</li>
     </ul>
 
-    <h3>AI Agents & Automation</h3>
+    <h3>Agent Coordinator & Workflows</h3>
+    <ul>
+      <li><strong>6 Composable Workflows</strong> — Multi-agent pipelines with context passing between steps:</li>
+      <li><strong>Deal Deep Dive</strong> — Coach → Research → Competitive → Coaching tips (full deal analysis).</li>
+      <li><strong>Proposal Accelerator</strong> — Research → Draft proposal → Cover email (fast proposal creation).</li>
+      <li><strong>Pipeline Health</strong> — Hygiene scan → Recovery plan → Forecast update (weekly review).</li>
+      <li><strong>New Lead Enrichment</strong> — Research → Qualify → Outreach draft (new lead processing).</li>
+      <li><strong>Deal Rescue</strong> — Diagnose stall → Competitive check → Coaching → Re-engagement email.</li>
+      <li><strong>Growth Play</strong> — Whitespace analysis → Deep dive → Expansion proposal.</li>
+    </ul>
+
+    <h3>AI Agents (13)</h3>
     <ul>
       <li><strong>13 AI Agents</strong> — Deal Coach, Research, Outreach, Hygiene, Forecast, Intake, Proposal, Account Intel, Competitive Intel, Growth, Enablement Coach, Signal Processor, Campaign Manager.</li>
-      <li><strong>Agent Chaining</strong> — "Continue with" follow-up suggestions: Deal Coach → Competitive Intel → Enablement → Outreach, forming a neural workflow.</li>
       <li><strong>MCP Server</strong> — 15 tools + invoke_agent exposed at /api/mcp. Compatible with Claude Desktop, Cursor, VS Code.</li>
       <li><strong>Sales Enablement</strong> — 3 AI coaches (Platform, Offerings, Objection), 6 offerings with battle cards, 5 stage-based playbooks.</li>
       <li><strong>Ask Galent</strong> — Natural language pipeline queries with GenUI interactive action buttons.</li>
@@ -227,21 +239,24 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
       <li><strong>O365 Directory</strong> — Search organization directory via Microsoft Graph, invite users from Azure AD.</li>
       <li><strong>Microsoft SSO</strong> — Sign in with Microsoft O365 via Azure AD OAuth with MFA support.</li>
       <li><strong>Smart Matching</strong> — Users auto-matched to their deals by fuzzy name matching.</li>
-      <li><strong>Settings</strong> — 5 tabs: AI & Agents (model, guardrails), Plugins (download/configure), MCP Tools, Appearance, Notifications.</li>
+      <li><strong>Settings</strong> — 6 tabs: AI & Agents, Plugins, MCP Tools, Security (2FA/TOTP), Appearance, Notifications.</li>
+      <li><strong>2FA (TOTP)</strong> — App-level authenticator setup in Settings → Security. Works with Google/Microsoft Authenticator.</li>
+      <li><strong>RBAC</strong> — 6 roles (Admin, Manager, Rep, SDR, Presales, Viewer) with 30+ permissions across 15 resources.</li>
     </ul>
 
     <hr class="section-divider" />
     <h2>Getting Started</h2>
     <ol>
-      <li>Sign in at <strong>https://salespilot.galent.ai</strong> with Microsoft or email.</li>
-      <li>Check <strong>"My Day"</strong> — daily brief + Pilot Nudges show what needs attention immediately.</li>
-      <li>Open <strong>Pipeline</strong> — the Insight Bar above the board flags risks. Click any deal to open Deal Detail.</li>
-      <li>In <strong>Deal Detail</strong> — use Pilot Actions (Research, Propose, Coach, Follow-up) and the 8 tabs (Details, Stakeholders, Tasks, Pricing, Presales, Contracts, Docs, Log).</li>
-      <li>Use <strong>Ask Galent</strong> to query your pipeline in natural language — AI responds with interactive cards.</li>
-      <li><strong>Forecasting</strong> — Pilot Forecast Brief shows commit confidence and slip risks.</li>
-      <li><strong>Tasks</strong> — Pilot Priorities ranks your top 5 tasks by AI urgency scoring.</li>
-      <li>Go to <strong>Settings → Plugins</strong> to download and install Outlook/Teams connectors.</li>
-      <li>Go to <strong>Settings → MCP Tools</strong> to connect Claude Desktop or Cursor to your pipeline.</li>
+      <li>Sign in at <strong>https://salespilot.galent.ai</strong> with Microsoft or email/password.</li>
+      <li>Check <strong>"My Day"</strong> — Pilot Nudges show risks, stale deals, ageing hotspots, and opportunities.</li>
+      <li>Open <strong>Pipeline</strong> — Insight Bar flags risks. <strong>Table view</strong> has Ageing column (days in stage, color-coded).</li>
+      <li>Click any deal → <strong>Deal Detail</strong>: Pilot Actions (stage-aware), Agent Workflows (Deal Deep Dive, Proposal Accelerator, etc.), 8 tabs.</li>
+      <li>Run a <strong>Workflow</strong> on a deal: Deal Rescue (stale deals), Proposal Accelerator (fast proposals), Growth Play (expansions).</li>
+      <li>Use <strong>Ask Galent</strong> for natural language queries — AI responds with interactive GenUI cards.</li>
+      <li><strong>Forecasting</strong> — Pilot Forecast Brief with commit confidence and slip risks.</li>
+      <li><strong>Tasks</strong> — Pilot Priorities ranks top 5 by urgency. Ageing-aware prioritization.</li>
+      <li><strong>Agents page</strong> — Quick actions (12), Composable Workflows (6), Custom invocation, Agent fleet (13).</li>
+      <li><strong>Settings</strong> → Plugins (Outlook/Teams), MCP Tools (Claude Desktop), Security (2FA).</li>
       <li>Visit <strong>Enablement</strong> for AI coaching, battle cards, and playbooks.</li>
     </ol>
 
@@ -454,7 +469,7 @@ export default function GuidePage() {
       description: '13 specialized AI agents woven into every surface — the platform thinks for you',
       features: [
         { icon: Brain, title: 'SalesPilot Intelligence', description: 'Ambient AI: Pilot Nudges on Home, Insight Bar on Pipeline, Pilot Actions in Deal Detail, Forecast Brief, Task Priorities — agents run behind the scenes.', href: '/', color: '#7c3aed', tag: 'Ambient AI' },
-        { icon: Bot, title: 'Agent Fleet (13)', description: 'Deal Coach, Research, Outreach, Hygiene, Forecast, Intake, Proposal, Account Intel, Competitive Intel, Growth, Enablement Coach, Signal Processor, Campaign Manager.', href: '/agents', color: '#ec4899', tag: '13 Agents', stats: 'Claude-powered with guardrails + MCP' },
+        { icon: Bot, title: 'Agent Fleet + Workflows', description: '13 agents + 6 composable workflows: Deal Deep Dive, Proposal Accelerator, Pipeline Health, Lead Enrichment, Deal Rescue, Growth Play.', href: '/agents', color: '#ec4899', tag: '13 + 6', stats: 'Coordinator with context passing between agents' },
         { icon: Sparkles, title: 'Ask Galent', description: 'Natural language queries. AI responds with interactive GenUI cards, deal lists, metrics, and action buttons.', href: '/ask', color: '#11A7A0' },
         { icon: Zap, title: 'Plugins & MCP', description: 'Download Outlook/Teams connectors from Settings → Plugins. Connect Claude Desktop via Settings → MCP Tools.', href: '/settings', color: '#f59e0b', tag: 'MCP' },
       ],
@@ -615,7 +630,7 @@ export default function GuidePage() {
             { label: 'MCP Server', desc: '15 tools + agents' },
             { label: '6 Pipeline Views', desc: 'Board/Table/Calendar...' },
             { label: '5 Plugins', desc: 'Outlook/Teams/Voice/SF/SP' },
-            { label: 'Pilot Intelligence', desc: 'Ambient AI on every page' },
+            { label: '6 Workflows', desc: 'Multi-agent coordination' },
           ].map(cap => (
             <div key={cap.label} className="flex items-center gap-2">
               <CircleCheck className="h-3.5 w-3.5 text-[var(--g-green)] shrink-0" />
