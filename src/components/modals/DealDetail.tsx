@@ -1259,6 +1259,20 @@ function DealPricingTab({ opportunity, onSwitchTab }: { opportunity: any; onSwit
   const totalCost = totalMonthly * duration;
   const tcv = totalCost * (1 + margin / 100);
 
+  // Auto-populate margin & TCV to deal when presales enters resource plan at Proposal stage
+  const hasResourcePlan = lines.length > 0 && totalCost > 0;
+  useEffect(() => {
+    if (hasResourcePlan && opportunity.status === 'Proposal' && Math.round(tcv) !== (opportunity.tcv || 0)) {
+      // Auto-save after a short delay (debounce)
+      const timer = setTimeout(() => {
+        updateOpp.mutate({ id: opportunity.id, tcv: Math.round(tcv), margin } as any, {
+          onSuccess: () => utils.opportunity.list.invalidate(),
+        });
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [tcv, margin, hasResourcePlan]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
