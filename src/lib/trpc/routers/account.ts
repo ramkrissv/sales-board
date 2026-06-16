@@ -133,7 +133,7 @@ export const accountRouter = router({
       const client = getAnthropicClient();
 
       const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514',
+        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610',
         max_tokens: 512,
         messages: [{ role: 'user', content: `Score this account's buying intent for an IT services company. Return ONLY JSON:
 Account: ${(account as any).companyName}

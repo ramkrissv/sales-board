@@ -19,7 +19,7 @@ export interface ISettings extends Document {
 
 const SettingsSchema = new Schema<ISettings>({
   userId: { type: String, required: true, unique: true },
-  aiModel: { type: String, default: 'claude-sonnet-4-20250514' },
+  aiModel: { type: String, default: 'claude-sonnet-4-6-20250610' },
   guardrails: {
     requireApproval: { type: Boolean, default: true },
     logActions: { type: Boolean, default: true },

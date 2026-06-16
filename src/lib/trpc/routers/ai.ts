@@ -77,7 +77,7 @@ export const aiRouter = router({
       const client = getAnthropicClient();
 
       const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514',
+        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610',
         max_tokens: 2048,
         messages: [{ role: 'user', content: `Generate a professional Statement of Work (SOW) document for this engagement:
 
@@ -124,7 +124,7 @@ Format as clean markdown. Be specific to the project, not generic.` }],
     .mutation(async ({ input }) => {
       const { getAnthropicClient } = await import('@/lib/ai/anthropic');
       const client = getAnthropicClient();
-      const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514';
+      const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610';
 
       const response = await client.messages.create({
         model,
@@ -204,7 +204,7 @@ Return ONLY valid JSON:
     .mutation(async ({ input }) => {
       const { getAnthropicClient } = await import('@/lib/ai/anthropic');
       const client = getAnthropicClient();
-      const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514';
+      const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610';
 
       await connectDB();
       const Opportunity = getOpportunityModel();
@@ -292,7 +292,7 @@ Return ONLY valid JSON:
     .mutation(async ({ input }) => {
       const { getAnthropicClient } = await import('@/lib/ai/anthropic');
       const client = getAnthropicClient();
-      const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-20250514';
+      const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610';
 
       // ALWAYS load full pipeline context
       await connectDB();
