@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "id": "a0746e51-15c5-4a2e-867a-dae137e724f7",
   "developer": {
     "name": "Galent",
@@ -14,8 +14,8 @@
     "full": "Galent SalesPilot AI Sales Intelligence"
   },
   "description": {
-    "short": "AI sales assistant for deal signals and pipeline intelligence",
-    "full": "SalesPilot AI assistant for Microsoft Teams. Capture meeting notes, deal updates, and client conversations. AI extracts action items, matches deals, creates tasks."
+    "short": "AI sales assistant — signals, deals, meeting recaps",
+    "full": "SalesPilot AI for Microsoft Teams. @mention the bot with meeting notes or deal updates. AI extracts signals, matches deals, creates tasks. Search deals from compose box. Get proactive alerts on deal changes and risks. Accept or dismiss signals directly from Teams."
   },
   "icons": {
     "color": "color.png",
@@ -30,34 +30,27 @@
       "isNotificationOnly": false
     }
   ],
-  "staticTabs": [
+  "composeExtensions": [
     {
-      "entityId": "home",
-      "name": "Home",
-      "contentUrl": "https://salespilot.galent.ai",
-      "websiteUrl": "https://salespilot.galent.ai",
-      "scopes": ["personal"]
-    },
-    {
-      "entityId": "pipeline",
-      "name": "Pipeline",
-      "contentUrl": "https://salespilot.galent.ai/pipeline",
-      "websiteUrl": "https://salespilot.galent.ai/pipeline",
-      "scopes": ["personal"]
-    },
-    {
-      "entityId": "ask",
-      "name": "Ask Galent",
-      "contentUrl": "https://salespilot.galent.ai/ask",
-      "websiteUrl": "https://salespilot.galent.ai/ask",
-      "scopes": ["personal"]
-    },
-    {
-      "entityId": "intake",
-      "name": "Signal Capture",
-      "contentUrl": "https://salespilot.galent.ai/plugins/outlook/taskpane",
-      "websiteUrl": "https://salespilot.galent.ai/intake",
-      "scopes": ["personal"]
+      "botId": "a0746e51-15c5-4a2e-867a-dae137e724f7",
+      "canUpdateConfiguration": false,
+      "commands": [
+        {
+          "id": "searchDeals",
+          "type": "query",
+          "title": "Search Deals",
+          "description": "Search SalesPilot deals and share in conversation",
+          "initialRun": false,
+          "parameters": [
+            {
+              "name": "query",
+              "title": "Deal or Customer",
+              "description": "Search by customer name or deal name",
+              "inputType": "text"
+            }
+          ]
+        }
+      ]
     }
   ],
   "configurableTabs": [
