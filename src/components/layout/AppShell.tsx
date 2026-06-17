@@ -109,7 +109,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [pathname]);
 
-  if (pathname === '/login') {
+  // Skip AppShell for login, plugin taskpanes, and Teams config (they run in iframes)
+  if (pathname === '/login' || pathname.startsWith('/plugins/') || pathname.startsWith('/teams/') || pathname.startsWith('/auth/')) {
     return <>{children}</>;
   }
 
