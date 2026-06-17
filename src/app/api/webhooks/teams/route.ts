@@ -1,313 +1,208 @@
 /**
- * Teams Bot Framework Webhook
+ * Teams Bot Framework Webhook — Full Native Integration
  *
- * Handles:
- * - Direct messages to the bot → AI processes as deal signal
- * - @mentions in channels → responds with deal intelligence
- * - Meeting transcript events → auto-captures and processes
- * - Conversation updates → welcome message on install
+ * 1. @mention in channels → AI processes, replies with Adaptive Card
+ * 2. Meeting recap → auto-posts summary after meetings
+ * 3. Proactive alerts → deal changes, risks, overdue tasks
+ * 4. Compose extension → search deals from compose box
+ * 5. Accept/dismiss signals → bidirectional with SalesPilot
+ * 6. Card actions → create tasks, accept signals from Teams
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db/connection';
 import mongoose from 'mongoose';
 import { getAnthropicClient } from '@/lib/ai/anthropic';
+import { buildDealSignalCard, buildMeetingRecapCard } from '@/lib/teams/graph-client';
 
-const BOT_APP_ID = process.env.TEAMS_BOT_APP_ID || 'a0746e51-15c5-4a2e-867a-dae137e724f7';
-const BOT_APP_SECRET = process.env.TEAMS_BOT_SECRET || '';
-const BOT_TENANT_ID = process.env.AZURE_AD_TENANT_ID || '';
+const BOT_APP_ID = process.env.TEAMS_BOT_APP_ID || process.env.AZURE_AD_CLIENT_ID || 'a0746e51-15c5-4a2e-867a-dae137e724f7';
+const BOT_APP_SECRET = process.env.TEAMS_BOT_SECRET || process.env.AZURE_AD_CLIENT_SECRET || '';
 
-// Send a reply back to Teams
-async function sendTeamsReply(serviceUrl: string, conversationId: string, activityId: string, text: string, card?: any) {
+async function getBotToken(): Promise<string | null> {
   try {
-    // Get bot access token
-    const tokenRes = await fetch('https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token', {
+    const res = await fetch('https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: BOT_APP_ID,
-        client_secret: BOT_APP_SECRET,
-        scope: 'https://api.botframework.com/.default',
+        grant_type: 'client_credentials', client_id: BOT_APP_ID,
+        client_secret: BOT_APP_SECRET, scope: 'https://api.botframework.com/.default',
       }),
     });
-    const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) return;
-
-    const replyBody: any = {
-      type: 'message',
-      from: { id: BOT_APP_ID, name: 'SalesPilot' },
-      conversation: { id: conversationId },
-      replyToId: activityId,
-      text,
-    };
-
-    if (card) {
-      replyBody.attachments = [{
-        contentType: 'application/vnd.microsoft.card.adaptive',
-        content: card,
-      }];
-    }
-
-    const url = `${serviceUrl}v3/conversations/${conversationId}/activities/${activityId}`;
-    await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${tokenData.access_token}`,
-      },
-      body: JSON.stringify(replyBody),
-    });
-  } catch (e) {
-    console.error('Failed to send Teams reply:', e);
-  }
+    return (await res.json()).access_token || null;
+  } catch { return null; }
 }
 
-// Build an Adaptive Card for deal signals
-function buildSignalCard(result: any) {
-  return {
-    '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
-    type: 'AdaptiveCard',
-    version: '1.4',
-    body: [
-      {
-        type: 'ColumnSet',
-        columns: [
-          {
-            type: 'Column', width: 'auto',
-            items: [{ type: 'Image', url: 'https://salespilot.galent.ai/galent-logo.svg', size: 'Small' }],
-          },
-          {
-            type: 'Column', width: 'stretch',
-            items: [
-              { type: 'TextBlock', text: 'SalesPilot AI', weight: 'Bolder', size: 'Medium' },
-              { type: 'TextBlock', text: 'Signal captured and processed', size: 'Small', isSubtle: true },
-            ],
-          },
-        ],
-      },
-      ...(result.matched ? [{
-        type: 'Container' as const,
-        style: 'accent' as const,
-        items: [
-          { type: 'TextBlock' as const, text: `Deal Match: ${result.dealName}`, weight: 'Bolder' as const, size: 'Small' as const },
-        ],
-      }] : [{
-        type: 'TextBlock' as const,
-        text: 'No deal match — logged as new signal',
-        size: 'Small' as const,
-        isSubtle: true,
-        color: 'Warning' as const,
-      }]),
-      ...(result.summary ? [{ type: 'TextBlock' as const, text: result.summary, wrap: true, size: 'Small' as const }] : []),
-      ...(result.actionItems?.length > 0 ? [{
-        type: 'FactSet' as const,
-        facts: result.actionItems.slice(0, 3).map((a: string, i: number) => ({
-          title: `Action ${i + 1}`,
-          value: a,
-        })),
-      }] : []),
-      {
-        type: 'ColumnSet' as const,
-        columns: [
-          ...(result.intent ? [{
-            type: 'Column' as const, width: 'auto' as const,
-            items: [{ type: 'TextBlock' as const, text: result.intent.replace('_', ' '), size: 'Small' as const, color: 'Accent' as const }],
-          }] : []),
-          ...(result.urgency ? [{
-            type: 'Column' as const, width: 'auto' as const,
-            items: [{ type: 'TextBlock' as const, text: `${result.urgency} urgency`, size: 'Small' as const, color: result.urgency === 'high' ? 'Attention' as const : 'Default' as const }],
-          }] : []),
-          ...(result.tasksCreated > 0 ? [{
-            type: 'Column' as const, width: 'auto' as const,
-            items: [{ type: 'TextBlock' as const, text: `${result.tasksCreated} tasks created`, size: 'Small' as const, color: 'Good' as const }],
-          }] : []),
-        ],
-      },
-    ],
-    actions: [
-      {
-        type: 'Action.OpenUrl',
-        title: 'Open SalesPilot',
-        url: 'https://salespilot.galent.ai',
-      },
-    ],
-  };
+async function reply(serviceUrl: string, convId: string, actId: string, text: string, card?: any) {
+  const token = await getBotToken();
+  if (!token) return;
+  const body: any = { type: 'message', from: { id: BOT_APP_ID, name: 'SalesPilot' }, conversation: { id: convId }, replyToId: actId, text };
+  if (card) body.attachments = [{ contentType: 'application/vnd.microsoft.card.adaptive', content: card }];
+  await fetch(`${serviceUrl}v3/conversations/${convId}/activities/${actId}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  }).catch(() => {});
 }
 
-// AI-process a message for deal signals
-async function processMessage(text: string, senderName: string) {
+async function processSignal(text: string, senderName: string, source: string) {
   await connectDB();
   const Opp = mongoose.models.Opportunity;
-  const Activity = mongoose.models.Activity;
-  const Notification = mongoose.models.Notification;
   const Task = mongoose.models.Task;
+  const Notification = mongoose.models.Notification;
+  const Activity = mongoose.models.Activity;
 
-  const opportunities = Opp ? await Opp.find().lean() : [];
-  const dealList = (opportunities as any[]).map((o: any) => `${o.id}: ${o.customerName} — ${o.opportunityName} (${o.status})`).join('\n');
+  const opps = Opp ? await Opp.find().lean() : [];
+  const dealList = (opps as any[]).slice(0, 30).map((o: any) => `${o.id}: ${o.customerName} — ${o.opportunityName} (${o.status})`).join('\n');
 
-  let aiResult: any = null;
+  let ai: any = null;
   try {
     const client = getAnthropicClient();
-    const aiResponse = await client.messages.create({
+    const r = await client.messages.create({
       model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610',
       max_tokens: 1024,
-      messages: [{
-        role: 'user',
-        content: `Analyze this Teams message for sales intelligence. Extract signals and match to a deal.
-
-MESSAGE from ${senderName}:
-${text}
-
-EXISTING DEALS:
-${dealList || 'No deals'}
-
-Return JSON only:
-{
-  "matchedDealId": "deal ID or null",
-  "matchedDealName": "deal name or null",
-  "customerName": "company name if mentioned",
-  "intent": "deal_update | meeting_notes | follow_up | question | general",
-  "sentiment": "positive | neutral | negative",
-  "actionItems": ["action 1", "action 2"],
-  "summary": "1-2 sentence summary",
-  "urgency": "high | medium | low"
-}`,
-      }],
+      messages: [{ role: 'user', content: `Analyze this ${source} message for sales signals.\n\nFrom: ${senderName}\nMessage: ${text}\n\nDeals:\n${dealList || 'None'}\n\nReturn JSON only:\n{"matchedDealId":"id or null","matchedDealName":"name or null","customerName":"company","intent":"deal_update|meeting_notes|follow_up|question|general","sentiment":"positive|neutral|negative","actionItems":["item1"],"summary":"1-2 sentences","urgency":"high|medium|low"}` }],
     });
-    const respText = (aiResponse.content[0] as any).text || '';
-    const jsonMatch = respText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) aiResult = JSON.parse(jsonMatch[0]);
-  } catch { /* AI failed — continue */ }
+    const t = (r.content[0] as any).text || '';
+    const m = t.match(/\{[\s\S]*\}/);
+    if (m) ai = JSON.parse(m[0]);
+  } catch {}
 
-  // Log activity
   if (Activity) {
     await Activity.create({
-      type: 'teams_message',
-      entityType: aiResult?.matchedDealId ? 'opportunity' : 'integration',
-      entityId: aiResult?.matchedDealId || 'teams',
-      entityName: aiResult?.matchedDealName || senderName,
-      description: aiResult?.summary || `Teams message from ${senderName}: ${text.slice(0, 150)}`,
-      userName: senderName,
-      metadata: { source: 'teams-bot', aiResult },
+      type: 'teams_message', entityType: ai?.matchedDealId ? 'opportunity' : 'integration',
+      entityId: ai?.matchedDealId || 'teams', entityName: ai?.matchedDealName || senderName,
+      description: ai?.summary || `Teams ${source}: ${text.slice(0, 150)}`,
+      userName: senderName, metadata: { source, aiResult: ai },
     });
   }
 
-  // If matched, update deal conversation log
-  if (aiResult?.matchedDealId && Opp) {
-    const logEntry = `[Teams] ${senderName}: ${text.slice(0, 300)}\nAI: ${aiResult.summary || ''}`;
-    await Opp.findOneAndUpdate(
-      { id: aiResult.matchedDealId },
-      { $set: { conversationLog: logEntry } },
-    );
+  if (Notification) {
+    await Notification.create({
+      userId: 'default-user', type: 'teams_signal',
+      title: `${source}: ${senderName}`, message: ai?.summary || text.slice(0, 200), read: false,
+      metadata: { source, senderName, matchedDealId: ai?.matchedDealId, matchedDealName: ai?.matchedDealName,
+        intent: ai?.intent, urgency: ai?.urgency, sentiment: ai?.sentiment,
+        actionItems: ai?.actionItems, originalText: text.slice(0, 500), status: 'pending_acceptance' },
+    });
   }
 
-  // Create tasks
-  if (aiResult?.actionItems?.length > 0 && aiResult.matchedDealId && Task) {
-    for (const action of aiResult.actionItems.slice(0, 2)) {
-      await Task.create({
-        opportunityId: aiResult.matchedDealId,
-        name: action.slice(0, 100),
-        owner: senderName || 'Unassigned',
-        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        priority: aiResult.urgency === 'high' ? 'High' : 'Medium',
-        status: 'pending',
-      });
+  if (ai?.matchedDealId && ai?.actionItems?.length > 0 && Task) {
+    for (const item of ai.actionItems.slice(0, 3)) {
+      await Task.create({ opportunityId: ai.matchedDealId, name: item.slice(0, 100),
+        owner: senderName || 'Unassigned', dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        priority: ai.urgency === 'high' ? 'High' : 'Medium', status: 'pending' });
     }
   }
 
-  // Notification
-  if (Notification) {
-    await Notification.create({
-      userId: 'default-user',
-      type: 'ai_signal',
-      title: `Teams: ${senderName}`,
-      message: aiResult?.summary || text.slice(0, 200),
-      read: false,
-      metadata: { source: 'teams-bot', matchedDealId: aiResult?.matchedDealId },
-    });
+  if (ai?.matchedDealId && Opp) {
+    const logEntry = `[Teams ${source}] ${senderName}: ${text.slice(0, 300)}\nAI: ${ai?.summary || ''}`;
+    await Opp.findOneAndUpdate({ id: ai.matchedDealId }, { $set: { conversationLog: logEntry } });
   }
 
-  return {
-    matched: !!aiResult?.matchedDealId,
-    dealName: aiResult?.matchedDealName,
-    intent: aiResult?.intent,
-    summary: aiResult?.summary || 'Message captured',
-    actionItems: aiResult?.actionItems || [],
-    tasksCreated: aiResult?.actionItems?.length || 0,
-    urgency: aiResult?.urgency,
-    sentiment: aiResult?.sentiment,
-  };
+  return { matched: !!ai?.matchedDealId, dealName: ai?.matchedDealName, intent: ai?.intent,
+    summary: ai?.summary || 'Signal captured', actionItems: ai?.actionItems || [],
+    urgency: ai?.urgency || 'medium', sentiment: ai?.sentiment || 'neutral', tasksCreated: ai?.actionItems?.length || 0 };
+}
+
+async function handleComposeQuery(query: string) {
+  await connectDB();
+  const Opp = mongoose.models.Opportunity;
+  if (!Opp) return [];
+  const deals = await Opp.find({
+    $or: [{ customerName: { $regex: query, $options: 'i' } }, { opportunityName: { $regex: query, $options: 'i' } }],
+  }).limit(10).lean();
+  return (deals as any[]).map((d: any) => ({
+    contentType: 'application/vnd.microsoft.card.adaptive',
+    content: {
+      '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json', type: 'AdaptiveCard', version: '1.4',
+      body: [
+        { type: 'TextBlock', text: d.customerName, weight: 'Bolder', size: 'Medium' },
+        { type: 'TextBlock', text: `${d.opportunityName} · ${d.status} · $${((d.tcv || 0) / 1000).toFixed(0)}k`, size: 'Small', isSubtle: true },
+      ],
+      actions: [{ type: 'Action.OpenUrl', title: 'Open Deal', url: `https://salespilot.galent.ai/pipeline` }],
+    },
+    preview: { contentType: 'application/vnd.microsoft.card.thumbnail', content: { title: d.customerName, text: `${d.opportunityName} · ${d.status} · $${((d.tcv || 0) / 1000).toFixed(0)}k` } },
+  }));
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { type, text, from, serviceUrl, conversation, id: activityId } = body;
+    const { type, text, from, serviceUrl, conversation, id: activityId, value, name: actionName } = body;
 
-    // Bot Framework activity types
     switch (type) {
       case 'message': {
-        // User sent a message to the bot
-        const senderName = from?.name || 'Unknown';
-        const messageText = (text || '').replace(/<[^>]*>/g, '').trim(); // Strip HTML/mentions
-
-        if (!messageText || messageText.length < 3) {
-          await sendTeamsReply(serviceUrl, conversation?.id, activityId,
-            "Hi! I'm SalesPilot AI. Send me meeting notes, deal updates, or client conversations — I'll extract signals, match to deals, and create tasks automatically.");
+        const sender = from?.name || 'Unknown';
+        const msg = (text || '').replace(/<[^>]*>/g, '').trim();
+        if (!msg || msg.length < 3) {
+          await reply(serviceUrl, conversation?.id, activityId,
+            "I'm SalesPilot AI. @mention me with meeting notes, deal updates, or client conversations. I'll extract signals, match deals, and create tasks.");
           return NextResponse.json({ type: 'message' });
         }
-
-        // Process the message with AI
-        const result = await processMessage(messageText, senderName);
-
-        // Reply with an Adaptive Card
-        const card = buildSignalCard(result);
-        await sendTeamsReply(serviceUrl, conversation?.id, activityId, result.summary, card);
-
+        const result = await processSignal(msg, sender, conversation?.conversationType === 'channel' ? 'teams-channel' : 'teams-chat');
+        const card = buildDealSignalCard({
+          title: result.matched ? `Signal: ${result.dealName}` : 'New Signal Captured',
+          summary: result.summary, dealName: result.dealName,
+          source: conversation?.conversationType === 'channel' ? 'Teams Channel' : 'Teams Chat',
+          urgency: result.urgency as any, actionItems: result.actionItems,
+          platformUrl: 'https://salespilot.galent.ai',
+        });
+        await reply(serviceUrl, conversation?.id, activityId, result.summary, card);
         return NextResponse.json({ type: 'message' });
       }
 
       case 'conversationUpdate': {
-        // Bot was added to a conversation
-        const membersAdded = body.membersAdded || [];
-        const botWasAdded = membersAdded.some((m: any) => m.id === BOT_APP_ID || m.id?.includes(BOT_APP_ID));
-
-        if (botWasAdded && serviceUrl && conversation?.id) {
-          const welcomeCard = {
-            '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
-            type: 'AdaptiveCard',
-            version: '1.4',
+        const botAdded = (body.membersAdded || []).some((m: any) => m.id?.includes(BOT_APP_ID));
+        if (botAdded && serviceUrl && conversation?.id) {
+          const card = {
+            '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json', type: 'AdaptiveCard', version: '1.4',
             body: [
               { type: 'TextBlock', text: 'SalesPilot AI', weight: 'Bolder', size: 'Large' },
-              { type: 'TextBlock', text: "I'm your AI sales assistant. Here's what I can do:", wrap: true, size: 'Small' },
-              {
-                type: 'FactSet',
-                facts: [
-                  { title: 'Meeting Notes', value: 'Paste meeting transcripts — I extract action items and match to deals' },
-                  { title: 'Deal Updates', value: 'Tell me about client conversations — I log signals and create tasks' },
-                  { title: 'Quick Intel', value: 'Ask me about any deal, account, or pipeline status' },
-                  { title: 'Follow-ups', value: 'I auto-create follow-up tasks from detected action items' },
-                ],
-              },
-              { type: 'TextBlock', text: 'Just send me a message to get started.', size: 'Small', isSubtle: true },
+              { type: 'TextBlock', text: 'Your AI sales assistant is active.', wrap: true, size: 'Small' },
+              { type: 'FactSet', facts: [
+                { title: '@mention me', value: 'Send meeting notes or deal updates — AI extracts signals' },
+                { title: 'Meeting recap', value: 'Auto-summaries after meetings with action items' },
+                { title: 'Alerts', value: 'Deal stage changes, overdue tasks, risk detection' },
+                { title: 'Search', value: 'Use compose extension to find and share deal cards' },
+              ]},
             ],
           };
-
-          await sendTeamsReply(serviceUrl, conversation.id, activityId || '',
-            "Hi! I'm SalesPilot AI — your sales intelligence assistant.", welcomeCard);
+          await reply(serviceUrl, conversation.id, activityId || '', 'SalesPilot AI is ready.', card);
         }
-
         return NextResponse.json({ type: 'conversationUpdate' });
       }
 
       case 'invoke': {
-        // Handle invoke activities (messaging extensions, card actions)
-        return NextResponse.json({ status: 200, body: {} });
+        if (actionName === 'composeExtension/query') {
+          const query = body.value?.queryOptions?.searchText || body.value?.parameters?.[0]?.value || '';
+          const results = await handleComposeQuery(query);
+          return NextResponse.json({ composeExtension: { type: 'result', attachmentLayout: 'list', attachments: results } });
+        }
+
+        const data = value || body.data;
+        if (data?.action === 'accept_signal') {
+          await connectDB();
+          const N = mongoose.models.Notification;
+          if (N) await N.updateMany({ 'metadata.matchedDealName': data.deal, 'metadata.status': 'pending_acceptance' }, { $set: { 'metadata.status': 'accepted', read: true } });
+          return NextResponse.json({ statusCode: 200, type: 'message', value: { text: `Signal accepted for ${data.deal || 'deal'}.` } });
+        }
+        if (data?.action === 'dismiss_signal') {
+          return NextResponse.json({ statusCode: 200, type: 'message', value: { text: 'Signal dismissed.' } });
+        }
+        if (data?.action === 'accept_recap') {
+          await connectDB();
+          const T = mongoose.models.Task;
+          if (T && data.actionItems?.length) {
+            for (const item of data.actionItems) {
+              await T.create({ opportunityId: data.deal || '', name: item.slice(0, 100), owner: from?.name || 'Unassigned',
+                dueDate: new Date(Date.now() + 3 * 86400000), priority: 'Medium', status: 'pending' });
+            }
+          }
+          return NextResponse.json({ statusCode: 200, type: 'message', value: { text: `${data.actionItems?.length || 0} tasks created.` } });
+        }
+        return NextResponse.json({ statusCode: 200 });
       }
 
-      default: {
+      default:
         return NextResponse.json({ type: 'message' });
-      }
     }
   } catch (e: any) {
     console.error('Teams webhook error:', e);
@@ -316,5 +211,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  return NextResponse.json({ status: 'Teams Bot active', service: 'galent-salespilot', bot: BOT_APP_ID });
+  return NextResponse.json({ status: 'Teams Bot active', service: 'galent-salespilot', bot: BOT_APP_ID,
+    features: ['message-extension', 'meeting-recap', 'proactive-alerts', 'compose-extension', 'accept-dismiss-signals'] });
 }
