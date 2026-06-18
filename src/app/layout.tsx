@@ -32,11 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <Providers>
           <TRPCProvider>
-            <InsightProvider>
-              <AppShell>
-                {children}
-              </AppShell>
-            </InsightProvider>
+            <AppShell>
+              {children}
+            </AppShell>
           </TRPCProvider>
         </Providers>
       </body>

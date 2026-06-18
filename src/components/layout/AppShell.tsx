@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
+import { InsightProvider } from '@/lib/intelligence/InsightStore';
 import {
   Kanban, TrendingUp, CalendarDays, Table as TableIcon,
   LayoutDashboard, CheckSquare, Users, Network, Sparkles, Magnet,
@@ -125,6 +126,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
+    <InsightProvider>
     <div className="min-h-screen g-scene text-foreground">
       {/* ── Sidebar ── */}
       <aside className="fixed left-0 top-0 bottom-0 w-52 z-50 hidden md:flex flex-col g-hex"
@@ -323,5 +325,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <NewDealModal isOpen={showNewDeal} onClose={() => setShowNewDeal(false)} />
       <MeetingNotesModal isOpen={showMeetingNotes} onClose={() => setShowMeetingNotes(false)} />
     </div>
+    </InsightProvider>
   );
 }
