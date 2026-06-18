@@ -11,7 +11,7 @@ export interface DealAnalysis {
 
 export async function analyzeDeal(opportunity: any): Promise<DealAnalysis> {
   const client = getAnthropicClient();
-  const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610';
+  const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6';
 
   const stakeholders = opportunity.customerStakeholders || [];
   const tasks = opportunity.subTasks || [];
@@ -105,7 +105,7 @@ Be specific to THIS deal. Reference actual stakeholder names, dates, and data po
  */
 export async function analyzePipeline(opportunities: any[]): Promise<string> {
   const client = getAnthropicClient();
-  const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610';
+  const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6';
 
   const active = opportunities.filter((o) => !['Won', 'Lost'].includes(o.status));
   const totalTcv = active.reduce((sum, o) => sum + (o.tcv || 0), 0);

@@ -184,7 +184,7 @@ export default function SettingsPage() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
   ];
 
-  const currentModel = settings?.aiModel ?? 'claude-sonnet-4-6-20250610';
+  const currentModel = settings?.aiModel ?? 'claude-sonnet-4-6';
   const guardrails = settings?.guardrails ?? { requireApproval: true, logActions: true, autoInvoke: true };
   const notifications = settings?.notifications ?? {
     dealStageChanges: true, overdueTasks: true, aiSignals: true,

@@ -19,7 +19,7 @@ export const AVAILABLE_MODELS: AIModelConfig[] = [
   // Anthropic — Claude 4.6 (latest)
   {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6-20250610',
+    model: 'claude-sonnet-4-6',
     displayName: 'Claude Sonnet 4.6',
     maxTokens: 16384,
     temperature: 0.7,
@@ -27,7 +27,7 @@ export const AVAILABLE_MODELS: AIModelConfig[] = [
   },
   {
     provider: 'anthropic',
-    model: 'claude-opus-4-6-20250610',
+    model: 'claude-opus-4-6',
     displayName: 'Claude Opus 4.6',
     maxTokens: 16384,
     temperature: 0.5,
@@ -42,14 +42,14 @@ export const AVAILABLE_MODELS: AIModelConfig[] = [
   // Anthropic — Claude 4 (previous gen)
   {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-6-20250610',
+    model: 'claude-sonnet-4-6',
     displayName: 'Claude Sonnet 4',
     maxTokens: 8192,
     temperature: 0.7,
   },
   {
     provider: 'anthropic',
-    model: 'claude-opus-4-6-20250610',
+    model: 'claude-opus-4-6',
     displayName: 'Claude Opus 4',
     maxTokens: 8192,
     temperature: 0.5,
@@ -414,7 +414,7 @@ Be specific to the client and deal, never generic.`,
  */
 export function getDefaultModelConfig(): AIModelConfig {
   const provider = (process.env.AI_DEFAULT_PROVIDER || 'anthropic') as AIProvider;
-  const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610';
+  const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6';
 
   const found = AVAILABLE_MODELS.find((m) => m.provider === provider && m.model === model);
   return found || AVAILABLE_MODELS[0];
