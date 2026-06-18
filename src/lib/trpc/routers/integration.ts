@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../trpc';
 import { connectDB } from '@/lib/db/connection';
+import { parseAIJson } from '@/lib/ai/parse-json';
 import Integration from '@/lib/db/models/integration';
 
 const DEFAULT_INTEGRATIONS = [
@@ -137,10 +138,9 @@ export const integrationRouter = router({
       });
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
-      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
       try {
-        return JSON.parse(cleaned);
+        return parseAIJson(text);
       } catch {
         return { name: input.serviceName, type: 'other', description: text.slice(0, 200), error: 'Could not parse AI response' };
       }

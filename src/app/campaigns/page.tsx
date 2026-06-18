@@ -360,7 +360,10 @@ Overall: ${totalSent} sent, ${avgOpenRate}% avg open rate, ${avgReplyRate}% repl
     }, {
       onSuccess: (data) => {
         try {
-          const parsed = JSON.parse(data.response);
+          const raw = data.response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          let parsed;
+          try { parsed = JSON.parse(raw); } catch { const m = raw.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : null; }
+          if (!parsed) throw new Error('No JSON');
           setFormName(parsed.name || '');
           setFormType(parsed.type || 'Outbound');
           setFormTarget(parsed.target || '');

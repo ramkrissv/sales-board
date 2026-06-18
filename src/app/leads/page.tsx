@@ -175,9 +175,16 @@ export default function LeadsPage() {
         context: { page: 'leads' },
       });
       const raw = (result as any).response || '';
-      // Strip markdown code fences if present
+      // Parse JSON from AI response — handles fences, text wrapping, etc.
       const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const parsed = JSON.parse(cleaned) as ExtractedLead;
+      let parsed: ExtractedLead;
+      try {
+        parsed = JSON.parse(cleaned) as ExtractedLead;
+      } catch {
+        const m = cleaned.match(/\{[\s\S]*\}/);
+        if (!m) throw new Error('No JSON found in AI response');
+        parsed = JSON.parse(m[0]) as ExtractedLead;
+      }
       setExtractedLead(parsed);
     } catch (e: any) {
       console.error('AI extraction failed:', e);

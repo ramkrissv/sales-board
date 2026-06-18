@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import {
   Search, Plus, Pencil, Trash2, X, Building2, Globe, MapPin,
-  Users, DollarSign, ChevronDown, ChevronUp, Sparkles, Loader2,
+  Users, DollarSign, ChevronDown, ChevronUp, Sparkles, Loader2, Clock,
 } from 'lucide-react';
 import { RelationshipMap } from '@/components/views/RelationshipMap';
 
@@ -281,6 +281,13 @@ function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, score
   const dealCount = opportunities.length;
   const totalTcv = opportunities.reduce((s: number, o: any) => s + (o.tcv || 0), 0);
 
+  // Fetch recent activity for this account's opportunities
+  const oppIds = opportunities.map((o: any) => o.id || o._id?.toString()).filter(Boolean);
+  const { data: accountActivities = [] } = trpc.activity.list.useQuery(
+    { entityIds: oppIds, limit: 10 },
+    { enabled: expanded && oppIds.length > 0 }
+  );
+
   const [accountBrief, setAccountBrief] = useState<string | null>(null);
   const accountBriefMutation = trpc.ai.chat.useMutation({
     onSuccess: (data: any) => setAccountBrief(data.response),
@@ -464,6 +471,27 @@ function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, score
                   </div>
                 )}
               </div>
+
+              {/* Recent Activity */}
+              {(accountActivities as any[]).length > 0 && (
+                <div>
+                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground g-section-label">Recent Activity</span>
+                  <div className="mt-2 space-y-1.5">
+                    {(accountActivities as any[]).slice(0, 8).map((act: any, i: number) => (
+                      <div key={act._id || i} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-secondary/30">
+                        <Clock className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-foreground truncate">{act.description}</p>
+                          <div className="flex gap-2 text-[10px] text-muted-foreground mt-0.5">
+                            <span>{act.userName || 'System'}</span>
+                            {act.createdAt && <span>{new Date(act.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Relationship Map */}
               <div>
