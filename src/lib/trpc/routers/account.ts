@@ -56,11 +56,16 @@ export const accountRouter = router({
       }
 
       // Get associated opportunities
-      // Match by accountId OR by customerName (for deals not yet linked)
+      // Match by accountId OR by customerName (case-insensitive partial match for name variations)
+      const companyName = (account as any).companyName || '';
+      const escapedName = companyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const opportunities = await Opportunity.find({
         $or: [
           { accountId: input.id },
-          { customerName: (account as any).companyName },
+          { customerName: companyName },
+          { customerName: { $regex: new RegExp(escapedName, 'i') } },
+          // Also match if opportunity name contains account name
+          { opportunityName: { $regex: new RegExp(escapedName, 'i') } },
         ],
       }).lean();
 
@@ -125,8 +130,14 @@ export const accountRouter = router({
 
       // Get all opportunities for this account
       const OppModel = mongoose.models.Opportunity || Opportunity;
+      const companyName = (account as any).companyName || '';
+      const escapedName = companyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const opps = await OppModel.find({
-        $or: [{ accountId: input.id }, { customerName: (account as any).companyName }]
+        $or: [
+          { accountId: input.id },
+          { customerName: companyName },
+          { customerName: { $regex: new RegExp(escapedName, 'i') } },
+        ]
       }).lean();
 
       const { getAnthropicClient } = await import('@/lib/ai/anthropic');

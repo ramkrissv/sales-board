@@ -277,22 +277,25 @@ function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, score
     { enabled: expanded }
   );
 
+  const opportunities = detail?.opportunities || [];
+  const dealCount = opportunities.length;
+  const totalTcv = opportunities.reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+
   const [accountBrief, setAccountBrief] = useState<string | null>(null);
   const accountBriefMutation = trpc.ai.chat.useMutation({
     onSuccess: (data: any) => setAccountBrief(data.response),
   });
 
   useEffect(() => {
-    if (expanded && !accountBrief) {
+    if (expanded && !accountBrief && !isLoading && detail) {
+      const oppSummary = opportunities.length > 0
+        ? opportunities.map((o: any) => `- ${o.opportunityName}: ${o.status}, $${((o.tcv || 0) / 1000).toFixed(0)}k TCV, owner: ${o.primaryOwner || 'unassigned'}`).join('\n')
+        : 'No active opportunities';
       accountBriefMutation.mutate({
-        message: `Give a brief (3 sentences) account intelligence summary for ${account.companyName}. Include: deal status, relationship health, and one recommended action.`,
+        message: `Give a brief (3 sentences) account intelligence summary for ${account.companyName}.\n\nOpportunities (${opportunities.length}):\n${oppSummary}\n\nInclude: deal status, relationship health, and one recommended action. Be specific about the actual deals listed above.`,
       });
     }
-  }, [expanded]); // eslint-disable-line
-
-  const opportunities = detail?.opportunities || [];
-  const dealCount = opportunities.length;
-  const totalTcv = opportunities.reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+  }, [expanded, isLoading, detail]); // eslint-disable-line
 
   const intentScore = account.accountHealth;
   const intentData = account.intentData;

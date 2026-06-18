@@ -66,18 +66,20 @@ export function NotificationPopover() {
     onSuccess: () => { utils.opportunity.list.invalidate(); },
   });
 
+  const [acceptResult, setAcceptResult] = useState<{ id: string; message: string } | null>(null);
+
   const handleAcceptSignal = async (notif: any) => {
     setProcessing(notif._id);
-    // Mark as read
     markRead.mutate({ id: notif._id });
 
-    // If there's a matched deal, just accept (already logged)
     if (notif.metadata?.matchedDealId) {
+      setAcceptResult({ id: notif._id, message: `Signal linked to ${notif.metadata.matchedDealName}` });
       setProcessing(null);
+      setTimeout(() => setAcceptResult(null), 3000);
       return;
     }
 
-    // No matched deal — create new opportunity from signal
+    // No matched deal — create new opportunity
     const meta = notif.metadata || {};
     try {
       await createOpp.mutateAsync({
@@ -93,8 +95,12 @@ export function NotificationPopover() {
         source: meta.source || 'Signal',
         dealDuration: '12 months',
       } as any);
-    } catch { /* best effort */ }
+      setAcceptResult({ id: notif._id, message: 'New opportunity created in Discovery' });
+    } catch {
+      setAcceptResult({ id: notif._id, message: 'Signal accepted (opp creation failed)' });
+    }
     setProcessing(null);
+    setTimeout(() => setAcceptResult(null), 3000);
   };
 
   const handleDismissSignal = (notif: any) => {
@@ -172,8 +178,15 @@ export function NotificationPopover() {
                         </div>
                       )}
 
+                      {/* Accept result toast */}
+                      {acceptResult?.id === notif._id && (
+                        <div className="flex items-center gap-1 mt-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md animate-flow-in">
+                          <CheckCircle2 className="h-3 w-3" /> {acceptResult?.message}
+                        </div>
+                      )}
+
                       {/* Accepted state */}
-                      {isSignal && notif.read && meta.status === 'accepted' && (
+                      {isSignal && notif.read && meta.status === 'accepted' && !acceptResult && (
                         <div className="flex items-center gap-1 mt-1 text-[10px] text-emerald-400">
                           <CheckCircle2 className="h-3 w-3" /> Accepted
                         </div>
