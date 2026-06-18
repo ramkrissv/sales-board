@@ -13,6 +13,7 @@ import { connectDB } from '@/lib/db/connection';
 import mongoose from 'mongoose';
 import { getAnthropicClient } from '@/lib/ai/anthropic';
 import { buildDealSignalCard, buildMeetingRecapCard } from '@/lib/teams/graph-client';
+import { GraphService } from '@/lib/graph/graph-service';
 
 const BOT_APP_ID = process.env.TEAMS_BOT_APP_ID || process.env.AZURE_AD_CLIENT_ID || 'a0746e51-15c5-4a2e-867a-dae137e724f7';
 const BOT_APP_SECRET = process.env.TEAMS_BOT_SECRET || process.env.AZURE_AD_CLIENT_SECRET || '';
@@ -96,6 +97,33 @@ async function processSignal(text: string, senderName: string, source: string) {
     const logEntry = `[Teams ${source}] ${senderName}: ${text.slice(0, 300)}\nAI: ${ai?.summary || ''}`;
     await Opp.findOneAndUpdate({ id: ai.matchedDealId }, { $set: { conversationLog: logEntry } });
   }
+
+  // Update knowledge graph
+  try {
+    const contactId = `contact:${senderName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    await GraphService.upsertNode(contactId, 'person', senderName, {
+      source, lastSignal: new Date(),
+    }, 'teams-webhook');
+
+    if (ai?.matchedDealId) {
+      await GraphService.addEdge(contactId, `deal:${ai.matchedDealId}`, 'involved_in', {
+        weight: 0.7, context: `Teams: ${text.slice(0, 100)}`,
+      });
+    }
+    if (ai?.customerName) {
+      const companyId = `company:${ai.customerName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+      await GraphService.upsertNode(companyId, 'account', ai.customerName, { source, lastSignal: new Date() }, 'teams-webhook');
+      await GraphService.addEdge(contactId, companyId, 'works_at', { weight: 0.9 });
+    }
+
+    const signalId = `signal:teams:${Date.now()}`;
+    await GraphService.upsertNode(signalId, 'signal' as any, `Teams: ${senderName}`, {
+      source, intent: ai?.intent, urgency: ai?.urgency, summary: ai?.summary, timestamp: new Date(),
+    }, 'teams-webhook');
+    if (ai?.matchedDealId) {
+      await GraphService.addEdge(signalId, `deal:${ai.matchedDealId}`, 'relates_to', { weight: 0.7 });
+    }
+  } catch { /* best effort */ }
 
   return { matched: !!ai?.matchedDealId, dealName: ai?.matchedDealName, intent: ai?.intent,
     summary: ai?.summary || 'Signal captured', actionItems: ai?.actionItems || [],

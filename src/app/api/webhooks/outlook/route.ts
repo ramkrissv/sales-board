@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db/connection';
 import mongoose from 'mongoose';
 import { getAnthropicClient } from '@/lib/ai/anthropic';
+import { GraphService } from '@/lib/graph/graph-service';
 
 export async function POST(req: Request) {
   try {
@@ -97,6 +98,44 @@ Return JSON only (no markdown):
         });
       }
     }
+
+    // Update knowledge graph
+    try {
+      // Add contact node
+      if (aiResult?.contactName || from) {
+        const contactId = `contact:${(aiResult?.contactName || from || '').toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+        await GraphService.upsertNode(contactId, 'person', aiResult?.contactName || from || '', {
+          email: from, title: aiResult?.contactTitle, source: 'outlook', lastSignal: new Date(),
+        }, 'outlook-webhook');
+
+        // Link contact to deal if matched
+        if (aiResult?.matchedDealId) {
+          await GraphService.addEdge(contactId, `deal:${aiResult.matchedDealId}`, 'involved_in', {
+            weight: 0.8, context: `Email: ${subject}`,
+          });
+        }
+
+        // Link contact to company if detected
+        if (aiResult?.customerName) {
+          const companyId = `company:${aiResult.customerName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+          await GraphService.upsertNode(companyId, 'account', aiResult.customerName, {
+            source: 'outlook', lastSignal: new Date(),
+          }, 'outlook-webhook');
+          await GraphService.addEdge(contactId, companyId, 'works_at', { weight: 0.9 });
+        }
+      }
+
+      // Add signal node
+      const signalId = `signal:outlook:${Date.now()}`;
+      await GraphService.upsertNode(signalId, 'signal' as any, `Email: ${subject || 'Signal'}`, {
+        source: 'outlook', from, subject, intent: aiResult?.intent, urgency: aiResult?.urgency,
+        sentiment: aiResult?.sentiment, summary: aiResult?.summary, timestamp: new Date(),
+      }, 'outlook-webhook');
+
+      if (aiResult?.matchedDealId) {
+        await GraphService.addEdge(signalId, `deal:${aiResult.matchedDealId}`, 'relates_to', { weight: 0.7 });
+      }
+    } catch { /* Graph update best-effort */ }
 
     // Create notification
     if (Notification) {
