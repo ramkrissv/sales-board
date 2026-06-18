@@ -223,14 +223,13 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
 
     <h3>Plugins & Integrations</h3>
     <ul>
-      <li><strong>Outlook Add-in</strong> — "Send to SalesPilot" sidebar. Download manifest from Settings → Plugins. Deploy via admin.microsoft.com.</li>
-      <li><strong>Teams App</strong> — Pipeline, Ask Galent, Signal tabs. Download manifest from Settings → Plugins. Deploy via Teams Admin Center.</li>
-      <li><strong>Voice AI (Pipecat)</strong> — Real-time voice assistant for deal updates via Deepgram STT.</li>
-      <li><strong>SharePoint</strong> — Auto-sync proposals and SOWs to SharePoint document libraries.</li>
+      <li><strong>Outlook Add-in</strong> — Native sidebar in Outlook. Auto-reads email (subject, from, body). One-click "Capture Signal & Process with AI". Shows deal match, action items, tasks created. Quick actions: Follow-up, Meeting Notes. Deployed via admin.microsoft.com.</li>
+      <li><strong>Teams Bot</strong> — Native Teams bot. @mention or DM the bot with meeting notes, deal updates, or client conversations. Bot replies with Adaptive Cards showing deal match, signals, Accept/Dismiss buttons. Compose extension to search and share deal cards. Proactive alerts for deal changes.</li>
+      <li><strong>Actionable Notifications</strong> — Signals from Teams/Outlook show in notifications with Accept/Dismiss buttons. Accept: logs signal to deal or creates new opportunity. Source badges (Teams/Outlook), intent, urgency, deal match indicators.</li>
+      <li><strong>Voice AI</strong> — Real-time transcription via Web Speech API. Record → auto-transcribe → Process with AI. Playback with progress bar.</li>
       <li><strong>CRM Sync</strong> — Salesforce, HubSpot, Pipedrive, Zoho, Freshsales bidirectional sync engine.</li>
       <li><strong>Email</strong> — Gmail/Outlook IMAP+SMTP connector with CC/BCC tracking.</li>
-      <li><strong>MCP Tools</strong> — Configure MCP client from Settings → MCP Tools. Copy config for Claude Desktop / Cursor.</li>
-      <li><strong>Webhooks</strong> — /api/webhooks/teams, /api/webhooks/outlook for signal ingestion.</li>
+      <li><strong>MCP Server</strong> — 15 tools + invoke_agent at /api/mcp. Configure from Settings → MCP Tools. Compatible with Claude Desktop, Cursor, VS Code.</li>
     </ul>
 
     <h3>Admin & Users</h3>
