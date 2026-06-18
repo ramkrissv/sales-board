@@ -23,7 +23,10 @@ export const notificationRouter = router({
       await connectDB();
       const Notification = getModel();
       const uid = ctx.userId || 'default-user';
-      let notifications = await Notification.find({ userId: uid })
+      // Include both user-specific AND broadcast notifications (from webhooks using 'default-user')
+      let notifications = await Notification.find({
+        $or: [{ userId: uid }, { userId: 'default-user' }]
+      })
         .sort({ createdAt: -1 })
         .limit(input?.limit || 20)
         .lean();
@@ -46,7 +49,11 @@ export const notificationRouter = router({
   getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
     await connectDB();
     const Notification = getModel();
-    return Notification.countDocuments({ userId: ctx.userId || 'default-user', read: false });
+    const uid = ctx.userId || 'default-user';
+    return Notification.countDocuments({
+      $or: [{ userId: uid }, { userId: 'default-user' }],
+      read: false,
+    });
   }),
 
   markRead: protectedProcedure

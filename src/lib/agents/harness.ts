@@ -182,9 +182,10 @@ export async function runAgent(
       messages,
     });
 
-    // Process response
+    // Process response — collect all tool uses, then execute and push results together
     let hasToolUse = false;
     const assistantContent: any[] = [];
+    const toolResults: any[] = [];
 
     for (const block of response.content) {
       if (block.type === 'text') {
@@ -198,20 +199,19 @@ export async function runAgent(
         const toolResult = await executeTool(block.name, block.input as any);
         run.toolCalls.push({ tool: block.name, params: block.input, result: toolResult });
 
-        // Add tool result to conversation
-        messages.push({ role: 'assistant', content: assistantContent });
-        messages.push({
-          role: 'user',
-          content: [{
-            type: 'tool_result',
-            tool_use_id: block.id,
-            content: JSON.stringify(toolResult).slice(0, 4000), // Limit size
-          }],
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: block.id,
+          content: JSON.stringify(toolResult).slice(0, 4000),
         });
       }
     }
 
-    if (!hasToolUse) {
+    if (hasToolUse) {
+      // Push assistant message with ALL tool_use blocks, then ALL tool_results together
+      messages.push({ role: 'assistant', content: assistantContent });
+      messages.push({ role: 'user', content: toolResults });
+    } else {
       // Agent is done — extract final answer
       run.finalAnswer = run.reasoning[run.reasoning.length - 1] || '';
       break;
