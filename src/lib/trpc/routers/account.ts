@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import mongoose from 'mongoose';
 import { router, protectedProcedure } from '../trpc';
 import { connectDB } from '@/lib/db/connection';
+import { parseAIJson } from '@/lib/ai/parse-json';
 import { Account } from '@/lib/db/models/account';
 import { Opportunity } from '@/lib/db/models/opportunity';
 
@@ -158,7 +159,7 @@ Health: ${(account as any).accountHealth || 'N/A'}
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
       try {
-        const result = JSON.parse(text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+        const result = parseAIJson(text);
         // Save score to account
         await Account.findByIdAndUpdate(input.id, {
           accountHealth: result.intentScore,

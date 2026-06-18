@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import mongoose from 'mongoose';
 import { router, protectedProcedure } from '../trpc';
 import { connectDB } from '@/lib/db/connection';
+import { parseAIJson } from '@/lib/ai/parse-json';
 
 function getModel() {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -146,8 +147,7 @@ export const leadRouter = router({
       });
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
-      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const qual = JSON.parse(cleaned);
+      const qual = parseAIJson(text);
 
       lead.aiQualification = qual;
       lead.score = qual.overallScore;
@@ -183,8 +183,7 @@ export const leadRouter = router({
       });
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
-      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const enrichment = JSON.parse(cleaned);
+      const enrichment = parseAIJson(text);
 
       lead.industry = enrichment.industry;
       lead.employeeCount = enrichment.employeeCount;
@@ -310,8 +309,7 @@ export const leadRouter = router({
           });
 
           const text = response.content[0].type === 'text' ? response.content[0].text : '';
-          const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-          const qual = JSON.parse(cleaned);
+          const qual = parseAIJson(text);
 
           lead.aiQualification = qual;
           lead.score = qual.overallScore;

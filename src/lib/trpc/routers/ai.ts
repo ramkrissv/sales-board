@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { connectDB } from '@/lib/db/connection';
 import { analyzeDeal, analyzePipeline } from '@/lib/ai/deal-coach';
+import { parseAIJson } from '@/lib/ai/parse-json';
 import mongoose from 'mongoose';
 
 function getOpportunityModel() {
@@ -166,10 +167,9 @@ Return ONLY valid JSON:
       });
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
-      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
       try {
-        const result = JSON.parse(cleaned);
+        const result = parseAIJson(text);
 
         // If linked to an opportunity, auto-update the conversation log
         if (input.opportunityId) {
@@ -255,10 +255,9 @@ Return ONLY valid JSON:
       });
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
-      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
       try {
-        const result = JSON.parse(cleaned);
+        const result = parseAIJson(text);
 
         if (result.confidence >= 80 && result.matchedDealId && result.intent === 'update_deal') {
           const opp = await Opportunity.findOne({ id: result.matchedDealId });

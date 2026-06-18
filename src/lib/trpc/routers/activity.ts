@@ -20,13 +20,22 @@ function getModel() {
 
 export const activityRouter = router({
   list: protectedProcedure
-    .input(z.object({ limit: z.number().default(30), entityType: z.string().optional(), entityId: z.string().optional() }).optional())
+    .input(z.object({
+      limit: z.number().default(30),
+      entityType: z.string().optional(),
+      entityId: z.string().optional(),
+      entityIds: z.array(z.string()).optional(),
+    }).optional())
     .query(async ({ input }) => {
       await connectDB();
       const Activity = getModel();
       const filter: any = {};
       if (input?.entityType) filter.entityType = input.entityType;
       if (input?.entityId) filter.entityId = input.entityId;
+      // Support querying by multiple entity IDs (e.g. all opps for an account)
+      if (input?.entityIds?.length) {
+        filter.entityId = { $in: input.entityIds };
+      }
 
       const activities = await Activity.find(filter).sort({ createdAt: -1 }).limit(input?.limit || 30).lean();
 
