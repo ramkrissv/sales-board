@@ -28,7 +28,7 @@ const updateTaskSchema = z.object({
 export const taskRouter = router({
   create: protectedProcedure
     .input(createTaskSchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       await connectDB();
       const task = await Task.create({
         ...input,
@@ -44,7 +44,7 @@ export const taskRouter = router({
           await Activity.create({
             type: 'task_created', entityType: 'task', entityId: plain._id.toString(),
             entityName: plain.name, description: `Task created: ${plain.name}`,
-            userName: 'Admin User',
+            userName: ctx.userName || 'Admin User',
           });
         }
       } catch {}
@@ -57,7 +57,7 @@ export const taskRouter = router({
 
   update: protectedProcedure
     .input(updateTaskSchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       await connectDB();
       const { id, ...updates } = input;
 
@@ -88,7 +88,7 @@ export const taskRouter = router({
             entityType: 'task', entityId: input.id,
             entityName: (task as any).name || input.id,
             description: input.status === 'complete' ? `Task completed: ${(task as any).name}` : `Task updated: ${(task as any).name}`,
-            userName: 'Admin User',
+            userName: ctx.userName || 'Admin User',
           });
         }
       } catch {}
@@ -103,7 +103,7 @@ export const taskRouter = router({
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       await connectDB();
       const result = await Task.findByIdAndDelete(input.id);
 
@@ -121,7 +121,7 @@ export const taskRouter = router({
           await Activity.create({
             type: 'task_deleted', entityType: 'task', entityId: input.id,
             entityName: input.id, description: `Task deleted`,
-            userName: 'Admin User',
+            userName: ctx.userName || 'Admin User',
           });
         }
       } catch {}
