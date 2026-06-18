@@ -54,6 +54,7 @@ function HomeContent() {
   const { filteredOpportunities: opportunities, isLoading, filters, setFilters } = useOpportunities();
   const { data: session } = useSession();
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+  const [expandedNudge, setExpandedNudge] = useState<any>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [homeView, setHomeView] = useState<'myday' | 'dashboard'>('myday');
   const { data: activities = [] } = trpc.activity.list.useQuery();
@@ -334,16 +335,49 @@ function HomeContent() {
           </div>
 
           {/* Pilot Nudges — AI-detected insights */}
-          {pilotInsights && pilotInsights.nudges.length > 0 && (
+          {pilotInsights && pilotInsights.nudges.length > 0 && (<>
             <PilotNudges
               nudges={pilotInsights.nudges}
               isLoading={pilotLoading}
               onNudgeClick={(nudge) => {
-                if (nudge.dealIds?.[0]) setSelectedOppId(nudge.dealIds[0]);
+                if (nudge.dealIds?.length === 1) {
+                  setSelectedOppId(nudge.dealIds[0]);
+                } else {
+                  setExpandedNudge(expandedNudge?.id === nudge.id ? null : nudge);
+                }
               }}
               onRefresh={refreshPilot}
             />
-          )}
+            {/* Expanded nudge — show all affected deals */}
+            {expandedNudge && expandedNudge.dealIds?.length > 0 && (
+              <div className="g-surface g-elevated p-4 rounded-xl space-y-2 animate-flow-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground">{expandedNudge.title}</span>
+                  <button onClick={() => setExpandedNudge(null)} className="text-[10px] text-muted-foreground hover:text-foreground">Close</button>
+                </div>
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {expandedNudge.dealIds.map((dealId: string) => {
+                    const deal = opportunities.find((o: any) => o.id === dealId);
+                    if (!deal) return null;
+                    return (
+                      <button key={dealId} onClick={() => { setSelectedOppId(dealId); setExpandedNudge(null); }}
+                        className="w-full flex items-center justify-between p-2.5 rounded-lg border border-border bg-card hover:border-[#7c3aed]/30 transition-all text-left text-xs">
+                        <div>
+                          <div className="font-medium text-foreground">{deal.customerName}</div>
+                          <div className="text-[10px] text-muted-foreground">{deal.opportunityName}</div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {deal.tcv > 0 && <span className="font-bold text-foreground">${(deal.tcv / 1000).toFixed(0)}k</span>}
+                          <span className="text-[10px] text-muted-foreground">{deal.status}</span>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>)}
 
           {/* AI Daily Brief — Timeline of deal stories */}
           <div>
