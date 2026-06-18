@@ -17,6 +17,7 @@ import { DealDetail } from '@/components/modals/DealDetail';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 import PilotNudges from '@/components/ai/PilotNudges';
+import SignalCards from '@/components/ai/SignalCards';
 import { usePipelineInsight } from '@/lib/intelligence/useInsight';
 
 function getRelativeTime(date: Date): string {
@@ -333,6 +334,9 @@ function HomeContent() {
               </div>
             </div>
           </div>
+
+          {/* Incoming Signals — Teams/Outlook alerts with Accept/Dismiss */}
+          <SignalCards onOpenDeal={(dealId) => setSelectedOppId(dealId)} />
 
           {/* Pilot Nudges — AI-detected insights */}
           {pilotInsights && pilotInsights.nudges.length > 0 && (<>

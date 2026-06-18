@@ -71,13 +71,26 @@ Be specific to THIS deal. Reference actual stakeholder names, dates, and data po
   const text = response.content[0].type === 'text' ? response.content[0].text : '';
 
   try {
-    // Try to parse the JSON response
+    // Try to parse the JSON response — extract JSON object even if surrounded by text
     const cleaned = text
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '')
       .trim();
-    const analysis = JSON.parse(cleaned) as DealAnalysis;
+
+    // First try direct parse, then regex extraction
+    let analysis: DealAnalysis;
+    try {
+      analysis = JSON.parse(cleaned) as DealAnalysis;
+    } catch {
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON found');
+      analysis = JSON.parse(jsonMatch[0]) as DealAnalysis;
+    }
+
     analysis.generatedAt = new Date().toISOString();
+    // Ensure numeric fields are numbers
+    analysis.healthScore = Number(analysis.healthScore) || 50;
+    analysis.winProbability = Number(analysis.winProbability) || 30;
     return analysis;
   } catch {
     // Fallback if parsing fails
@@ -87,7 +100,7 @@ Be specific to THIS deal. Reference actual stakeholder names, dates, and data po
       risks: [
         {
           type: 'parse_error',
-          message: 'AI analysis could not be parsed. Raw: ' + text.slice(0, 200),
+          message: 'AI analysis could not be parsed. Please refresh to retry.',
           severity: 'low',
         },
       ],
