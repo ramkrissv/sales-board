@@ -352,35 +352,77 @@ function HomeContent() {
               }}
               onRefresh={refreshPilot}
             />
-            {/* Expanded nudge — show all affected deals */}
-            {expandedNudge && expandedNudge.dealIds?.length > 0 && (
-              <div className="g-surface g-elevated p-4 rounded-xl space-y-2 animate-flow-in">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-foreground">{expandedNudge.title}</span>
-                  <button onClick={() => setExpandedNudge(null)} className="text-[10px] text-muted-foreground hover:text-foreground">Close</button>
+            {/* Expanded nudge — show all affected deals with fix-one-by-one flow */}
+            {expandedNudge && (() => {
+              // Resolve deals from dealIds, falling back to matching by nudge criteria
+              let nudgeDeals = (expandedNudge.dealIds || [])
+                .map((dealId: string) => opportunities.find((o: any) => o.id === dealId))
+                .filter(Boolean);
+
+              // Fallback: if dealIds didn't resolve, match by nudge type
+              if (nudgeDeals.length === 0) {
+                const nudgeId = expandedNudge.id || '';
+                if (nudgeId.includes('missing_dm') || expandedNudge.title?.includes('missing decision maker')) {
+                  nudgeDeals = activeDeals.filter(d => !(d.customerStakeholders || []).some((s: any) => s.isDecisionMaker));
+                } else if (nudgeId.includes('zero_tcv') || expandedNudge.title?.includes('$0 TCV')) {
+                  nudgeDeals = activeDeals.filter(d => !d.tcv || d.tcv === 0);
+                } else if (nudgeId.includes('ready_to_close') || expandedNudge.title?.includes('ready to close')) {
+                  nudgeDeals = opportunities.filter(d => d.status === 'Negotiation');
+                } else if (nudgeId.includes('no_margin') || expandedNudge.title?.includes('without margin')) {
+                  nudgeDeals = activeDeals.filter(d => ['Proposal', 'Solutioning'].includes(d.status) && (!d.margin || d.margin === 0));
+                } else if (nudgeId.includes('stale') || expandedNudge.title?.includes('stale')) {
+                  nudgeDeals = activeDeals.filter(d => {
+                    const age = (Date.now() - new Date(d.updatedAt || d.createdAt || d.expectedCloseDate).getTime()) / 86400000;
+                    return age > 14;
+                  });
+                } else if (nudgeId.includes('overdue') || expandedNudge.title?.includes('overdue')) {
+                  nudgeDeals = activeDeals.filter(d => (d.subTasks || []).some((t: any) => t.status === 'pending' && new Date(t.dueDate) < new Date()));
+                } else {
+                  nudgeDeals = activeDeals; // last fallback
+                }
+              }
+
+              return nudgeDeals.length > 0 ? (
+                <div className="g-surface g-elevated p-4 rounded-xl space-y-3 animate-flow-in">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-semibold text-foreground">{expandedNudge.title}</span>
+                      <span className="text-[10px] text-muted-foreground ml-2">Click a deal to fix →</span>
+                    </div>
+                    <button onClick={() => setExpandedNudge(null)} className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-secondary">Close</button>
+                  </div>
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                    {nudgeDeals.map((deal: any) => {
+                      const stakeholders = deal.customerStakeholders || [];
+                      const hasDM = stakeholders.some((s: any) => s.isDecisionMaker);
+                      const overdue = (deal.subTasks || []).filter((t: any) => t.status === 'pending' && new Date(t.dueDate) < new Date()).length;
+
+                      return (
+                        <button key={deal.id} onClick={() => { setSelectedOppId(deal.id); }}
+                          className="w-full flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:border-[#7c3aed]/30 hover:bg-[#7c3aed]/5 transition-all text-left text-xs group">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-foreground">{deal.customerName}</div>
+                            <div className="text-[10px] text-muted-foreground truncate">{deal.opportunityName}</div>
+                            {/* Quick status hints */}
+                            <div className="flex gap-1.5 mt-1 flex-wrap">
+                              {!hasDM && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400">No DM</span>}
+                              {(!deal.tcv || deal.tcv === 0) && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400">$0 TCV</span>}
+                              {overdue > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">{overdue} overdue</span>}
+                              {deal.margin === 0 && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400">No margin</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                            {deal.tcv > 0 && <span className="font-bold text-foreground">${(deal.tcv / 1000).toFixed(0)}k</span>}
+                            <span className="text-[10px] text-muted-foreground">{deal.status}</span>
+                            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-[#7c3aed] group-hover:translate-x-0.5 transition-all" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {expandedNudge.dealIds.map((dealId: string) => {
-                    const deal = opportunities.find((o: any) => o.id === dealId);
-                    if (!deal) return null;
-                    return (
-                      <button key={dealId} onClick={() => { setSelectedOppId(dealId); setExpandedNudge(null); }}
-                        className="w-full flex items-center justify-between p-2.5 rounded-lg border border-border bg-card hover:border-[#7c3aed]/30 transition-all text-left text-xs">
-                        <div>
-                          <div className="font-medium text-foreground">{deal.customerName}</div>
-                          <div className="text-[10px] text-muted-foreground">{deal.opportunityName}</div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {deal.tcv > 0 && <span className="font-bold text-foreground">${(deal.tcv / 1000).toFixed(0)}k</span>}
-                          <span className="text-[10px] text-muted-foreground">{deal.status}</span>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+              ) : null;
+            })()}
           </>)}
 
           {/* AI Daily Brief — Timeline of deal stories */}
