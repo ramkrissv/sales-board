@@ -15,7 +15,7 @@ function TasksContent() {
   const utils = trpc.useUtils();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'complete' | 'overdue'>('all');
-  const [ownerFilter, setOwnerFilter] = useState<'all' | 'my' | string>('all');
+  const [ownerFilter, setOwnerFilter] = useState<'all' | 'my' | string>('my');
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTask, setNewTask] = useState({ name: '', owner: '', dueDate: '', priority: 'Medium', oppId: '' });

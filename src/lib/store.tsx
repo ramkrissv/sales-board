@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { trpc } from '@/lib/trpc/client';
 import type { Opportunity, Status } from './types';
 
@@ -29,6 +30,7 @@ interface OpportunityContextType {
 const OpportunityContext = createContext<OpportunityContextType | undefined>(undefined);
 
 export function OpportunityProvider({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession();
   const [filters, setFilters] = useState<FilterState>({
     status: [],
     primaryOwner: [],
@@ -38,8 +40,17 @@ export function OpportunityProvider({ children }: { children: React.ReactNode })
     scope: 'org',
   });
 
+  // Auto-set scopeOwner from session
+  useEffect(() => {
+    if (session?.user?.name && !filters.scopeOwner) {
+      setFilters(prev => ({ ...prev, scopeOwner: session.user?.name || '' }));
+    }
+  }, [session?.user?.name]); // eslint-disable-line
+
   const utils = trpc.useUtils();
-  const { data: opportunities = [], isLoading } = trpc.opportunity.list.useQuery();
+  const { data: opportunities = [], isLoading } = trpc.opportunity.list.useQuery(
+    filters.scope === 'my' ? { scope: 'my', owner: filters.scopeOwner } : undefined
+  );
 
   const createMutation = trpc.opportunity.create.useMutation({
     onSuccess: () => {

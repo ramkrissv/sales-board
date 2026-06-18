@@ -107,9 +107,32 @@ const updateOpportunitySchema = createOpportunitySchema.partial().extend({
 });
 
 export const opportunityRouter = router({
-  list: protectedProcedure.query(async () => {
+  list: protectedProcedure
+    .input(z.object({
+      scope: z.enum(['my', 'team', 'org']).optional(),
+      owner: z.string().optional(),
+    }).optional())
+    .query(async ({ input, ctx }) => {
     await connectDB();
-    const opportunities = await Opportunity.find().sort({ createdAt: -1 }).lean();
+
+    // Server-side visibility scoping
+    const filter: any = {};
+    const scope = input?.scope || 'org';
+    if (scope === 'my') {
+      const ownerName = input?.owner || ctx.userName || '';
+      if (ownerName) {
+        filter.$or = [
+          { primaryOwner: ownerName },
+          { primaryOwner: { $regex: new RegExp(ownerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') } },
+          { salesPOCs: ownerName },
+          { presalesPOCs: ownerName },
+          { createdBy: ctx.userId },
+        ];
+      }
+    }
+    // 'team' and 'org' return all for now (team filtering requires team membership data)
+
+    const opportunities = await Opportunity.find(filter).sort({ createdAt: -1 }).lean();
 
     const enriched = await Promise.all(
       opportunities.map((opp) => enrichOpportunity(opp))
@@ -137,15 +160,15 @@ export const opportunityRouter = router({
 
   create: protectedProcedure
     .input(createOpportunitySchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       await connectDB();
       const now = new Date();
       const opportunity = await Opportunity.create({
         ...input,
         expectedCloseDate: new Date(input.expectedCloseDate),
         startDate: new Date(input.startDate),
-        createdBy: 'admin@galent.com',
-        updatedBy: 'admin@galent.com',
+        createdBy: ctx.userName || ctx.userId || 'admin@galent.com',
+        updatedBy: ctx.userName || ctx.userId || 'admin@galent.com',
       });
 
       const plain = opportunity.toObject();
@@ -175,7 +198,7 @@ export const opportunityRouter = router({
           await Activity.create({
             type: 'deal_created', entityType: 'opportunity', entityId: plain.id,
             entityName: plain.customerName, description: `New deal created: ${plain.opportunityName}`,
-            userName: 'Admin User',
+            userName: ctx.userName || 'Admin User',
           });
         }
       } catch {}
@@ -197,7 +220,7 @@ export const opportunityRouter = router({
 
   update: protectedProcedure
     .input(updateOpportunitySchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       await connectDB();
       const { id, ...updates } = input;
 
@@ -277,7 +300,7 @@ export const opportunityRouter = router({
               type: input.status ? 'stage_change' : 'deal_updated', entityType: 'opportunity',
               entityId: input.id, entityName: (oppById as any)?.customerName || input.id,
               description: input.status ? `Stage changed to ${input.status}` : `Updated: ${changes}`,
-              userName: 'Admin User',
+              userName: ctx.userName || 'Admin User',
             });
           }
         } catch {}
@@ -321,7 +344,7 @@ export const opportunityRouter = router({
             type: input.status ? 'stage_change' : 'deal_updated', entityType: 'opportunity',
             entityId: input.id, entityName: (opportunity as any)?.customerName || input.id,
             description: input.status ? `Stage changed to ${input.status}` : `Updated: ${changes}`,
-            userName: 'Admin User',
+            userName: ctx.userName || 'Admin User',
           });
         }
       } catch {}
@@ -387,7 +410,7 @@ export const opportunityRouter = router({
         margin: z.number().optional(),
       }))
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       await connectDB();
       const year = new Date().getFullYear();
 
@@ -409,7 +432,7 @@ export const opportunityRouter = router({
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       await connectDB();
       const oppId = input.id;
 
@@ -437,7 +460,7 @@ export const opportunityRouter = router({
           await Activity.create({
             type: 'deal_deleted', entityType: 'opportunity', entityId: input.id,
             entityName: input.id, description: `Deal deleted`,
-            userName: 'Admin User',
+            userName: ctx.userName || 'Admin User',
           });
         }
       } catch {}

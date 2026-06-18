@@ -1411,11 +1411,54 @@ function DealPresalesTab({ opportunity, onSwitchTab }: { opportunity: any; onSwi
     }
   };
 
+  // Lifecycle phase detection
+  const hasStakeholders = stakeholders.length > 0;
+  const hasTasks = tasks.length > 0;
+  const proposalCount = Object.keys(proposalSections).filter(k => proposalSections[k] && proposalSections[k] !== '..generating..').length;
+  const hasMargin = opportunity.margin && opportunity.margin > 0;
+
+  const lifecycleSteps = [
+    { id: 'rfp', label: 'RFP / Discovery', done: hasStakeholders, desc: `${stakeholders.length} stakeholders mapped` },
+    { id: 'proposal', label: 'Proposal', done: proposalCount >= 3, desc: `${proposalCount}/${SECTIONS.length} sections drafted` },
+    { id: 'pricing', label: 'Pricing', done: hasMargin, desc: hasMargin ? `${opportunity.margin}% margin` : 'Set margin & pricing' },
+    { id: 'solutioning', label: 'Solutioning', done: proposalCount >= 6, desc: proposalCount >= 6 ? 'Technical approach ready' : 'Draft approach & team' },
+    { id: 'contracts', label: 'Contracts', done: opportunity.status === 'Won', desc: opportunity.status === 'Negotiation' ? 'Ready for contracting' : 'Awaiting stage' },
+  ];
+  const completedPhases = lifecycleSteps.filter(s => s.done).length;
+
   return (
     <div className="space-y-4">
-      {/* Deal lifecycle flow indicator */}
+      {/* Connected Presales Lifecycle Flow */}
+      <div className="p-3 rounded-xl bg-card border border-border">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold text-foreground">Presales Lifecycle</span>
+          <span className="text-[10px] text-muted-foreground">{completedPhases}/{lifecycleSteps.length} phases</span>
+        </div>
+        <div className="flex items-center gap-0">
+          {lifecycleSteps.map((step, i) => (
+            <div key={step.id} className="flex-1 flex items-center">
+              <div className="flex flex-col items-center flex-1">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${
+                  step.done ? 'bg-emerald-500 text-white' : 'bg-secondary text-muted-foreground'
+                }`}>
+                  {step.done ? '✓' : i + 1}
+                </div>
+                <span className={`text-[9px] mt-1 text-center leading-tight ${step.done ? 'text-emerald-400 font-medium' : 'text-muted-foreground'}`}>
+                  {step.label}
+                </span>
+                <span className="text-[8px] text-muted-foreground mt-0.5 text-center">{step.desc}</span>
+              </div>
+              {i < lifecycleSteps.length - 1 && (
+                <div className={`h-px w-full mx-0.5 ${step.done ? 'bg-emerald-500' : 'bg-border'}`} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab switcher */}
       <div className="flex items-center gap-1 text-[10px]">
-        {['Presales', 'Pricing', 'Contracts'].map((step, i) => (
+        {['Presales', 'Pricing', 'Contracts'].map((step) => (
           <button key={step} onClick={() => onSwitchTab?.(step.toLowerCase())}
             className={`flex-1 py-1.5 rounded-lg text-center font-medium transition-colors ${
               step === 'Presales' ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
@@ -1432,17 +1475,17 @@ function DealPresalesTab({ opportunity, onSwitchTab }: { opportunity: any; onSwi
         </Link>
       </div>
 
-      {/* Stage readiness */}
+      {/* Proposal readiness */}
       <div className="p-3 rounded-lg bg-card border border-border">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-foreground">Proposal Readiness</span>
           <span className="text-xs text-muted-foreground">
-            {Object.keys(proposalSections).length}/{SECTIONS.length} sections
+            {proposalCount}/{SECTIONS.length} sections
           </span>
         </div>
         <div className="h-2 rounded-full bg-secondary overflow-hidden">
           <div className="h-full rounded-full bg-[#7c3aed] transition-all"
-            style={{ width: `${(Object.keys(proposalSections).length / SECTIONS.length) * 100}%` }} />
+            style={{ width: `${(proposalCount / SECTIONS.length) * 100}%` }} />
         </div>
       </div>
 
