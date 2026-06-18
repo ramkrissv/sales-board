@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 // Inline schema to avoid import issues
 const SettingsSchema = new mongoose.Schema({
   userId: { type: String, required: true, unique: true },
-  aiModel: { type: String, default: 'claude-sonnet-4-6-20250610' },
+  aiModel: { type: String, default: 'claude-sonnet-4-6' },
   guardrails: {
     requireApproval: { type: Boolean, default: true },
     logActions: { type: Boolean, default: true },

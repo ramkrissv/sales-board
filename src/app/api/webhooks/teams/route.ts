@@ -56,7 +56,7 @@ async function processSignal(text: string, senderName: string, source: string) {
   try {
     const client = getAnthropicClient();
     const r = await client.messages.create({
-      model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610',
+      model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages: [{ role: 'user', content: `Analyze this ${source} message for sales signals.\n\nFrom: ${senderName}\nMessage: ${text}\n\nDeals:\n${dealList || 'None'}\n\nReturn JSON only:\n{"matchedDealId":"id or null","matchedDealName":"name or null","customerName":"company","intent":"deal_update|meeting_notes|follow_up|question|general","sentiment":"positive|neutral|negative","actionItems":["item1"],"summary":"1-2 sentences","urgency":"high|medium|low"}` }],
     });

@@ -153,7 +153,7 @@ export async function runAgent(
   maxSteps: number = 5
 ): Promise<AgentRun> {
   const client = getAnthropicClient();
-  const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610';
+  const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6';
   const startedAt = new Date().toISOString();
 
   const run: AgentRun = {

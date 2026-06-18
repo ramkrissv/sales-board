@@ -140,7 +140,7 @@ export const leadRouter = router({
       const client = getAnthropicClient();
 
       const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610',
+        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
         max_tokens: 512,
         messages: [{ role: 'user', content: `Score this sales lead for qualification. Company: ${lead.company}, Contact: ${lead.contactName} (${lead.contactTitle}), Industry: ${lead.industry || 'Unknown'}, Product Interest: ${lead.productInterest.join(', ') || 'None'}, Service Interest: ${lead.serviceInterest.join(', ') || 'None'}, Source: ${lead.source}, Type: ${lead.type}. Respond with ONLY JSON: {"icpFit": <0-100>, "budgetSignal": <0-100>, "timing": <0-100>, "overallScore": <0-100>, "reasoning": "<2 sentences>"}` }],
       });
@@ -177,7 +177,7 @@ export const leadRouter = router({
       const client = getAnthropicClient();
 
       const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610',
+        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
         max_tokens: 512,
         messages: [{ role: 'user', content: `Enrich this company profile for sales purposes. Company: ${lead.company}, Contact: ${lead.contactName} (${lead.contactTitle}), Industry: ${lead.industry || 'Unknown'}, Website: ${lead.website || 'Unknown'}. Generate realistic enrichment data. Respond with ONLY JSON: {"industry": "<industry>", "employeeCount": <number>, "annualRevenue": <number in USD>, "techStack": ["<tech1>", "<tech2>", "<tech3>"]}` }],
       });
@@ -208,7 +208,7 @@ export const leadRouter = router({
       const client = getAnthropicClient();
 
       const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610',
+        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
         max_tokens: 512,
         messages: [{ role: 'user', content: `Draft a personalized sales outreach email for: Company: ${lead.company}, Contact: ${lead.contactName} (${lead.contactTitle}), Email: ${lead.contactEmail}, Interest: ${[...lead.productInterest, ...lead.serviceInterest].join(', ')}, Industry: ${lead.industry || 'their industry'}. The email should be from Galent, a sales intelligence and IT services company. Be professional, concise (under 150 words), and include a specific value proposition. Don't use generic templates. Return ONLY the email body text, no subject line.` }],
       });
@@ -304,7 +304,7 @@ export const leadRouter = router({
 
         try {
           const response = await client.messages.create({
-            model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6-20250610',
+            model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
             max_tokens: 512,
             messages: [{ role: 'user', content: `Score this sales lead for qualification. Company: ${lead.company}, Contact: ${lead.contactName} (${lead.contactTitle}), Industry: ${lead.industry || 'Unknown'}, Product Interest: ${lead.productInterest.join(', ') || 'None'}, Service Interest: ${lead.serviceInterest.join(', ') || 'None'}, Source: ${lead.source}, Type: ${lead.type}. Respond with ONLY JSON: {"icpFit": <0-100>, "budgetSignal": <0-100>, "timing": <0-100>, "overallScore": <0-100>, "reasoning": "<2 sentences>"}` }],
           });
