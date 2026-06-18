@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SalesPilot</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #fff; color: #1a1a2e; font-size: 13px; padding: 16px; }
+    .header { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; margin-bottom: 16px; }
+    .logo { width: 32px; height: 32px; border-radius: 8px; background: #7c3aed; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; }
+    .title { font-weight: 700; font-size: 14px; }
+    .subtitle { font-size: 11px; color: #999; }
+    .card { padding: 12px; border-radius: 10px; background: #f8f9fc; border: 1px solid #e5e7eb; margin-bottom: 12px; }
+    .card-label { font-size: 11px; font-weight: 600; color: #7c3aed; margin-bottom: 6px; }
+    .card-title { font-size: 13px; font-weight: 600; }
+    .card-sub { font-size: 11px; color: #666; margin-top: 2px; }
+    .card-body { font-size: 11px; color: #888; margin-top: 6px; max-height: 80px; overflow: hidden; }
+    input, textarea { width: 100%; padding: 10px 12px; font-size: 13px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; color: #1a1a2e; outline: none; margin-bottom: 8px; font-family: inherit; }
+    textarea { resize: vertical; }
+    input:focus, textarea:focus { border-color: #7c3aed; }
+    .btn-primary { width: 100%; padding: 12px; border-radius: 10px; border: none; cursor: pointer; background: #7c3aed; color: white; font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
+    .btn-primary:disabled { opacity: 0.5; cursor: default; }
+    .btn-primary:hover:not(:disabled) { background: #6d28d9; }
+    .btn-row { display: flex; gap: 6px; margin-bottom: 12px; }
+    .btn-secondary { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; cursor: pointer; background: #fff; font-size: 12px; font-weight: 500; font-family: inherit; }
+    .btn-secondary:hover { background: #f8f9fc; }
+    .badge { display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 12px; font-weight: 600; margin-right: 4px; margin-bottom: 4px; }
+    .result-card { padding: 12px; border-radius: 10px; border: 1px solid; margin-bottom: 10px; }
+    .action-item { display: flex; align-items: flex-start; gap: 6px; padding: 4px 0; font-size: 12px; }
+    .spinner { width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top-color: #7c3aed; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .center { text-align: center; padding: 24px; }
+    a { color: #7c3aed; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .link-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 12px; font-weight: 500; color: #7c3aed; margin-bottom: 8px; }
+    .section-label { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    #status-msg { font-size: 11px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">S</div>
+    <div>
+      <div class="title">SalesPilot</div>
+      <div class="subtitle">AI Signal Capture</div>
+    </div>
+  </div>
+
+  <div id="email-card" style="display:none">
+    <div class="card">
+      <div class="card-label">📧 Email Detected</div>
+      <div class="card-title" id="email-subject"></div>
+      <div class="card-sub" id="email-from"></div>
+      <div class="card-sub" id="email-to"></div>
+      <div class="card-body" id="email-body-preview"></div>
+    </div>
+  </div>
+
+  <div id="manual-form">
+    <input type="text" id="subject" placeholder="Subject">
+    <input type="text" id="from" placeholder="From (email)">
+    <textarea id="body" rows="5" placeholder="Paste email content or key notes..."></textarea>
+  </div>
+
+  <div id="actions">
+    <button class="btn-primary" id="btn-capture" onclick="capture()">⚡ Capture Signal & Process with AI</button>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="capture('[Flag: follow-up]')">→ Follow-up</button>
+      <button class="btn-secondary" onclick="capture('[Flag: meeting notes]')">📝 Meeting Notes</button>
+    </div>
+  </div>
+
+  <div id="loading" style="display:none" class="center">
+    <div class="spinner"></div>
+    <p style="color:#666;margin-top:12px">AI is analyzing...</p>
+    <p style="color:#999;font-size:11px;margin-top:4px">Matching to deals, extracting signals</p>
+  </div>
+
+  <div id="results" style="display:none"></div>
+
+  <p id="status-msg"></p>
+
+  <script>
+    var emailData = { subject: '', from: '', to: '', body: '' };
+
+    // Try Office.js auto-capture
+    if (window.Office) {
+      Office.onReady(function() {
+        try {
+          var item = Office.context.mailbox.item;
+          if (item) {
+            emailData.subject = item.subject || '';
+            emailData.from = item.from ? item.from.emailAddress : (item.sender ? item.sender.emailAddress : '');
+            emailData.to = item.to ? item.to.map(function(t) { return t.emailAddress; }).join(', ') : '';
+
+            item.body.getAsync('text', function(result) {
+              if (result.status === Office.AsyncResultStatus.Succeeded) {
+                emailData.body = (result.value || '').substring(0, 3000);
+              }
+              showEmailCard();
+            });
+            return;
+          }
+        } catch(e) {}
+        showManualForm();
+      });
+    } else {
+      showManualForm();
+    }
+
+    function showEmailCard() {
+      if (emailData.subject) {
+        document.getElementById('email-subject').textContent = emailData.subject;
+        document.getElementById('email-from').textContent = 'From: ' + emailData.from;
+        document.getElementById('email-to').textContent = emailData.to ? 'To: ' + emailData.to : '';
+        document.getElementById('email-body-preview').textContent = emailData.body.substring(0, 200) + '...';
+        document.getElementById('email-card').style.display = 'block';
+        document.getElementById('manual-form').style.display = 'none';
+      } else {
+        showManualForm();
+      }
+    }
+
+    function showManualForm() {
+      document.getElementById('manual-form').style.display = 'block';
+      document.getElementById('email-card').style.display = 'none';
+    }
+
+    function capture(extra) {
+      // Read from form if manual
+      if (document.getElementById('manual-form').style.display !== 'none') {
+        emailData.subject = document.getElementById('subject').value;
+        emailData.from = document.getElementById('from').value;
+        emailData.body = document.getElementById('body').value;
+      }
+
+      if (!emailData.subject && !emailData.body) {
+        document.getElementById('status-msg').textContent = 'Please enter email content';
+        document.getElementById('status-msg').style.color = '#ef4444';
+        return;
+      }
+
+      var payload = JSON.parse(JSON.stringify(emailData));
+      if (extra) payload.body = (payload.body || '') + '\n' + extra;
+
+      document.getElementById('actions').style.display = 'none';
+      document.getElementById('email-card').style.display = 'none';
+      document.getElementById('manual-form').style.display = 'none';
+      document.getElementById('loading').style.display = 'block';
+
+      fetch('/api/webhooks/outlook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        document.getElementById('loading').style.display = 'none';
+        if (data.success) {
+          showResults(data.result);
+        } else {
+          showError();
+        }
+      })
+      .catch(function() {
+        document.getElementById('loading').style.display = 'none';
+        showError();
+      });
+    }
+
+    function showResults(r) {
+      var html = '<div style="display:flex;align-items:center;gap:6px;color:#22c55e;font-weight:600;margin-bottom:12px">✅ Signal Captured</div>';
+
+      if (r.matched && r.dealName) {
+        html += '<div class="result-card" style="background:#7c3aed08;border-color:#7c3aed30"><div class="section-label" style="color:#7c3aed">Deal Match</div><div style="font-size:14px;font-weight:700">' + r.dealName + '</div></div>';
+      } else {
+        html += '<div class="result-card" style="background:#f59e0b10;border-color:#f59e0b30;font-size:11px;color:#f59e0b;font-weight:600">No deal match — logged as new signal</div>';
+      }
+
+      if (r.summary) html += '<p style="font-size:12px;color:#444;line-height:1.6;margin-bottom:10px">' + r.summary + '</p>';
+
+      html += '<div style="margin-bottom:10px">';
+      if (r.intent) html += '<span class="badge" style="background:#3b82f610;color:#3b82f6">' + r.intent.replace('_',' ') + '</span>';
+      if (r.sentiment) {
+        var sc = r.sentiment === 'positive' ? '#22c55e' : r.sentiment === 'negative' ? '#ef4444' : '#3b82f6';
+        html += '<span class="badge" style="background:' + sc + '10;color:' + sc + '">' + r.sentiment + '</span>';
+      }
+      if (r.urgency) {
+        var uc = r.urgency === 'high' ? '#ef4444' : r.urgency === 'medium' ? '#f59e0b' : '#999';
+        html += '<span class="badge" style="background:' + uc + '10;color:' + uc + '">' + r.urgency + '</span>';
+      }
+      if (r.tasksCreated > 0) html += '<span class="badge" style="background:#22c55e10;color:#22c55e">' + r.tasksCreated + ' tasks</span>';
+      html += '</div>';
+
+      if (r.actionItems && r.actionItems.length > 0) {
+        html += '<div class="section-label">Action Items</div>';
+        r.actionItems.forEach(function(a) {
+          html += '<div class="action-item"><span style="color:#7c3aed">→</span> ' + a + '</div>';
+        });
+        html += '<br>';
+      }
+
+      html += '<a href="https://salespilot.galent.ai" target="_blank" class="link-btn">🔗 Open in SalesPilot</a>';
+      html += '<div style="text-align:center"><a href="#" onclick="reset();return false" style="font-size:11px;color:#999">Capture another email</a></div>';
+
+      document.getElementById('results').innerHTML = html;
+      document.getElementById('results').style.display = 'block';
+    }
+
+    function showError() {
+      document.getElementById('results').innerHTML = '<div class="center"><div style="font-size:24px">⚠️</div><p style="color:#ef4444;margin-top:8px">Failed to process</p><a href="#" onclick="reset();return false" style="font-size:12px">Try again</a></div>';
+      document.getElementById('results').style.display = 'block';
+    }
+
+    function reset() {
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('actions').style.display = 'block';
+      if (emailData.subject) showEmailCard();
+      else showManualForm();
+    }
+  </script>
+</body>
+</html>

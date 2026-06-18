@@ -29,7 +29,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://salespilot.galent.ai/plugins/outlook/taskpane"/>
+        <SourceLocation DefaultValue="https://salespilot.galent.ai/plugins/outlook/taskpane.html"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -112,7 +112,7 @@
         <bt:Image id="icon80" DefaultValue="https://salespilot.galent.ai/plugins/outlook/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="taskpaneUrl" DefaultValue="https://salespilot.galent.ai/plugins/outlook/taskpane"/>
+        <bt:Url id="taskpaneUrl" DefaultValue="https://salespilot.galent.ai/plugins/outlook/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="SalesPilot"/>
