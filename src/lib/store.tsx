@@ -37,10 +37,10 @@ export function OpportunityProvider({ children }: { children: React.ReactNode })
     industry: [],
     region: [],
     search: '',
-    scope: 'my',
+    scope: 'org',
   });
 
-  // Auto-set scopeOwner from session and ensure scope works
+  // Auto-set scopeOwner from session
   useEffect(() => {
     if (session?.user?.name && !filters.scopeOwner) {
       setFilters(prev => ({ ...prev, scopeOwner: session.user?.name || '' }));
@@ -48,11 +48,9 @@ export function OpportunityProvider({ children }: { children: React.ReactNode })
   }, [session?.user?.name]); // eslint-disable-line
 
   const utils = trpc.useUtils();
-  // Only send scope='my' if we have an owner name; otherwise fall back to org to avoid empty results
-  const effectiveScope = filters.scope === 'my' && filters.scopeOwner ? 'my' : filters.scope === 'my' ? 'org' : filters.scope;
-  const { data: opportunities = [], isLoading } = trpc.opportunity.list.useQuery(
-    effectiveScope === 'my' ? { scope: 'my', owner: filters.scopeOwner } : undefined
-  );
+  // Always fetch all deals from server — client-side filtering handles "my" scope
+  // This avoids empty boards when user name doesn't match any primaryOwner
+  const { data: opportunities = [], isLoading } = trpc.opportunity.list.useQuery();
 
   const createMutation = trpc.opportunity.create.useMutation({
     onSuccess: () => {

@@ -191,9 +191,11 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
 
     <h3>SalesPilot Intelligence (Ambient AI)</h3>
     <ul>
-      <li><strong>Pilot Nudges</strong> (Home → My Day) — AI-detected risk/opportunity cards: stale deals, missing DMs, ready-to-close, $0 TCV, ageing hotspots, proposals without margin.</li>
-      <li><strong>Pilot Actions</strong> (Deal Detail → below tabs) — Stage-aware agent buttons: Research Account, Draft Proposal, Coach Me, Competitive Intel, Draft Follow-up, Next Steps.</li>
-      <li><strong>Agent Workflows</strong> (Deal Detail + Agents page) — Composable multi-agent pipelines: Deal Deep Dive, Proposal Accelerator, Pipeline Health, Lead Enrichment, Deal Rescue, Growth Play.</li>
+      <li><strong>Pilot Nudges</strong> (Home → My Day) — AI-detected risk/opportunity cards: stale deals, missing DMs, ready-to-close, $0 TCV, ageing hotspots, proposals without margin. Click to expand full deal list with fix hints, click any deal to fix.</li>
+      <li><strong>Signal Cards</strong> (Home → My Day) — Prominent Teams/Outlook signal cards with Accept/Dismiss. Accept triggers GenUI process view showing step-by-step: Signal → Match → Tasks → Graph → Open Deal.</li>
+      <li><strong>Pilot Actions</strong> (Deal Detail → above content) — Stage-aware agent buttons: Research Account, Draft Proposal, Coach Me, Competitive Intel, Draft Follow-up, Next Steps.</li>
+      <li><strong>Agent Workflows</strong> (Deal Detail → below content) — Stage-aware multi-agent pipelines with "Suggested" badge. Discovery → Lead Enrichment, Proposal → Proposal Accelerator, Negotiation → Deal Rescue, Won → Growth Play.</li>
+      <li><strong>AI Create</strong> (New Opportunity) — Describe a deal in natural language, AI extracts all fields (customer, name, TCV, industry, stage). Also works with signal-driven creation.</li>
       <li><strong>Pilot Forecast Brief</strong> (Forecasting page → top) — AI commit confidence %, slip risk analysis.</li>
       <li><strong>Pilot Priorities</strong> (Tasks page → top) — AI-ranked top 5 tasks by urgency score.</li>
       <li><strong>Pipeline Insight Bar</strong> (Pipeline Board → top) — Collapsible AI insight bar with risk/action counts.</li>
@@ -223,22 +225,40 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
 
     <h3>Plugins & Integrations</h3>
     <ul>
-      <li><strong>Outlook Add-in</strong> — Native sidebar in Outlook. Auto-reads email (subject, from, body). One-click "Capture Signal & Process with AI". Shows deal match, action items, tasks created. Quick actions: Follow-up, Meeting Notes. Deployed via admin.microsoft.com.</li>
-      <li><strong>Teams Bot</strong> — Native Teams bot. @mention or DM the bot with meeting notes, deal updates, or client conversations. Bot replies with Adaptive Cards showing deal match, signals, Accept/Dismiss buttons. Compose extension to search and share deal cards. Proactive alerts for deal changes.</li>
-      <li><strong>Actionable Notifications</strong> — Signals from Teams/Outlook show in notifications with Accept/Dismiss buttons. Accept: logs signal to deal or creates new opportunity. Source badges (Teams/Outlook), intent, urgency, deal match indicators.</li>
+      <li><strong>Outlook Add-in</strong> — Native sidebar in Outlook. Auto-reads email (subject, from, body). One-click "Capture Signal & Process with AI". Shows deal match, action items, tasks created. Signals appear as cards on Home page with Accept/Dismiss. Deployed via admin.microsoft.com.</li>
+      <li><strong>Teams Bot</strong> — Native Teams bot. @mention or DM the bot with meeting notes, deal updates, or client conversations. AI processes messages, extracts signals, matches deals, creates tasks, updates knowledge graph. Compose extension to search and share deal cards.</li>
+      <li><strong>Signal Cards</strong> — Signals from Teams/Outlook show prominently on Home page AND in notification bell. Accept triggers full GenUI process view: Signal Captured → Deal Matched → Tasks Created → Graph Updated → Open Deal. Accept & Create Opp for unmatched signals.</li>
+      <li><strong>Daily Digest</strong> — Automated email digest to each sales rep: KPIs, deals needing action, overdue tasks, recent signals, quick links. Trigger from Settings → Notifications or via API. Schedulable via AWS EventBridge cron.</li>
+      <li><strong>Invite Emails</strong> — Creating a user auto-sends branded invite email. Re-send from Admin → Users → Send Invite button.</li>
       <li><strong>Voice AI</strong> — Real-time transcription via Web Speech API. Record → auto-transcribe → Process with AI. Playback with progress bar.</li>
       <li><strong>CRM Sync</strong> — Salesforce, HubSpot, Pipedrive, Zoho, Freshsales bidirectional sync engine.</li>
-      <li><strong>Email</strong> — Gmail/Outlook IMAP+SMTP connector with CC/BCC tracking.</li>
+      <li><strong>Email Connector</strong> — Gmail/Outlook IMAP+SMTP connector with CC/BCC tracking.</li>
       <li><strong>MCP Server</strong> — 15 tools + invoke_agent at /api/mcp. Configure from Settings → MCP Tools. Compatible with Claude Desktop, Cursor, VS Code.</li>
+    </ul>
+
+    <h3>Personalization</h3>
+    <ul>
+      <li><strong>Default "My" Scope</strong> — Home page, pipeline, tasks all default to showing your own deals. Toggle My/Team/Org via scope switch.</li>
+      <li><strong>Server-Side Filtering</strong> — Opportunities filtered by primaryOwner on the server, not just client-side.</li>
+      <li><strong>Per-User Notifications</strong> — Each user sees their own notifications + broadcast signals from webhooks.</li>
+      <li><strong>Activity Attribution</strong> — All actions (create, update, delete) log the real user name, not "Admin User".</li>
+    </ul>
+
+    <h3>Presales Lifecycle</h3>
+    <ul>
+      <li><strong>Connected Flow</strong> — Deal presales tab shows 5-phase lifecycle: RFP/Discovery → Proposal → Pricing → Solutioning → Contracts. Each phase shows completion status.</li>
+      <li><strong>Proposal Studio</strong> — 8 AI-draftable sections with progress tracking. Click to generate, expand to view/copy.</li>
+      <li><strong>Conditional UI</strong> — Create Contract and View Contracts only appear for Negotiation/Won/Proposal stages.</li>
     </ul>
 
     <h3>Admin & Users</h3>
     <ul>
-      <li><strong>User Management</strong> — Create users, assign roles (Admin/Manager/Rep/SDR/Presales/Viewer).</li>
+      <li><strong>User Management</strong> — Create users, assign roles. Auto-sends invite email on creation.</li>
+      <li><strong>Send Invite</strong> — Email invite button on Admin → Users page. Branded HTML template with sign-in link.</li>
       <li><strong>O365 Directory</strong> — Search organization directory via Microsoft Graph, invite users from Azure AD.</li>
       <li><strong>Microsoft SSO</strong> — Sign in with Microsoft O365 via Azure AD OAuth with MFA support.</li>
       <li><strong>Smart Matching</strong> — Users auto-matched to their deals by fuzzy name matching.</li>
-      <li><strong>Settings</strong> — 6 tabs: AI & Agents, Plugins, MCP Tools, Security (2FA/TOTP), Appearance, Notifications.</li>
+      <li><strong>Settings</strong> — 6 tabs: AI & Agents, Plugins, MCP Tools, Security (2FA/TOTP), Appearance, Notifications (with Daily Digest controls).</li>
       <li><strong>2FA (TOTP)</strong> — App-level authenticator setup in Settings → Security. Works with Google/Microsoft Authenticator.</li>
       <li><strong>RBAC</strong> — 6 roles (Admin, Manager, Rep, SDR, Presales, Viewer) with 30+ permissions across 15 resources.</li>
     </ul>
