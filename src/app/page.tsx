@@ -19,6 +19,21 @@ import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 import PilotNudges from '@/components/ai/PilotNudges';
 import SignalCards from '@/components/ai/SignalCards';
 import { usePipelineInsight } from '@/lib/intelligence/useInsight';
+import dynamic from 'next/dynamic';
+
+import RevenueSignalsTimeline from '@/components/intelligence/RevenueSignalsTimeline';
+
+const MindMap = dynamic(
+  () => import('@/components/intelligence/MindMap').then(m => ({ default: m.MindMap })),
+  { ssr: false, loading: () => (
+    <div className="h-[420px] rounded-xl g-surface g-elevated flex items-center justify-center">
+      <div className="flex items-center gap-3 text-muted-foreground">
+        <Sparkles className="h-5 w-5 animate-pulse text-[#7c3aed]" />
+        <span className="text-sm">Loading Intelligence Mindmap...</span>
+      </div>
+    </div>
+  )}
+);
 
 function getRelativeTime(date: Date): string {
   const now = new Date();
@@ -558,7 +573,10 @@ function HomeContent() {
       {/* ===================== TAB 2: DASHBOARD ===================== */}
       {homeView === 'dashboard' && (
         <div className="space-y-6 animate-flow-in">
-          {/* AI Insight Banner -- auto-generated, not on-demand */}
+          {/* Intelligence Mindmap — animated force graph centerpiece */}
+          <MindMap opportunities={opportunities} onDealClick={setSelectedOppId} />
+
+          {/* AI Insight Banner — below mindmap */}
           <div className="relative overflow-hidden rounded-xl ai-glow animate-flow-in g-gradient-border g-noise" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.02), transparent)' }}>
             <div className="g-fractal-orb g-fractal-orb-teal" style={{ width: '200px', height: '200px', top: '-60px', right: '-40px' }} />
             <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
@@ -810,6 +828,15 @@ function HomeContent() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Revenue Signals Timeline — unified signal stream */}
+          <div className="animate-flow-in animate-flow-in-delay-4 p-5 rounded-xl g-surface g-elevated">
+            <RevenueSignalsTimeline
+              opportunities={opportunities}
+              activities={activities}
+              onDealClick={setSelectedOppId}
+            />
           </div>
 
           {/* Activity Feed */}

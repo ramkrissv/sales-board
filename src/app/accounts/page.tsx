@@ -7,6 +7,7 @@ import {
   Users, DollarSign, ChevronDown, ChevronUp, Sparkles, Loader2, Clock,
 } from 'lucide-react';
 import { RelationshipMap } from '@/components/views/RelationshipMap';
+import BuyerIntentSignals from '@/components/intelligence/BuyerIntentSignals';
 
 const ACCOUNT_TYPES = ['Strategic', 'Enterprise', 'Mid-Market', 'SMB'] as const;
 
@@ -492,6 +493,9 @@ function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, score
                   </div>
                 </div>
               )}
+
+              {/* Buyer Intent Signals */}
+              <BuyerIntentSignals accountName={account.companyName} industry={account.industry} />
 
               {/* Relationship Map */}
               <div>

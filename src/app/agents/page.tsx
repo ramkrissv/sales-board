@@ -13,6 +13,8 @@ import { DEFAULT_AGENT_CONFIGS, AVAILABLE_MODELS } from '@/lib/ai/config';
 import type { AgentConfig } from '@/lib/ai/config';
 import AgentResultView from '@/components/ai/AgentResultView';
 import WorkflowRunner from '@/components/ai/WorkflowRunner';
+import AutonomousMode from '@/components/ai/AutonomousMode';
+import SalesPlaybook from '@/components/ai/SalesPlaybook';
 
 export default function AgentsPage() {
   const [agents] = useState<AgentConfig[]>(DEFAULT_AGENT_CONFIGS);
@@ -87,6 +89,11 @@ export default function AgentsPage() {
         </div>
       </div>
 
+      {/* Autonomous Mode — AI auto-executes with approval queue */}
+      <div className="g-surface g-elevated p-5">
+        <AutonomousMode />
+      </div>
+
       {/* Quick Actions — one-click agent invocations */}
       <div>
         <div className="g-section-label mb-2 flex items-center gap-1.5">
@@ -144,6 +151,11 @@ export default function AgentsPage() {
       {/* Composable Workflows — multi-agent coordination */}
       <div className="g-surface g-elevated p-5">
         <WorkflowRunner />
+      </div>
+
+      {/* Sales Playbooks — stage-by-stage guided plays */}
+      <div className="g-surface g-elevated p-5">
+        <SalesPlaybook />
       </div>
 
       {/* Custom Agent Invocation */}

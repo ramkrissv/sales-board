@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { OpportunityProvider } from '@/lib/store';
 import { DealDetail } from '@/components/modals/DealDetail';
-import { Sparkles, MessageCircle, Table as TableIcon, Eye, Kanban, CalendarDays, TrendingUp, Clock } from 'lucide-react';
+import { Sparkles, Table as TableIcon, Eye, Kanban, CalendarDays, TrendingUp, BarChart3, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FilterPanel } from '@/components/shared/FilterPanel';
@@ -13,6 +13,9 @@ import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
 import { useOpportunities } from '@/lib/store';
 import PipelineInsightBar from '@/components/ai/PipelineInsightBar';
 import { usePipelineInsight } from '@/lib/intelligence/useInsight';
+import { ConversationalPipeline } from '@/components/pipeline/ConversationalPipeline';
+import LeaderDashboard from '@/components/views/LeaderDashboard';
+import CustomDashboard from '@/components/views/CustomDashboard';
 
 const KanbanBoard = dynamic(
   () => import('@/components/kanban/KanbanBoard').then(m => ({ default: m.KanbanBoard })),
@@ -26,7 +29,9 @@ const KanbanBoard = dynamic(
   )}
 );
 
-const VIEW_MODES = [
+type LocalView = 'kanban' | 'leader' | 'custom';
+
+const LINK_VIEWS = [
   { id: 'kanban', label: 'Board', icon: Kanban, href: '/pipeline' },
   { id: 'funnel', label: 'Funnel', icon: TrendingUp, href: '/funnel' },
   { id: 'table', label: 'Table', icon: TableIcon, href: '/table' },
@@ -34,7 +39,12 @@ const VIEW_MODES = [
   { id: 'graph', label: 'Graph', icon: Eye, href: '/graph' },
 ];
 
-function PipelineHeader() {
+const LOCAL_VIEWS = [
+  { id: 'leader' as const, label: 'Leader', icon: BarChart3 },
+  { id: 'custom' as const, label: 'Custom', icon: LayoutDashboard },
+];
+
+function PipelineHeader({ localView, setLocalView }: { localView: LocalView; setLocalView: (v: LocalView) => void }) {
   const { filteredOpportunities, filters, setFilters } = useOpportunities();
   const { data: session } = useSession();
   const pathname = usePathname();
@@ -43,7 +53,6 @@ function PipelineHeader() {
 
   return (
     <div className="space-y-4 mb-6">
-      {/* Title + KPIs */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground font-display">Pipeline</h1>
@@ -57,12 +66,13 @@ function PipelineHeader() {
         />
       </div>
 
-      {/* View mode tabs */}
       <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 w-fit">
-        {VIEW_MODES.map(mode => {
-          const isActive = pathname === mode.href;
+        {/* Link-based views */}
+        {LINK_VIEWS.map(mode => {
+          const isActive = localView === 'kanban' && pathname === mode.href;
           return (
             <Link key={mode.id} href={mode.href}
+              onClick={() => setLocalView('kanban')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 isActive
                   ? 'bg-card text-foreground shadow-sm border border-border'
@@ -73,6 +83,18 @@ function PipelineHeader() {
             </Link>
           );
         })}
+        {/* Local views (no navigation) */}
+        {LOCAL_VIEWS.map(mode => (
+          <button key={mode.id} onClick={() => setLocalView(mode.id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              localView === mode.id
+                ? 'bg-card text-foreground shadow-sm border border-border'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}>
+            <mode.icon className={`h-3.5 w-3.5 ${localView === mode.id ? 'text-[#7c3aed]' : ''}`} />
+            {mode.label}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -86,13 +108,30 @@ function PipelineInsightSection({ onDealClick }: { onDealClick: (id: string) => 
 
 export default function PipelinePage() {
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+  const [localView, setLocalView] = useState<LocalView>('kanban');
 
   return (
     <OpportunityProvider>
       <FilterPanel />
-      <PipelineHeader />
-      <PipelineInsightSection onDealClick={setSelectedOppId} />
-      <KanbanBoard onCardClick={setSelectedOppId} />
+      <PipelineHeader localView={localView} setLocalView={setLocalView} />
+
+      {localView === 'kanban' && (
+        <>
+          <PipelineInsightSection onDealClick={setSelectedOppId} />
+          <KanbanBoard onCardClick={setSelectedOppId} />
+          <ConversationalPipeline onDealClick={setSelectedOppId} />
+          <div className="h-16" />
+        </>
+      )}
+
+      {localView === 'leader' && (
+        <LeaderDashboard onDealClick={setSelectedOppId} />
+      )}
+
+      {localView === 'custom' && (
+        <CustomDashboard onDealClick={setSelectedOppId} />
+      )}
+
       {selectedOppId && (
         <DealDetail
           opportunityId={selectedOppId}

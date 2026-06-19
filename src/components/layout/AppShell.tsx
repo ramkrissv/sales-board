@@ -18,6 +18,7 @@ import {
 import { NewDealModal } from '@/components/modals/NewDealModal';
 import { MeetingNotesModal } from '@/components/modals/MeetingNotesModal';
 import { CopilotPanel } from '@/components/ai/CopilotPanel';
+import { DealCopilot } from '@/components/ai/DealCopilot';
 import { NotificationPopover } from '@/components/shared/NotificationPopover';
 
 // ── Simplified navigation: 8 core items + expandable sections ──
@@ -320,6 +321,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Copilot Panel */}
       <CopilotPanel isOpen={copilotOpen} onClose={() => setCopilotOpen(false)} />
+
+      {/* Deal Copilot — floating button, context-aware, all pages */}
+      {!copilotOpen && <DealCopilot />}
 
       {/* Modals */}
       <NewDealModal isOpen={showNewDeal} onClose={() => setShowNewDeal(false)} />

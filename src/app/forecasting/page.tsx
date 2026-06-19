@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import ForecastInsightCard from '@/components/ai/ForecastInsightCard';
 import { useForecastInsight } from '@/lib/intelligence/useInsight';
+import SmartForecast from '@/components/ai/SmartForecast';
+import { OpportunityProvider, useOpportunities } from '@/lib/store';
 
 const CATEGORY_META: Record<string, { label: string; color: string; bgColor: string; icon: any; description: string }> = {
   commit: { label: 'Commit', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', icon: CheckCircle, description: 'Owner says will close' },
@@ -240,6 +242,21 @@ export default function ForecastingPage() {
           </div>
         </>
       )}
+
+      {/* Smart Forecast — What-If Scenarios + Monte Carlo */}
+      <div className="p-5 rounded-xl g-surface g-elevated">
+        <div className="text-sm font-medium text-foreground mb-4 flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-[#7c3aed]" />
+          Smart Forecast &amp; Scenarios
+        </div>
+        <SmartForecastSection />
+      </div>
     </div>
   );
+}
+
+function SmartForecastSection() {
+  const { data: oppData } = trpc.opportunity.list.useQuery();
+  if (!oppData) return <div className="text-xs text-muted-foreground">Loading opportunities...</div>;
+  return <SmartForecast opportunities={oppData} />;
 }

@@ -20,6 +20,12 @@ import type { Status } from '@/lib/types';
 import DealPilotActions from '@/components/ai/DealPilotActions';
 import AgentResultView from '@/components/ai/AgentResultView';
 import WorkflowRunner from '@/components/ai/WorkflowRunner';
+import MeetingIntelligence from '@/components/ai/MeetingIntelligence';
+import WinLossAutopsy from '@/components/ai/WinLossAutopsy';
+import AIEmailComposer from '@/components/ai/AIEmailComposer';
+import ClientHealthScore from '@/components/ai/ClientHealthScore';
+import CompetitiveBattleStation from '@/components/ai/CompetitiveBattleStation';
+import AIDealRoom from '@/components/ai/AIDealRoom';
 
 interface DealDetailProps {
   opportunityId: string;
@@ -71,7 +77,8 @@ function WinProbabilityBar({ probability }: { probability: number }) {
 export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const { opportunities, updateOpportunity, deleteOpportunity } = useOpportunities();
   const opp = opportunities.find(o => o.id === opportunityId);
-  const [activeTab, setActiveTab] = useState<'details' | 'stakeholders' | 'tasks' | 'log' | 'documents' | 'pricing' | 'presales' | 'contracts'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'stakeholders' | 'tasks' | 'meetings' | 'email' | 'competitive' | 'health' | 'log' | 'documents' | 'pricing' | 'presales' | 'contracts'>('details');
+  const [showAutopsy, setShowAutopsy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [analysis, setAnalysis] = useState<any>(null);
@@ -227,6 +234,29 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const handleStageChange = async (newStage: Status) => {
     await updateOpportunity(opp.id, { status: newStage });
     setShowStageSelector(false);
+
+    // Auto-trigger Win/Loss Autopsy when deal reaches Won or Lost
+    if (newStage === 'Won' || newStage === 'Lost') {
+      setTimeout(() => setShowAutopsy(true), 500);
+    }
+
+    // Auto-trigger TCV-based approval workflow on Negotiation
+    if (newStage === 'Negotiation' && opp.tcv > 0) {
+      const tcv = opp.tcv;
+      let roles: string[] = [];
+      if (tcv >= 1_000_000) roles = ['VP Sales', 'CSO'];
+      else if (tcv >= 500_000) roles = ['VP Sales'];
+
+      if (roles.length > 0) {
+        requestApprovalMutation.mutate({
+          entityType: 'opportunity',
+          entityId: opp.id,
+          entityName: `${opp.customerName} — $${(tcv / 1000).toFixed(0)}k`,
+          reason: `Deal TCV $${(tcv / 1000).toFixed(0)}k exceeds threshold — requires ${roles.join(' → ')} approval`,
+          roles,
+        });
+      }
+    }
   };
 
   const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
@@ -262,11 +292,15 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
     { id: 'details' as const, label: 'Details' },
     { id: 'stakeholders' as const, label: `Stakeholders (${stakeholders.length})` },
     { id: 'tasks' as const, label: `Tasks (${completedTasks}/${tasks.length})` },
+    { id: 'meetings' as const, label: 'Meetings' },
+    { id: 'email' as const, label: 'Email' },
+    { id: 'competitive' as const, label: 'Competitive' },
+    ...(opp.status === 'Won' ? [{ id: 'health' as const, label: 'Health' }] : []),
     { id: 'pricing' as const, label: 'Pricing' },
     { id: 'presales' as const, label: 'Presales' },
     { id: 'contracts' as const, label: 'Contracts' },
     { id: 'documents' as const, label: 'Docs' },
-    { id: 'log' as const, label: 'Log' },
+    { id: 'log' as const, label: 'Deal Room' },
   ];
 
   const inputClasses = 'w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#5B4FE9]/20 focus:border-[#5B4FE9]';
@@ -1139,17 +1173,45 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
             </div>
           )}
 
+          {activeTab === 'meetings' && (
+            <MeetingIntelligence opportunityId={opp.id} customerName={opp.customerName} />
+          )}
+
+          {activeTab === 'email' && (
+            <AIEmailComposer
+              opportunityId={opp.id}
+              customerName={opp.customerName}
+              dealStage={opp.status}
+              stakeholders={stakeholders}
+            />
+          )}
+
+          {activeTab === 'competitive' && (
+            <CompetitiveBattleStation
+              opportunityId={opp.id}
+              customerName={opp.customerName}
+              competitors={(opp as any).competitorNames || []}
+            />
+          )}
+
+          {activeTab === 'health' && (
+            <ClientHealthScore opportunity={opp} />
+          )}
+
           {activeTab === 'log' && (
-            <div>
-              {opp.conversationLog ? (
-                <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{opp.conversationLog}</div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="text-center py-8 text-muted-foreground text-sm">No conversation log yet.</div>
-                  <div className="p-3 rounded-lg bg-[#5B4FE9]/5 border border-[#5B4FE9]/20 flex items-center gap-2 text-xs text-[#5B4FE9]">
-                    <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span>No conversation log yet. Use the &quot;Notes&quot; button to capture meeting intel — AI will extract insights automatically.</span>
-                  </div>
+            <div className="space-y-6">
+              {/* AI Deal Room — team collaboration + client portal */}
+              <AIDealRoom
+                opportunityId={opp.id}
+                customerName={opp.customerName}
+                opportunityName={opp.opportunityName}
+              />
+
+              {/* Legacy conversation log */}
+              {opp.conversationLog && (
+                <div>
+                  <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Conversation Log</div>
+                  <div className="text-xs text-foreground whitespace-pre-wrap leading-relaxed p-3 rounded-lg bg-secondary/20 border border-border max-h-48 overflow-y-auto">{opp.conversationLog}</div>
                 </div>
               )}
             </div>
@@ -1229,6 +1291,13 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
           onClose={() => setShowMeetingNotes(false)}
           opportunityId={opp.id}
           opportunityName={`${opp.customerName} — ${opp.opportunityName}`}
+        />
+
+        {/* Win/Loss Autopsy — auto-triggers on Won/Lost stage change */}
+        <WinLossAutopsy
+          opportunity={opp}
+          isOpen={showAutopsy}
+          onClose={() => setShowAutopsy(false)}
         />
       </div>
     </div>

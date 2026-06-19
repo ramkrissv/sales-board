@@ -493,6 +493,31 @@ export default function GuidePage() {
         { icon: Zap, title: 'Plugins & MCP', description: 'Download Outlook/Teams connectors from Settings → Plugins. Connect Claude Desktop via Settings → MCP Tools.', href: '/settings', color: '#f59e0b', tag: 'MCP' },
       ],
     },
+    {
+      title: 'Wave 3 — AI Intelligence Suite',
+      description: '20 new features: Intelligence Mindmap, Deal Copilot, Meeting Intelligence, Autonomous Agents, Monte Carlo Forecasting, Battle Station, and more',
+      icon: Crown,
+      features: [
+        { icon: Brain, title: 'Intelligence Mindmap', description: 'D3 force-directed graph on Dashboard. Center: you, Ring 1: KPIs (Pipeline, Revenue, Deals, Signals), Ring 2: each deal node sized by TCV and colored by health, Ring 3: stakeholders. Click any node to drill in. Zoom, drag, expand fullscreen.', href: '/', color: '#7c3aed', tag: 'D3.js' },
+        { icon: Sparkles, title: 'Deal Copilot', description: 'Floating AI button (bottom-right) on every page. Context-aware prompts based on current page. Deal-focused mode when viewing a specific deal. Minimizable, streaming AI responses.', href: '/', color: '#5B4FE9', tag: 'Global' },
+        { icon: MessageSquare, title: 'Conversational Pipeline', description: 'Chat bar at bottom of Pipeline board. Type "Move Stellantis to Negotiation" or "Set TCV for Acme to $500k" — AI parses intent and shows executable action cards with one-click confirmation.', href: '/pipeline', color: '#22c55e', tag: 'NLP' },
+        { icon: Target, title: 'Meeting Intelligence', description: 'New "Meetings" tab in Deal Detail. Paste transcripts from Teams/Zoom/Meet. AI extracts action items, stakeholder sentiment, deal signals (buying intent, budget, competitors, objections).', href: '/pipeline', color: '#3b82f6', tag: 'AI Extract' },
+        { icon: Trophy, title: 'Win/Loss Autopsy', description: 'Auto-triggers when deal moves to Won or Lost. Full-screen modal: execution score (0-100), key factors, deal timeline, stakeholder map, lessons learned, recommendations.', href: '/pipeline', color: '#22c55e', tag: 'Auto-trigger' },
+        { icon: Zap, title: 'Revenue Signals Timeline', description: 'Unified signal stream on Dashboard. Merges activity feed + AI signals (stale deals, close opportunities). Grouped by date, click to open.', href: '/', color: '#f59e0b' },
+        { icon: Mail, title: 'AI Email Composer', description: 'New "Email" tab in Deal Detail. 6 templates × 4 tones. Auto-selects DM as recipient. A/B variant generation. Copy-to-clipboard.', href: '/pipeline', color: '#10b981', tag: 'A/B Testing' },
+        { icon: Bot, title: 'Autonomous Agent Mode', description: 'Toggle on Agents page. Low-risk actions auto-execute (logging, notifications, tags). High-risk actions queue for approval. Configurable confidence threshold.', href: '/agents', color: '#ec4899', tag: 'Autonomous' },
+        { icon: Shield, title: 'TCV Approval Workflows', description: 'Auto-triggers on stage change to Negotiation: $500k+ requires VP Sales, $1M+ adds CSO to chain. Visual approval status in Deal Detail.', href: '/pipeline', color: '#f59e0b', tag: 'Auto-route' },
+        { icon: Award, title: 'Client Health Score', description: 'New "Health" tab for Won deals. Overall/Engagement/Delivery score rings. Churn probability, renewal risk, upsell signals, engagement metrics with trends.', href: '/pipeline', color: '#22c55e' },
+        { icon: BookOpen, title: 'Sales Playbooks', description: '4 stage playbooks (Discovery → Negotiation), 5 steps each with descriptions and tips. AI coaching button on every step. Progress tracking.', href: '/agents', color: '#7c3aed' },
+        { icon: BarChart3, title: 'Leader Dashboard', description: 'New "Leader" tab on Pipeline page. 8 executive KPIs (ARR, MRR, Win Rate, etc), rep performance, stage chart, industry pie, cohort analysis, top deals table.', href: '/pipeline', color: '#3b82f6', tag: 'RevOps' },
+        { icon: TrendingUp, title: 'Smart Forecast + Monte Carlo', description: 'Scenarios (Base/Optimistic/Conservative), what-if sliders (win rate ±20%, slippage 0-50%), quarterly projection chart, 1000-iteration Monte Carlo with P10-P90 confidence.', href: '/forecasting', color: '#06b6d4', tag: 'Monte Carlo' },
+        { icon: Shield, title: 'Competitive Battle Station', description: 'New "Competitive" tab in Deal Detail. Add competitors, AI generates battle cards: threat level, win rate, strengths/advantages, talking points, objection handlers.', href: '/pipeline', color: '#ef4444', tag: 'Battle Cards' },
+        { icon: Crown, title: 'Custom Dashboards', description: 'New "Custom" tab on Pipeline. 15 widget types (KPIs, charts, lists). Add from catalog, edit layout with remove buttons. Build your own view.', href: '/pipeline', color: '#7c3aed', tag: 'Builder' },
+        { icon: Zap, title: 'Buyer Intent Signals', description: 'Inline on expanded accounts. AI-generated intent score + signals: job postings, tech signals, news, web activity. Strength badges and actionable recommendations.', href: '/accounts', color: '#f59e0b' },
+        { icon: DollarSign, title: 'Territory & Quota', description: 'Settings → Territory & Quota. Define territories, assign owners, set quotas. Attainment tracking, pacing bars, gap analysis, stacked bar chart.', href: '/settings', color: '#10b981' },
+        { icon: MessageSquare, title: 'AI Deal Rooms', description: 'Enhanced "Deal Room" tab in Deal Detail. Team chat with AI assistant, document management (add/share/track), client micro-portal with shareable link.', href: '/pipeline', color: '#8b5cf6', tag: 'Portal' },
+      ],
+    },
   ];
 
   return (
