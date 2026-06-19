@@ -38,6 +38,10 @@ export default function SignalCards({ onAccept, onOpenDeal }: SignalCardsProps) 
   const createOpp = trpc.opportunity.create.useMutation({
     onSuccess: () => { utils.opportunity.list.invalidate(); },
   });
+  const updateOpp = trpc.opportunity.update.useMutation({
+    onSuccess: () => { utils.opportunity.list.invalidate(); },
+  });
+  const { data: existingOpps = [] } = trpc.opportunity.list.useQuery();
 
   // Filter to only unread signal notifications
   const signals = (notifications as any[]).filter(
@@ -75,36 +79,74 @@ export default function SignalCards({ onAccept, onOpenDeal }: SignalCardsProps) 
       steps.push({ id: 'graph', label: 'Knowledge Graph Updated', status: 'complete', detail: 'Contact & signal nodes synced' });
       setProcessView({ notifId: notif._id, steps });
     } else {
-      // No matched deal — create opportunity
-      steps.push({ id: 'match', label: 'No Deal Match', status: 'complete', detail: 'Creating new opportunity...' });
-      steps.push({ id: 'create', label: 'Creating Opportunity', status: 'running' });
-      setProcessView({ notifId: notif._id, steps });
-
+      // No AI match — try client-side fuzzy match by customer name before creating duplicate
       const meta = notif.metadata || {};
-      try {
-        await createOpp.mutateAsync({
-          customerName: meta.customerName || notif.title?.replace(/^.*:\s*/, '') || 'New Lead',
-          opportunityName: `Signal: ${meta.customerName || 'New Lead'} — ${meta.intent || 'Inbound'}`,
-          status: 'Discovery',
-          tcv: 0,
-          expectedCloseDate: new Date(Date.now() + 90 * 86400000).toISOString(),
-          startDate: new Date().toISOString(),
-          primaryOwner: meta.senderName || 'Unassigned',
-          industry: '',
-          region: 'North America',
-          source: meta.source || 'Signal',
-          dealDuration: '12 months',
-        } as any);
-        steps[2].status = 'complete';
-        steps[2].detail = 'Opportunity created in Discovery stage';
-      } catch {
-        steps[2].status = 'error';
-        steps[2].detail = 'Failed to create — try manually';
-      }
+      const signalCustomer = (meta.customerName || notif.title?.replace(/^.*:\s*/, '') || '').toLowerCase().trim();
 
-      markRead.mutate({ id: notif._id });
-      steps.push({ id: 'graph', label: 'Knowledge Graph Updated', status: 'complete', detail: 'Contact, company & signal nodes synced' });
-      setProcessView({ notifId: notif._id, steps });
+      const clientMatch = signalCustomer
+        ? (existingOpps as any[]).find((o: any) => {
+            const oppName = (o.customerName || '').toLowerCase();
+            return oppName === signalCustomer || oppName.includes(signalCustomer) || signalCustomer.includes(oppName);
+          })
+        : null;
+
+      if (clientMatch) {
+        // Found existing deal — link signal to it instead of creating duplicate
+        steps.push({ id: 'match', label: 'Deal Matched (local)', status: 'complete', detail: `→ ${clientMatch.customerName}: ${clientMatch.opportunityName}` });
+        steps.push({ id: 'link', label: 'Linking Signal', status: 'running' });
+        setProcessView({ notifId: notif._id, steps });
+
+        try {
+          const timestamp = new Date().toISOString().split('T')[0];
+          const logEntry = `\n\n--- SIGNAL (${timestamp}) ---\n${meta.summary || notif.message || 'New signal captured'}\nSource: ${meta.source || 'Teams/Outlook'}`;
+          await updateOpp.mutateAsync({
+            id: clientMatch.id,
+            conversationLog: ((clientMatch as any).conversationLog || '') + logEntry,
+          } as any);
+          steps[2].status = 'complete';
+          steps[2].detail = `Signal linked to ${clientMatch.customerName}`;
+        } catch {
+          steps[2].status = 'complete';
+          steps[2].detail = 'Signal noted (log update skipped)';
+        }
+
+        markRead.mutate({ id: notif._id });
+        steps.push({ id: 'graph', label: 'Knowledge Graph Updated', status: 'complete', detail: 'Signal linked to existing deal' });
+        setProcessView({ notifId: notif._id, steps });
+
+        // Notify parent to open the matched deal
+        onOpenDeal?.(clientMatch.id);
+      } else {
+        // Truly new — create opportunity
+        steps.push({ id: 'match', label: 'No Existing Deal', status: 'complete', detail: 'Creating new opportunity...' });
+        steps.push({ id: 'create', label: 'Creating Opportunity', status: 'running' });
+        setProcessView({ notifId: notif._id, steps });
+
+        try {
+          await createOpp.mutateAsync({
+            customerName: meta.customerName || notif.title?.replace(/^.*:\s*/, '') || 'New Lead',
+            opportunityName: `Signal: ${meta.customerName || 'New Lead'} — ${meta.intent || 'Inbound'}`,
+            status: 'Discovery',
+            tcv: 0,
+            expectedCloseDate: new Date(Date.now() + 90 * 86400000).toISOString(),
+            startDate: new Date().toISOString(),
+            primaryOwner: meta.senderName || 'Unassigned',
+            industry: '',
+            region: 'North America',
+            source: meta.source || 'Signal',
+            dealDuration: '12 months',
+          } as any);
+          steps[2].status = 'complete';
+          steps[2].detail = 'Opportunity created in Discovery stage';
+        } catch {
+          steps[2].status = 'error';
+          steps[2].detail = 'Failed to create — try manually';
+        }
+
+        markRead.mutate({ id: notif._id });
+        steps.push({ id: 'graph', label: 'Knowledge Graph Updated', status: 'complete', detail: 'Contact, company & signal nodes synced' });
+        setProcessView({ notifId: notif._id, steps });
+      }
     }
 
     setAcceptedSignals(prev => new Set([...prev, notif._id]));

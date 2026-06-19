@@ -141,7 +141,7 @@ export default function PresalesPage() {
 
   const pursuits = useMemo(() =>
     (allOpportunities as Opportunity[]).filter(
-      o => !['Won', 'Lost'].includes(o.status)
+      o => ['Proposal', 'Negotiation', 'Qualification'].includes(o.status)
     ), [allOpportunities]
   );
 
