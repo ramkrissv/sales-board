@@ -30,6 +30,12 @@ export default function UsersAdminPage() {
   const directoryMutation = trpc.directory.searchUsers.useMutation();
   const [form, setForm] = useState({ email: '', firstName: '', lastName: '', role: 'rep' as string, team: '' });
   const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
+  const [sendingInvite, setSendingInvite] = useState<string | null>(null);
+  const [inviteSent, setInviteSent] = useState<string | null>(null);
+  const sendInvite = trpc.user.sendInvite.useMutation({
+    onSuccess: (_, vars) => { setInviteSent(vars.id); setSendingInvite(null); setTimeout(() => setInviteSent(null), 3000); },
+    onError: () => { setSendingInvite(null); },
+  });
 
   const handleDirectorySearch = () => {
     if (!directorySearch.trim()) return;
@@ -265,10 +271,19 @@ export default function UsersAdminPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => copyInvite(user.email)}
-                      className="flex items-center gap-1 text-[10px] text-[#7c3aed] hover:underline">
-                      {copiedInvite === user.email ? <><Check className="h-3 w-3" /> Copied!</> : <><Copy className="h-3 w-3" /> Copy invite</>}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => { setSendingInvite(user._id); sendInvite.mutate({ id: user._id }); }}
+                        disabled={sendingInvite === user._id}
+                        className="flex items-center gap-1 text-[10px] text-[#7c3aed] hover:underline disabled:opacity-50">
+                        {inviteSent === user._id ? <><Check className="h-3 w-3 text-emerald-400" /> Sent!</> :
+                         sendingInvite === user._id ? <><Loader2 className="h-3 w-3 animate-spin" /> Sending...</> :
+                         <><Mail className="h-3 w-3" /> Send invite</>}
+                      </button>
+                      <button onClick={() => copyInvite(user.email)}
+                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground">
+                        {copiedInvite === user.email ? <><Check className="h-3 w-3" /> Copied</> : <><Copy className="h-3 w-3" /> Copy</>}
+                      </button>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <button onClick={() => { if (confirm('Delete this user?')) deleteUser.mutate({ id: user._id }); }}

@@ -567,6 +567,20 @@ export default function SettingsPage() {
               </label>
             ))}
           </div>
+
+          {/* Daily Digest */}
+          <div className="g-section-label mt-6">Daily Sales Digest</div>
+          <div className="p-4 rounded-xl border border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-foreground">Email Digest</div>
+                <div className="text-[11px] text-muted-foreground">
+                  Sends a pipeline summary with KPIs, overdue tasks, deals needing action, and signals to each user's email.
+                </div>
+              </div>
+              <DigestButton userId={(session?.user as any)?.id} />
+            </div>
+          </div>
         </div>
       )}
 
@@ -616,6 +630,42 @@ export default function SettingsPage() {
 }
 
 // ── Security 2FA Component ──
+function DigestButton({ userId }: { userId?: string }) {
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [error, setError] = useState('');
+
+  const sendTestDigest = async () => {
+    setStatus('sending');
+    try {
+      const res = await fetch(`/api/digest${userId ? `?userId=${userId}` : ''}`, {
+        method: 'POST',
+        headers: { 'x-user-id': userId || '' },
+      });
+      const data = await res.json();
+      if (res.ok && data.sent > 0) {
+        setStatus('sent');
+        setTimeout(() => setStatus('idle'), 3000);
+      } else {
+        setStatus('error');
+        setError(data.error || `Sent: ${data.sent}, Failed: ${data.failed}`);
+      }
+    } catch (e: any) {
+      setStatus('error');
+      setError(e.message);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <button onClick={sendTestDigest} disabled={status === 'sending'}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors disabled:opacity-50">
+        {status === 'sending' ? 'Sending...' : status === 'sent' ? 'Sent!' : status === 'error' ? 'Retry' : 'Send Test Digest'}
+      </button>
+      {status === 'error' && <span className="text-[10px] text-red-400">{error}</span>}
+    </div>
+  );
+}
+
 function SecurityTFA({ email }: { email: string }) {
   const [status, setStatus] = useState<'checking' | 'off' | 'on' | 'setup'>('checking');
   const [qrCode, setQrCode] = useState('');
