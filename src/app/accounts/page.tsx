@@ -8,6 +8,12 @@ import {
 } from 'lucide-react';
 import { RelationshipMap } from '@/components/views/RelationshipMap';
 import BuyerIntentSignals from '@/components/intelligence/BuyerIntentSignals';
+import dynamic from 'next/dynamic';
+
+const RelationshipIntelligenceGraph = dynamic(
+  () => import('@/components/views/RelationshipIntelligenceGraph'),
+  { ssr: false, loading: () => <div className="h-[350px] rounded-xl g-surface g-elevated animate-pulse" /> }
+);
 
 const ACCOUNT_TYPES = ['Strategic', 'Enterprise', 'Mid-Market', 'SMB'] as const;
 
@@ -28,7 +34,10 @@ const emptyForm = {
   annualRevenue: '',
   hqLocation: '',
   techStack: '',
+  territory: '',
 };
+
+const TERRITORIES = ['Northeast', 'Southeast', 'West Coast', 'Midwest', 'EMEA', 'APAC', 'Latin America'] as const;
 
 export default function AccountsPage() {
   const utils = trpc.useUtils();
@@ -61,10 +70,13 @@ export default function AccountsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
 
+  const [territoryFilter, setTerritoryFilter] = useState('');
+
   const filtered = accounts.filter((a: any) => {
     const matchesSearch = !search || a.companyName?.toLowerCase().includes(search.toLowerCase()) || a.industry?.toLowerCase().includes(search.toLowerCase());
     const matchesType = !typeFilter || a.accountType === typeFilter;
-    return matchesSearch && matchesType;
+    const matchesTerritory = !territoryFilter || a.territory === territoryFilter;
+    return matchesSearch && matchesType && matchesTerritory;
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -79,6 +91,7 @@ export default function AccountsPage() {
       employeeCount: form.employeeCount ? Number(form.employeeCount) : undefined,
       annualRevenue: form.annualRevenue ? Number(form.annualRevenue) : undefined,
       techStack: form.techStack ? form.techStack.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+      territory: form.territory || undefined,
     };
     if (editingId) {
       updateMutation.mutate({ id: editingId, ...payload });
@@ -99,6 +112,7 @@ export default function AccountsPage() {
       annualRevenue: account.annualRevenue?.toString() || '',
       hqLocation: account.hqLocation || '',
       techStack: (account.techStack || []).join(', '),
+      territory: account.territory || '',
     });
     setShowForm(true);
   };
@@ -155,6 +169,14 @@ export default function AccountsPage() {
         >
           <option value="">All Types</option>
           {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select
+          value={territoryFilter}
+          onChange={e => setTerritoryFilter(e.target.value)}
+          className="px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/40"
+        >
+          <option value="">All Territories</option>
+          {TERRITORIES.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </div>
 
@@ -214,6 +236,14 @@ export default function AccountsPage() {
                 <input value={form.techStack} onChange={e => setForm(p => ({ ...p, techStack: e.target.value }))}
                   className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/40" placeholder="React, AWS, Python" />
               </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1.5">Territory</label>
+                <select value={form.territory} onChange={e => setForm(p => ({ ...p, territory: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/40">
+                  <option value="">Select territory...</option>
+                  {TERRITORIES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
             </div>
             <div>
               <label className="block text-xs text-muted-foreground mb-1.5">Description</label>
@@ -261,6 +291,7 @@ export default function AccountsPage() {
               onEdit={() => startEdit(account)}
               onDelete={() => { if (confirm('Delete this account?')) deleteMutation.mutate({ id: account._id }); }}
               scoreIntentMutation={scoreIntentMutation}
+              allOpps={allOpps as any[]}
             />
           ))}
         </div>
@@ -269,9 +300,9 @@ export default function AccountsPage() {
   );
 }
 
-function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, scoreIntentMutation }: {
+function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, scoreIntentMutation, allOpps }: {
   meta: { code: string; color: string; wonRev: number; activePip: number; dealCount: number; wonCount: number };
-  account: any; expanded: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void; scoreIntentMutation: any;
+  account: any; expanded: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void; scoreIntentMutation: any; allOpps: any[];
 }) {
   const { data: detail, isLoading } = trpc.account.getById.useQuery(
     { id: account._id },
@@ -349,6 +380,7 @@ function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, score
           </div>
           <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
             {account.industry && <span>{account.industry}</span>}
+            {account.territory && <span className="px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[9px] font-medium">{account.territory}</span>}
             {expanded && dealCount > 0 && <span>{dealCount} deals</span>}
             {expanded && totalTcv > 0 && <span>${(totalTcv / 1000).toFixed(0)}k TCV</span>}
           </div>
@@ -497,13 +529,11 @@ function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, score
               {/* Buyer Intent Signals */}
               <BuyerIntentSignals accountName={account.companyName} industry={account.industry} />
 
-              {/* Relationship Map */}
-              <div>
-                <RelationshipMap
-                  accountNodeId={`account:${(account.companyName || '').toLowerCase().replace(/\s+/g, '-')}`}
-                  accountName={account.companyName}
-                />
-              </div>
+              {/* Relationship Intelligence Graph — D3 force graph with sentiment/engagement */}
+              <RelationshipIntelligenceGraph
+                accountName={account.companyName}
+                opportunities={allOpps as any[]}
+              />
 
               {/* Actions */}
               <div className="flex items-center gap-2 pt-2">

@@ -12,6 +12,7 @@ export interface IAccount extends Document {
   accountType?: string;
   accountHealth?: number;
   penetration?: number;
+  territory?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +33,7 @@ const AccountSchema = new Schema<IAccount>(
     },
     accountHealth: { type: Number, min: 0, max: 100 },
     penetration: { type: Number, min: 0, max: 100 },
+    territory: { type: String },
   },
   { timestamps: true }
 );

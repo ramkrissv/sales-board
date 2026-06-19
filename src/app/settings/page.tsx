@@ -11,6 +11,7 @@ import { useSession } from 'next-auth/react';
 import { AVAILABLE_MODELS, DEFAULT_AGENT_CONFIGS } from '@/lib/ai/config';
 import { trpc } from '@/lib/trpc/client';
 import TerritoryQuota from '@/components/views/TerritoryQuota';
+import MultiOrgSettings from '@/components/views/MultiOrgSettings';
 
 // ── Plugin definitions ──
 interface PluginDef {
@@ -137,7 +138,7 @@ const MCP_TOOLS = [
   { name: 'invoke_agent', description: 'Invoke any of the 13 AI agents', category: 'Agents' },
 ];
 
-type TabId = 'ai' | 'plugins' | 'mcp' | 'territory' | 'security' | 'appearance' | 'notifications';
+type TabId = 'ai' | 'plugins' | 'mcp' | 'territory' | 'multiorg' | 'security' | 'appearance' | 'notifications';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('ai');
@@ -181,6 +182,7 @@ export default function SettingsPage() {
     { id: 'plugins', label: 'Plugins', icon: Puzzle },
     { id: 'mcp', label: 'MCP Tools', icon: Terminal },
     { id: 'territory', label: 'Territory & Quota', icon: Globe },
+    { id: 'multiorg', label: 'Multi-Org', icon: Server },
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -589,6 +591,11 @@ export default function SettingsPage() {
       {/* ─── Territory & Quota Tab ─── */}
       {activeTab === 'territory' && (
         <TerritorySection />
+      )}
+
+      {/* ─── Multi-Org / White-Label Tab ─── */}
+      {activeTab === 'multiorg' && (
+        <MultiOrgSettings />
       )}
 
       {/* ─── Security Tab (2FA) ─── */}

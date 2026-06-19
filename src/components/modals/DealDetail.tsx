@@ -26,6 +26,8 @@ import AIEmailComposer from '@/components/ai/AIEmailComposer';
 import ClientHealthScore from '@/components/ai/ClientHealthScore';
 import CompetitiveBattleStation from '@/components/ai/CompetitiveBattleStation';
 import AIDealRoom from '@/components/ai/AIDealRoom';
+import { DealCopilot } from '@/components/ai/DealCopilot';
+import { celebrateWin, flashLoss } from '@/lib/animations';
 
 interface DealDetailProps {
   opportunityId: string;
@@ -235,8 +237,12 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
     await updateOpportunity(opp.id, { status: newStage });
     setShowStageSelector(false);
 
-    // Auto-trigger Win/Loss Autopsy when deal reaches Won or Lost
-    if (newStage === 'Won' || newStage === 'Lost') {
+    // Auto-trigger Win/Loss Autopsy + animations when deal reaches Won or Lost
+    if (newStage === 'Won') {
+      celebrateWin();
+      setTimeout(() => setShowAutopsy(true), 800);
+    } else if (newStage === 'Lost') {
+      flashLoss();
       setTimeout(() => setShowAutopsy(true), 500);
     }
 
@@ -1292,6 +1298,9 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
           opportunityId={opp.id}
           opportunityName={`${opp.customerName} — ${opp.opportunityName}`}
         />
+
+        {/* Deal Copilot — context-aware, scoped to this deal */}
+        <DealCopilot activeDealId={opp.id} activeDealName={opp.customerName} />
 
         {/* Win/Loss Autopsy — auto-triggers on Won/Lost stage change */}
         <WinLossAutopsy
