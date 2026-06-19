@@ -63,6 +63,9 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
   const [error, setError] = useState('');
   const [aiSuggestions, setAiSuggestions] = useState<any>(null);
   const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiCreateMode, setAiCreateMode] = useState(true);
+  const [aiCreateText, setAiCreateText] = useState('');
+  const aiCreateMutation = trpc.ai.chat.useMutation();
 
   const update = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -125,6 +128,47 @@ Return as JSON: { industry, serviceLine, suggestedTcv, phase, tags, closeMonths,
 
   const applyAiSuggestion = (field: string, value: any) => {
     update(field, value);
+  };
+
+  // AI Create — describe deal in natural language, AI fills all fields
+  const handleAiCreate = () => {
+    if (!aiCreateText.trim()) return;
+    aiCreateMutation.mutate({
+      message: `Extract opportunity details from this description. Fill in as many fields as possible.
+
+"${aiCreateText}"
+
+Return JSON only:
+{"customerName":"","opportunityName":"","industry":"","region":"North America","serviceLine":"","tcv":0,"status":"Discovery","source":"Direct","primaryOwner":"","dealDuration":"12 months","margin":28,"dealClassification":"NN","reasoning":"1 sentence why"}`,
+      context: { page: 'ai-create-deal' },
+    }, {
+      onSuccess: (data) => {
+        try {
+          const raw = data.response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          let parsed;
+          try { parsed = JSON.parse(raw); } catch { const m = raw.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : null; }
+          if (parsed) {
+            if (parsed.customerName) update('customerName', parsed.customerName);
+            if (parsed.opportunityName) update('opportunityName', parsed.opportunityName);
+            if (parsed.industry) update('industry', parsed.industry);
+            if (parsed.region) update('region', parsed.region);
+            if (parsed.serviceLine) update('serviceLine', parsed.serviceLine);
+            if (parsed.tcv) update('tcv', parsed.tcv);
+            if (parsed.status) update('status', parsed.status);
+            if (parsed.source) update('source', parsed.source);
+            if (parsed.primaryOwner) update('primaryOwner', parsed.primaryOwner);
+            if (parsed.dealDuration) update('dealDuration', parsed.dealDuration);
+            if (parsed.margin) update('margin', parsed.margin);
+            if (parsed.dealClassification) update('dealClassification', parsed.dealClassification);
+            setAiSuggestions({ reasoning: parsed.reasoning || 'Fields populated from your description.' });
+            setShowAiPanel(true);
+            setAiCreateMode(false);
+          }
+        } catch {
+          setError('Could not parse AI response. Try being more specific.');
+        }
+      },
+    });
   };
 
   if (!isOpen) return null;
@@ -199,6 +243,36 @@ Return as JSON: { industry, serviceLine, suggestedTcv, phase, tags, closeMonths,
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {error && (
             <div className="p-3 rounded-lg bg-[var(--g-red-soft)] border border-[var(--g-red)]/30 text-[var(--g-red)] text-sm">{error}</div>
+          )}
+
+          {/* AI Create Mode — natural language input */}
+          {aiCreateMode && (
+            <div className="p-4 rounded-xl bg-[#7c3aed]/5 border border-[#7c3aed]/20 space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[#7c3aed]" />
+                <span className="text-sm font-semibold text-[#7c3aed]">AI Create</span>
+                <span className="text-[10px] text-muted-foreground">Describe the opportunity and AI fills the form</span>
+              </div>
+              <textarea
+                value={aiCreateText}
+                onChange={e => setAiCreateText(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2.5 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40 resize-none"
+                placeholder="e.g., New opportunity with HNI — Matt Baker wants agentforce consulting, 1-2 people team, potential $150k, 6 month engagement..."
+              />
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={handleAiCreate}
+                  disabled={!aiCreateText.trim() || aiCreateMutation.isPending}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-lg bg-[#7c3aed] text-white font-medium hover:bg-[#6d28d9] transition-colors disabled:opacity-50">
+                  {aiCreateMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                  {aiCreateMutation.isPending ? 'Extracting...' : 'Create with AI'}
+                </button>
+                <button type="button" onClick={() => setAiCreateMode(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground">
+                  Skip — use form
+                </button>
+              </div>
+            </div>
           )}
 
           {/* AI Suggestions Banner */}
