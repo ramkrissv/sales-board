@@ -27,7 +27,7 @@ const sopStages = [
       'EN (Existing-New): Cross-sell to existing account. Leverage existing relationship.',
       'EE (Existing-Existing): Renewal/expansion. Highest win probability.',
     ],
-    tools: ['Signal Intake', 'Campaigns', 'Lead Management'],
+    tools: ['Signal Intake', 'Campaigns', 'Lead Management', 'Buyer Intent Signals', 'Deal Copilot'],
     gate: 'Lead captured with source classification (EE/EN/NN) + ICP fit score assigned',
   },
   {
@@ -41,8 +41,10 @@ const sopStages = [
       'Identify decision maker (DM) — MANDATORY before advancing',
       'Log meeting notes via Signal Intake or Meeting Notes',
       'AI auto-qualifies leads with ICP scoring (60+ = qualified)',
+      'Use Discovery Playbook (Agents → Playbooks) for guided step-by-step',
+      'Meeting Intelligence: paste transcript → AI extracts action items, DM detection, deal signals',
     ],
-    tools: ['Lead Management', 'Signal Intake', 'AI Agent: Deal Coach'],
+    tools: ['Lead Management', 'Signal Intake', 'AI Agent: Deal Coach', 'Meeting Intelligence', 'Sales Playbooks', 'Deal Copilot'],
     gate: 'Must have DM identified + budget signal confirmed',
   },
   {
@@ -57,8 +59,10 @@ const sopStages = [
       'Mandatory sections: Exec Summary, Scope, Team, Timeline, Pricing',
       'Export as PDF/DOCX for client delivery',
       'Link pricing from Pricing Engine',
+      'AI Email Composer: generate cover emails with A/B variants per template/tone',
+      'Competitive Battle Station: generate battle cards before presenting',
     ],
-    tools: ['Presales OS / Proposal Studio', 'Pricing Engine', 'Templates Library'],
+    tools: ['Presales OS / Proposal Studio', 'Pricing Engine', 'Templates Library', 'AI Email Composer', 'Competitive Battle Station'],
     gate: 'Proposal delivered + stakeholder feedback received',
   },
   {
@@ -70,11 +74,13 @@ const sopStages = [
     activities: [
       'Draft contracts using Contracts tab',
       'Review pricing with margin targets (≥28% standard)',
-      'Get executive approval for deals >$500K',
+      'Get executive approval for deals >$500K (auto-triggers: $500k+ VP Sales, $1M+ CSO)',
       'Document all terms in conversation log',
+      'Use Conversational Pipeline: "Move X to Negotiation" — AI executes with confirm',
+      'AI Email Composer: closing nudge and follow-up emails',
     ],
-    tools: ['Contracts', 'Pricing Engine', 'Deal Room'],
-    gate: 'Commercial terms agreed + legal review complete',
+    tools: ['Contracts', 'Pricing Engine', 'AI Deal Room', 'Conversational Pipeline', 'TCV Approval Workflows'],
+    gate: 'Commercial terms agreed + legal review complete + approvals obtained',
   },
   {
     number: 5,
@@ -84,11 +90,12 @@ const sopStages = [
     color: '#22c55e',
     activities: [
       'Won: Auto-creates kickoff + delivery workspace tasks',
-      'Lost: Document reason, update for competitive intelligence',
+      'Won: Win/Loss Autopsy auto-triggers — full execution analysis, lessons learned',
+      'Lost: Loss Autopsy auto-triggers — root cause, what to do differently',
       'Contracts: SOW/MSA execution tracked in Contracts tab',
     ],
-    tools: ['Pipeline Board', 'Contracts', 'Tasks'],
-    gate: 'Contract executed (Won) or loss reason documented (Lost)',
+    tools: ['Pipeline Board', 'Contracts', 'Tasks', 'Win/Loss Autopsy'],
+    gate: 'Contract executed (Won) or loss reason documented (Lost) + Autopsy completed',
   },
   {
     number: 6,
@@ -97,12 +104,14 @@ const sopStages = [
     icon: RefreshCw,
     color: '#11A7A0',
     activities: [
-      'Track ongoing revenue (monthly/quarterly)',
-      'Identify upsell opportunities (EN → EE path)',
-      'Maintain account health through regular touchpoints',
+      'Track ongoing revenue (monthly/quarterly) via Client Health Score tab',
+      'Identify upsell opportunities (EN → EE path) — Health tab shows upsell signals',
+      'Maintain account health: engagement score, delivery score, churn probability',
       'Feed competitive intelligence back into prospecting',
+      'Leader Dashboard: monitor ARR, MRR, rep performance, quota attainment',
+      'Smart Forecast: Monte Carlo simulations, what-if scenarios for revenue planning',
     ],
-    tools: ['Analytics Dashboard', 'Account Intelligence', 'Forecasting'],
+    tools: ['Analytics Dashboard', 'Account Intelligence', 'Forecasting', 'Client Health Score', 'Leader Dashboard', 'Smart Forecast', 'Territory & Quota'],
     gate: 'Account health score maintained above threshold + expansion pipeline seeded',
   },
 ];
@@ -227,7 +236,7 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
     <ul>
       <li><strong>Outlook Add-in</strong> — Native sidebar in Outlook. Auto-reads email (subject, from, body). One-click "Capture Signal & Process with AI". Shows deal match, action items, tasks created. Signals appear as cards on Home page with Accept/Dismiss. Deployed via admin.microsoft.com.</li>
       <li><strong>Teams Bot</strong> — Native Teams bot. @mention or DM the bot with meeting notes, deal updates, or client conversations. AI processes messages, extracts signals, matches deals, creates tasks, updates knowledge graph. Compose extension to search and share deal cards.</li>
-      <li><strong>Signal Cards</strong> — Signals from Teams/Outlook show prominently on Home page AND in notification bell. Accept triggers full GenUI process view: Signal Captured → Deal Matched → Tasks Created → Graph Updated → Open Deal. Accept & Create Opp for unmatched signals.</li>
+      <li><strong>Signal Cards</strong> — Signals from Teams/Outlook show on Home page. Accept triggers GenUI process view: Signal → Match (AI + fuzzy client-side) → Link to existing deal or Create new opportunity → Graph Updated. Smart deduplication prevents duplicate opportunities for existing customers.</li>
       <li><strong>Daily Digest</strong> — Automated email digest to each sales rep: KPIs, deals needing action, overdue tasks, recent signals, quick links. Trigger from Settings → Notifications or via API. Schedulable via AWS EventBridge cron.</li>
       <li><strong>Invite Emails</strong> — Creating a user auto-sends branded invite email. Re-send from Admin → Users → Send Invite button.</li>
       <li><strong>Voice AI</strong> — Real-time transcription via Web Speech API. Record → auto-transcribe → Process with AI. Playback with progress bar.</li>
@@ -258,29 +267,77 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
       <li><strong>O365 Directory</strong> — Search organization directory via Microsoft Graph, invite users from Azure AD.</li>
       <li><strong>Microsoft SSO</strong> — Sign in with Microsoft O365 via Azure AD OAuth with MFA support.</li>
       <li><strong>Smart Matching</strong> — Users auto-matched to their deals by fuzzy name matching.</li>
-      <li><strong>Settings</strong> — 6 tabs: AI & Agents, Plugins, MCP Tools, Security (2FA/TOTP), Appearance, Notifications (with Daily Digest controls).</li>
+      <li><strong>Settings</strong> — 7 tabs: AI & Agents, Plugins, MCP Tools, Territory & Quota, Security (2FA/TOTP), Appearance, Notifications.</li>
       <li><strong>2FA (TOTP)</strong> — App-level authenticator setup in Settings → Security. Works with Google/Microsoft Authenticator.</li>
       <li><strong>RBAC</strong> — 6 roles (Admin, Manager, Rep, SDR, Presales, Viewer) with 30+ permissions across 15 resources.</li>
+    </ul>
+
+    <hr class="section-divider" />
+    <h2>Wave 3 — AI Intelligence Suite (20 Features)</h2>
+
+    <h3>Visualization & Copilot</h3>
+    <ul>
+      <li><strong>Intelligence Mindmap</strong> (Home → Dashboard) — D3.js force graph. Center: you, Ring 1: KPIs, Ring 2: deals (sized by TCV, colored by health), Ring 3: stakeholders. Click to drill, zoom, expand fullscreen.</li>
+      <li><strong>Deal Copilot</strong> (All pages) — Floating AI button bottom-right. Context-aware prompts based on current page. Deal-focused mode in Deal Detail. Minimizable.</li>
+      <li><strong>Conversational Pipeline</strong> (Pipeline) — Chat bar at bottom of kanban. "Move Stellantis to Negotiation" → AI parses intent → executable action card with one-click confirm.</li>
+      <li><strong>Revenue Signals Timeline</strong> (Dashboard) — Unified timeline: activities + AI signals (stale deals, close-ready). Grouped by date, click to open deal.</li>
+    </ul>
+
+    <h3>Deal Intelligence</h3>
+    <ul>
+      <li><strong>Meeting Intelligence</strong> (Deal Detail → Meetings) — Paste transcript from Teams/Zoom/Meet. AI extracts action items, stakeholder sentiment, buying intent, competitors, objections.</li>
+      <li><strong>Win/Loss Autopsy</strong> (Auto on Won/Lost) — Full modal: execution score 0-100, key factors, timeline, stakeholder map, lessons, recommendations.</li>
+      <li><strong>AI Email Composer</strong> (Deal Detail → Email) — 6 templates × 4 tones. Auto-selects DM. A/B variant generation. Copy-to-clipboard.</li>
+      <li><strong>Competitive Battle Station</strong> (Deal Detail → Competitive) — Add competitors → AI generates battle cards: threat level, win rate, strengths vs advantages, talking points, objection handlers.</li>
+      <li><strong>Client Health Score</strong> (Deal Detail → Health, Won only) — Overall/Engagement/Delivery score rings. Churn %, renewal risk, upsell signals, recommendations.</li>
+      <li><strong>AI Deal Rooms</strong> (Deal Detail → Deal Room) — Team chat with AI assistant, document management (add/share/track), client micro-portal with shareable link.</li>
+    </ul>
+
+    <h3>Automation & Playbooks</h3>
+    <ul>
+      <li><strong>Autonomous Agent Mode</strong> (Agents) — Toggle: low-risk auto-execute, high-risk queue for approval. Configurable confidence threshold.</li>
+      <li><strong>TCV Approval Workflows</strong> — Auto on Negotiation: $500k+ → VP Sales, $1M+ → CSO chain. Visual status in Deal Detail.</li>
+      <li><strong>Sales Playbooks</strong> (Agents) — 4 stage playbooks (Discovery → Negotiation), 5 steps each, AI coaching per step, progress tracking.</li>
+    </ul>
+
+    <h3>Enterprise & RevOps</h3>
+    <ul>
+      <li><strong>Leader Dashboard</strong> (Pipeline → Leader) — 8 KPIs (ARR, MRR, Win Rate, etc), rep performance, stage/industry/cohort charts, top deals.</li>
+      <li><strong>Smart Forecast + Monte Carlo</strong> (Forecasting) — 3 scenarios, what-if sliders (win rate ±20%, slippage 0-50%), 1000-iteration Monte Carlo with P10-P90.</li>
+      <li><strong>Custom Dashboards</strong> (Pipeline → Custom) — 15 widget types, add from catalog, edit/remove, grid layout.</li>
+      <li><strong>Buyer Intent Signals</strong> (Accounts) — AI intent score + signals: job postings, tech, news, web activity. Strength badges.</li>
+      <li><strong>Territory & Quota</strong> (Settings) — Define territories, assign owners/quotas, attainment %, pacing bars, gap analysis.</li>
+    </ul>
+
+    <h3>Signal Flow (End-to-End)</h3>
+    <ul>
+      <li><strong>Capture</strong> — Teams bot / Outlook add-in / Voice / Signal Intake → AI processes.</li>
+      <li><strong>Match</strong> — AI + client-side fuzzy match to existing deals. No duplicates.</li>
+      <li><strong>Accept</strong> — Signal Cards on Home → Accept → links to existing deal OR creates new opportunity.</li>
+      <li><strong>Pipeline</strong> — Opportunity appears in kanban (Signal badge), funnel (signal count), mindmap (deal node).</li>
+      <li><strong>Badges</strong> — Kanban cards show: AI health score, win probability, missing DM, signal origin, active indicator.</li>
     </ul>
 
     <hr class="section-divider" />
     <h2>Getting Started</h2>
     <ol>
       <li>Sign in at <strong>https://salespilot.galent.ai</strong> with Microsoft or email/password.</li>
-      <li>Check <strong>"My Day"</strong> — Pilot Nudges show risks, stale deals, ageing hotspots, and opportunities.</li>
-      <li>Open <strong>Pipeline</strong> — Insight Bar flags risks. <strong>Table view</strong> has Ageing column (days in stage, color-coded).</li>
-      <li>Click any deal → <strong>Deal Detail</strong>: Pilot Actions (stage-aware), Agent Workflows (Deal Deep Dive, Proposal Accelerator, etc.), 8 tabs.</li>
-      <li>Run a <strong>Workflow</strong> on a deal: Deal Rescue (stale deals), Proposal Accelerator (fast proposals), Growth Play (expansions).</li>
-      <li>Use <strong>Ask Galent</strong> for natural language queries — AI responds with interactive GenUI cards.</li>
-      <li><strong>Forecasting</strong> — Pilot Forecast Brief with commit confidence and slip risks.</li>
-      <li><strong>Tasks</strong> — Pilot Priorities ranks top 5 by urgency. Ageing-aware prioritization.</li>
-      <li><strong>Agents page</strong> — Quick actions (12), Composable Workflows (6), Custom invocation, Agent fleet (13).</li>
-      <li><strong>Settings</strong> → Plugins (Outlook/Teams), MCP Tools (Claude Desktop), Security (2FA).</li>
-      <li>Visit <strong>Enablement</strong> for AI coaching, battle cards, and playbooks.</li>
+      <li>Check <strong>"My Day"</strong> — Pilot Nudges show risks. Signal Cards show Teams/Outlook signals → Accept to link/create deals.</li>
+      <li>Switch to <strong>"Dashboard"</strong> — Intelligence Mindmap visualizes your pipeline. Revenue Signals Timeline shows all activity.</li>
+      <li>Open <strong>Pipeline</strong> → Board view with AI health badges on cards. Use <strong>Conversational Pipeline</strong> chat bar: "Move X to Y".</li>
+      <li>Try <strong>Pipeline → Leader</strong> for RevOps KPIs. <strong>Pipeline → Custom</strong> to build your own dashboard.</li>
+      <li>Click any deal → <strong>Deal Detail</strong> with 12 tabs: Details, Stakeholders, Tasks, Meetings, Email, Competitive, Health, Pricing, Presales, Contracts, Docs, Deal Room.</li>
+      <li>In Deal Detail → <strong>Meetings</strong>: paste a transcript → AI extracts intelligence. <strong>Email</strong>: compose with A/B variants. <strong>Competitive</strong>: generate battle cards.</li>
+      <li>Move a deal to Won/Lost → <strong>Win/Loss Autopsy</strong> auto-triggers with full execution analysis.</li>
+      <li>Use the <strong>Deal Copilot</strong> (floating button, bottom-right) on any page for context-aware AI help.</li>
+      <li><strong>Agents page</strong> — Enable <strong>Autonomous Mode</strong> (auto-execute + approval queue). Use <strong>Sales Playbooks</strong> for stage-by-stage coaching.</li>
+      <li><strong>Forecasting</strong> — Smart Forecast with what-if sliders + Monte Carlo (1k simulations).</li>
+      <li><strong>Accounts</strong> — Expand any account for <strong>Buyer Intent Signals</strong> + Relationship Map.</li>
+      <li><strong>Settings</strong> → <strong>Territory & Quota</strong> for territory management. Plugins, MCP Tools, Security (2FA).</li>
     </ol>
 
     <div class="footer">
-      Galent SalesPilot v2.0 · ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} · https://salespilot.galent.ai
+      Galent SalesPilot v3.0 — Wave 3 AI Intelligence Suite · ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} · https://salespilot.galent.ai
     </div>
   </body></html>`;
 }
