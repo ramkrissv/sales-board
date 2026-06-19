@@ -725,10 +725,11 @@ function HomeContent() {
               const stageData = stageNames.map((stage, i) => {
                 const deals = opportunities.filter(o => o.status === stage);
                 const tcv = deals.reduce((s, o) => s + (o.tcv || 0), 0);
+                const signalDeals = deals.filter(d => d.source === 'Signal' || (d as any).convertedFromLeadId);
                 const nextStage = stageNames[i + 1];
                 const nextCount = nextStage ? opportunities.filter(o => o.status === nextStage).length : 0;
                 const convRate = deals.length > 0 && nextStage ? Math.round((nextCount / deals.length) * 100) : null;
-                return { stage, count: deals.length, tcv, color: stageColors[i], convRate };
+                return { stage, count: deals.length, tcv, color: stageColors[i], convRate, signalCount: signalDeals.length };
               });
               const maxCount = Math.max(...stageData.map(s => s.count), 1);
 
@@ -743,9 +744,14 @@ function HomeContent() {
                           <div className="text-[10px] text-muted-foreground">${(s.tcv/1000).toFixed(0)}k</div>
                         </div>
                         <div className="flex-1 flex items-center">
-                          <div className="relative h-10 rounded-lg transition-all duration-700 flex items-center justify-center"
+                          <div className="relative h-10 rounded-lg transition-all duration-700 flex items-center justify-center gap-1.5"
                             style={{ width: `${widthPct}%`, backgroundColor: s.color + '20', borderLeft: `3px solid ${s.color}` }}>
                             <span className="text-xs font-bold text-foreground g-metric">{s.count}</span>
+                            {s.signalCount > 0 && (
+                              <span className="text-[8px] px-1 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 font-medium flex items-center gap-0.5">
+                                <Zap className="h-2 w-2" />{s.signalCount}
+                              </span>
+                            )}
                           </div>
                           {s.convRate !== null && (
                             <span className="ml-2 text-[10px] text-muted-foreground whitespace-nowrap">→ {s.convRate}%</span>
