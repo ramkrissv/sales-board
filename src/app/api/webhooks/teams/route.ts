@@ -19,6 +19,10 @@ const BOT_APP_ID = process.env.TEAMS_BOT_APP_ID || process.env.AZURE_AD_CLIENT_I
 const BOT_APP_SECRET = process.env.TEAMS_BOT_SECRET || process.env.AZURE_AD_CLIENT_SECRET || '';
 
 async function getBotToken(): Promise<string | null> {
+  if (!BOT_APP_SECRET) {
+    console.error('Teams bot: BOT_APP_SECRET is empty');
+    return null;
+  }
   try {
     const res = await fetch('https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token', {
       method: 'POST',
@@ -28,19 +32,33 @@ async function getBotToken(): Promise<string | null> {
         client_secret: BOT_APP_SECRET, scope: 'https://api.botframework.com/.default',
       }),
     });
-    return (await res.json()).access_token || null;
-  } catch { return null; }
+    const data = await res.json();
+    if (!data.access_token) {
+      console.error('Teams bot token failed:', data.error_description || JSON.stringify(data));
+      return null;
+    }
+    return data.access_token;
+  } catch (e: any) {
+    console.error('Teams bot token error:', e.message);
+    return null;
+  }
 }
 
 async function reply(serviceUrl: string, convId: string, actId: string, text: string, card?: any) {
   const token = await getBotToken();
-  if (!token) return;
+  if (!token) { console.error('Teams reply: no token'); return; }
   const body: any = { type: 'message', from: { id: BOT_APP_ID, name: 'SalesPilot' }, conversation: { id: convId }, replyToId: actId, text };
   if (card) body.attachments = [{ contentType: 'application/vnd.microsoft.card.adaptive', content: card }];
-  await fetch(`${serviceUrl}v3/conversations/${convId}/activities/${actId}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body),
-  }).catch(() => {});
+  const baseUrl = serviceUrl.endsWith('/') ? serviceUrl : serviceUrl + '/';
+  try {
+    const res = await fetch(`${baseUrl}v3/conversations/${convId}/activities`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) console.error(`Teams reply failed (${res.status}):`, await res.text());
+  } catch (e: any) {
+    console.error('Teams reply error:', e.message);
+  }
 }
 
 async function processSignal(text: string, senderName: string, source: string) {

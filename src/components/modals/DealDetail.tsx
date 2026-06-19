@@ -315,12 +315,14 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               <span className="text-[10px] text-muted-foreground ml-2 capitalize">{(opp as any).lifecyclePhase || 'opportunity'}</span>
             </div>
 
-            {/* Lifecycle Actions */}
+            {/* Lifecycle Actions — show contextually */}
             <div className="flex gap-1.5 mt-2">
-              <button onClick={() => setShowCreateContract(true)}
-                className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/20 transition-colors">
-                <FileText className="h-3 w-3" /> Create Contract
-              </button>
+              {['Negotiation', 'Won'].includes(opp.status) && (
+                <button onClick={() => { setActiveTab('contracts'); }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/20 transition-colors">
+                  <FileText className="h-3 w-3" /> Create Contract
+                </button>
+              )}
               <button onClick={() => {
                 const year = new Date().getFullYear();
                 const id = `OPP-${year}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
@@ -644,15 +646,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
           </div>
         )}
 
-        {/* Workflow Runner — composable multi-agent workflows */}
-        {!agentRunResult && (
-          <div className="px-5 pt-2">
-            <WorkflowRunner
-              opportunityId={opp.id}
-              customerName={opp.customerName}
-            />
-          </div>
-        )}
+        {/* Workflow Runner moved below tab content for better flow */}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
@@ -756,12 +750,14 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               <div className="space-y-2">
                 <div className="g-section-label">Linked Entities</div>
 
-                {/* Linked contracts */}
-                <Link href="/contracts" className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border text-xs hover:border-[#5B4FE9]/30 transition-all">
-                  <FileText className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-foreground">View Contracts</span>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground ml-auto" />
-                </Link>
+                {/* Linked contracts — only show for Negotiation/Won/Proposal or if contracts exist */}
+                {(['Negotiation', 'Won', 'Proposal'].includes(opp.status)) && (
+                  <button onClick={() => setActiveTab('contracts')} className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border text-xs hover:border-[#5B4FE9]/30 transition-all w-full text-left">
+                    <FileText className="h-3.5 w-3.5 text-emerald-400" />
+                    <span className="text-foreground">Contracts</span>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground ml-auto" />
+                  </button>
+                )}
 
                 {/* Parent opportunity */}
                 {(opp as any).parentOpportunityId && (
@@ -1216,6 +1212,17 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
             <DealContractsTab opportunity={opp} onSwitchTab={(tab) => setActiveTab(tab as any)} />
           )}
         </div>
+
+        {/* Agent Workflows — below tabs, stage-aware suggestions */}
+        {!agentRunResult && (
+          <div className="px-5 py-3 border-t border-border">
+            <WorkflowRunner
+              opportunityId={opp.id}
+              customerName={opp.customerName}
+              dealStage={opp.status}
+            />
+          </div>
+        )}
 
         <MeetingNotesModal
           isOpen={showMeetingNotes}

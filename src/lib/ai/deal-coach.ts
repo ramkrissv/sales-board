@@ -71,29 +71,29 @@ Be specific to THIS deal. Reference actual stakeholder names, dates, and data po
   const text = response.content[0].type === 'text' ? response.content[0].text : '';
 
   try {
-    // Try to parse the JSON response — extract JSON object even if surrounded by text
-    const cleaned = text
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
-      .trim();
-
-    // First try direct parse, then regex extraction
-    let analysis: DealAnalysis;
-    try {
-      analysis = JSON.parse(cleaned) as DealAnalysis;
-    } catch {
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('No JSON found');
-      analysis = JSON.parse(jsonMatch[0]) as DealAnalysis;
-    }
-
+    const { parseAIJson } = await import('./parse-json');
+    const analysis = parseAIJson<DealAnalysis>(text);
     analysis.generatedAt = new Date().toISOString();
-    // Ensure numeric fields are numbers
     analysis.healthScore = Number(analysis.healthScore) || 50;
     analysis.winProbability = Number(analysis.winProbability) || 30;
+    // Ensure summary is not raw JSON
+    if (analysis.summary && analysis.summary.startsWith('{')) {
+      analysis.summary = 'Deal analysis complete. Review risks and actions below.';
+    }
     return analysis;
   } catch {
-    // Fallback if parsing fails
+    // Try one more time with aggressive extraction
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*?"summary"\s*:\s*"[^"]*"[\s\S]*?\}/);
+      if (jsonMatch) {
+        const analysis = JSON.parse(jsonMatch[0]) as DealAnalysis;
+        analysis.generatedAt = new Date().toISOString();
+        analysis.healthScore = Number(analysis.healthScore) || 50;
+        analysis.winProbability = Number(analysis.winProbability) || 30;
+        return analysis;
+      }
+    } catch {}
+
     return {
       healthScore: 50,
       winProbability: 30,
@@ -107,7 +107,7 @@ Be specific to THIS deal. Reference actual stakeholder names, dates, and data po
       actions: [
         { action: 'Review deal manually', reason: 'AI analysis needs review', priority: 'medium' },
       ],
-      summary: text.slice(0, 500),
+      summary: 'Analysis encountered a parsing error. Click refresh to retry.',
       generatedAt: new Date().toISOString(),
     };
   }

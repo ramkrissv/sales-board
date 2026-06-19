@@ -25,24 +25,53 @@ const AGENT_META: Record<string, { label: string; color: string; icon: any }> = 
   'campaign-agent': { label: 'Campaign', color: '#e11d48', icon: Mail },
 };
 
+// Stage → recommended workflow mapping
+const STAGE_WORKFLOWS: Record<string, string[]> = {
+  'Discovery': ['new-lead-enrichment', 'deal-deep-dive'],
+  'Qualification': ['deal-deep-dive', 'new-lead-enrichment'],
+  'Proposal': ['proposal-accelerator', 'deal-deep-dive'],
+  'Negotiation': ['deal-rescue', 'proposal-accelerator'],
+  'Won': ['growth-play'],
+  'Lost': ['deal-rescue'],
+  'On Hold': ['deal-rescue', 'pipeline-health'],
+};
+
 interface WorkflowRunnerProps {
   opportunityId?: string;
   customerName?: string;
+  dealStage?: string;
   onDealClick?: (dealId: string) => void;
 }
 
-export default function WorkflowRunner({ opportunityId, customerName, onDealClick }: WorkflowRunnerProps) {
+export default function WorkflowRunner({ opportunityId, customerName, dealStage, onDealClick }: WorkflowRunnerProps) {
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
-  const { data: workflows = [] } = trpc.harness.getWorkflows.useQuery();
+  const { data: allWorkflows = [] } = trpc.harness.getWorkflows.useQuery();
   const runWorkflowMutation = trpc.harness.runWorkflow.useMutation();
+
+  // Filter and sort workflows by stage relevance
+  const recommended = STAGE_WORKFLOWS[dealStage || ''] || [];
+  const workflows = [...allWorkflows].sort((a: any, b: any) => {
+    const aIdx = recommended.indexOf(a.id);
+    const bIdx = recommended.indexOf(b.id);
+    if (aIdx >= 0 && bIdx < 0) return -1;
+    if (bIdx >= 0 && aIdx < 0) return 1;
+    if (aIdx >= 0 && bIdx >= 0) return aIdx - bIdx;
+    return 0;
+  });
   const [activeRun, setActiveRun] = useState<any>(null);
+
+  const [runError, setRunError] = useState<string | null>(null);
 
   const handleRunWorkflow = (workflowId: string) => {
     setActiveRun(null);
     setExpandedStep(null);
+    setRunError(null);
     runWorkflowMutation.mutate(
       { workflowId, opportunityId, customerName },
-      { onSuccess: (data) => setActiveRun(data) }
+      {
+        onSuccess: (data) => setActiveRun(data),
+        onError: (err) => setRunError(err.message || 'Workflow failed — try again'),
+      }
     );
   };
 
@@ -56,14 +85,19 @@ export default function WorkflowRunner({ opportunityId, customerName, onDealClic
 
       {!activeRun && !runWorkflowMutation.isPending && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {workflows.map((wf: any) => (
+          {workflows.map((wf: any) => {
+            const isRecommended = recommended.includes(wf.id);
+            return (
             <button key={wf.id}
               onClick={() => handleRunWorkflow(wf.id)}
-              className="p-3 rounded-xl border border-border bg-card hover:border-[#7c3aed]/30 transition-all text-left group"
+              className={`p-3 rounded-xl border transition-all text-left group ${
+                isRecommended ? 'border-[#7c3aed]/30 bg-[#7c3aed]/5 hover:border-[#7c3aed]/50' : 'border-border bg-card hover:border-[#7c3aed]/30'
+              }`}
             >
               <div className="flex items-center gap-2 mb-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-[#7c3aed]" />
                 <span className="text-xs font-semibold text-foreground group-hover:text-[#7c3aed]">{wf.name}</span>
+                {isRecommended && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#7c3aed]/15 text-[#7c3aed] font-medium">Suggested</span>}
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed">{wf.description}</p>
               <div className="flex items-center gap-1 mt-2">
@@ -82,7 +116,8 @@ export default function WorkflowRunner({ opportunityId, customerName, onDealClic
                 <span className="text-[9px] text-muted-foreground ml-1">{wf.stepCount} agents</span>
               </div>
             </button>
-          ))}
+          );
+          })}
         </div>
       )}
 
@@ -96,11 +131,21 @@ export default function WorkflowRunner({ opportunityId, customerName, onDealClic
               </div>
               <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#7c3aed] animate-ping" />
             </div>
-            <div>
+            <div className="flex-1">
               <div className="text-sm font-semibold text-foreground">Workflow running...</div>
-              <div className="text-xs text-muted-foreground">Agents are executing sequentially, passing context between each step</div>
+              <div className="text-xs text-muted-foreground">Agents executing — this may take 15-30 seconds</div>
             </div>
+            <button onClick={() => runWorkflowMutation.reset()}
+              className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-secondary">Cancel</button>
           </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {runError && (
+        <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/5 flex items-center justify-between">
+          <span className="text-xs text-red-400">{runError}</span>
+          <button onClick={() => setRunError(null)} className="text-[10px] text-muted-foreground hover:text-foreground">Dismiss</button>
         </div>
       )}
 
