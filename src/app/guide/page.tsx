@@ -172,17 +172,17 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
 
     <h3>Core Sales</h3>
     <ul>
-      <li><strong>Pipeline Management</strong> — Board, Funnel, Table, Calendar, Graph views. Drag-drop with AI gate analysis.</li>
-      <li><strong>Conversational Lead Capture</strong> — Describe leads naturally (voice or text), AI extracts all fields.</li>
-      <li><strong>Deal Room</strong> — AI-powered conversational deal management with inline forms.</li>
+      <li><strong>Pipeline Management</strong> — 7 views: Board, Funnel, Table, Calendar, Graph, Leader, Custom. AI health badges on kanban cards. Conversational Pipeline chat bar for NLP commands.</li>
+      <li><strong>New Opportunity</strong> — 6 service lines (Legacy Modernization, Data & AI, Testing & QA, Managed Services/SRE, Cloud & Infrastructure, Staffing). 4 engagement types (Fixed Price, T&M, Product Licensing, Outcome-Based). Stage drives progression (no lifecycle phase).</li>
+      <li><strong>Deal Detail</strong> — 12 tabs: Details, Stakeholders, Tasks, Meetings, Email, Competitive, Health, Pricing, Presales, Contracts, Docs, Deal Room. Deal Copilot embedded.</li>
       <li><strong>Contacts Intelligence</strong> — Auto-categorized: Executive, Champion, Influencer, Gatekeeper, End User.</li>
       <li><strong>Tasks</strong> — AI auto-creates tasks on stage changes. Overdue tracking.</li>
     </ul>
 
     <h3>Presales & Pricing</h3>
     <ul>
-      <li><strong>Proposal Studio</strong> — Conversational AI drafts proposals. 150+ templates across 12 domains.</li>
-      <li><strong>Pricing Desk</strong> — Rate cards by geo (NA/India/LATAM/EU). Blended team builder. CSV export.</li>
+      <li><strong>Proposal Studio</strong> — Conversational AI drafts proposals. 150+ templates across 12 domains. Filters to Qualification+ deals only.</li>
+      <li><strong>Pricing Desk</strong> — Rate cards by geo. Apply Pricing auto-populates both TCV and Margin % on the deal.</li>
       <li><strong>Solutioning</strong> — Effort estimator, SA assignments, architecture notes.</li>
       <li><strong>Contracts</strong> — SOW, MSA, NDA lifecycle with approval chains.</li>
       <li><strong>Export</strong> — PDF, DOCX, Markdown export for proposals.</li>
@@ -509,34 +509,36 @@ export default function GuidePage() {
         { icon: Magnet, title: 'Lead Management', description: 'AI-powered lead scoring, qualification, and enrichment. Leads flow: Signal → Qualify → Enrich → Engage → Convert.', href: '/leads', color: '#7c3aed', tag: 'AI', stats: `${opps.length > 0 ? 'Pipeline active' : 'Start adding leads'}` },
         { icon: Globe, title: 'Signal Intake', description: 'Capture intel from voice recordings, Teams transcripts, Outlook emails, or desktop notes. AI extracts deal signals automatically.', href: '/intake', color: '#11A7A0', tag: 'Omni-channel' },
         { icon: Mail, title: 'Campaigns', description: 'Track outbound, ABM, and inbound campaigns with funnel analytics. Create, manage, and measure campaign performance.', href: '/campaigns', color: '#3b82f6' },
-        { icon: Network, title: 'Account Intelligence', description: 'Deep account research with AI-powered company analysis, relationship mapping, and expansion signals.', href: '/accounts', color: '#f59e0b', stats: 'AI enrichment + intent scoring' },
+        { icon: Network, title: 'Account Intelligence', description: 'Deep account research with Buyer Intent Signals (job postings, tech, news), D3 Relationship Intelligence Graph (sentiment halos, DM crowns), territory assignment, and expansion signals.', href: '/accounts', color: '#f59e0b', tag: 'D3 + Intent', stats: 'AI enrichment + intent scoring + territory' },
       ],
     },
     {
       title: 'Pipeline Management',
-      description: 'Manage your deals through stages with AI coaching, multiple views, and real-time insights',
+      description: 'Manage deals through 7 views with AI coaching, NLP commands, and real-time insights',
       features: [
-        { icon: Kanban, title: 'Pipeline Board', description: 'Drag-and-drop kanban with gate criteria, AI readiness analysis on every stage move, and weighted values.', href: '/pipeline', color: '#7c3aed', tag: 'Primary', stats: `${activeDeals.length} active deals · $${(totalPipeline / 1e6).toFixed(1)}M pipeline` },
-        { icon: MessageSquare, title: 'Deal Room', description: 'Conversational deal management. Add tasks, stakeholders, change stages — all through natural language with AI assistance.', href: '/deal-room', color: '#22c55e' },
+        { icon: Kanban, title: 'Pipeline Board', description: 'Drag-and-drop kanban with AI health badges on every card (health score, win probability, missing DM, signal origin). Gate criteria on stage move.', href: '/pipeline', color: '#7c3aed', tag: 'Primary', stats: `${activeDeals.length} active deals · $${(totalPipeline / 1e6).toFixed(1)}M pipeline` },
+        { icon: MessageSquare, title: 'Conversational Pipeline', description: 'Chat bar at bottom of board. "Move Stellantis to Negotiation" → AI parses intent → action card with Execute button. Natural language pipeline management.', href: '/pipeline', color: '#22c55e', tag: 'NLP' },
+        { icon: BarChart3, title: 'Leader Dashboard', description: 'Pipeline → Leader tab. 8 executive KPIs, Targets vs Actuals per rep (quota, closed, pipeline, attainment %, pacing), rep ranking, charts.', href: '/pipeline', color: '#3b82f6', tag: 'RevOps' },
+        { icon: Crown, title: 'Custom Dashboards', description: 'Pipeline → Custom tab. 15 widget types (KPIs, bar charts, pie charts, deal lists). Add from catalog, edit layout.', href: '/pipeline', color: '#7c3aed', tag: 'Builder' },
         { icon: CheckSquare, title: 'Tasks', description: 'AI auto-creates tasks when deals change stages. Track overdue items, set priorities, and link everything to deals.', href: '/tasks', color: '#ef4444', stats: overdueTasks.length > 0 ? `${overdueTasks.length} overdue tasks need attention` : 'All tasks on track' },
         { icon: Users, title: 'Contacts & Intelligence', description: 'Auto-categorized contacts: Executive, Champion, Influencer, Gatekeeper. Slide-out intelligence panel for each person.', href: '/stakeholders', color: '#8b5cf6', tag: 'AI Categories' },
       ],
     },
     {
       title: 'Presales & Pricing',
-      description: 'Build proposals, estimate pricing, and generate SOW documents — all AI-assisted',
+      description: 'Build proposals, estimate pricing, generate SOW — AI-assisted with auto-populate margin',
       features: [
-        { icon: Target, title: 'Presales OS', description: 'Pursuit pipeline (RFP/RFI/Proactive), 10-section Proposal Studio with AI drafting, solutioning effort estimator, and templates.', href: '/presales', color: '#178A4C', tag: 'AI Studio' },
-        { icon: DollarSign, title: 'Pricing Engine', description: '11 roles × 6 geo regions with Galent rate cards. Build team compositions, calculate blended rates, margins, and export to CSV.', href: '/pricing', color: '#B26A05' },
+        { icon: Target, title: 'Presales OS', description: 'Pursuit pipeline (Qualification+ only), 10-section Proposal Studio with AI drafting, solutioning effort estimator, and templates. Deals filter to Qualification/Proposal/Negotiation.', href: '/presales', color: '#178A4C', tag: 'AI Studio' },
+        { icon: DollarSign, title: 'Pricing Engine', description: '11 roles × 6 geo regions. Build team compositions, calculate blended rates. Apply Pricing auto-populates both TCV and Margin % on the deal.', href: '/pricing', color: '#B26A05', tag: 'Auto-Margin' },
         { icon: FileText, title: 'Contracts', description: 'Full contract lifecycle: SOW, MSA, NDA, Change Orders. Approval chains, expiry tracking, and deal linking.', href: '/contracts', color: '#C73A3A' },
       ],
     },
     {
       title: 'Analytics & Forecasting',
-      description: 'Pipeline insights, revenue forecasting, and deal flow visualization',
+      description: 'Pipeline insights, scenario modeling, Monte Carlo simulations, and deal flow visualization',
       features: [
-        { icon: BarChart3, title: 'Analytics Dashboard', description: 'Pipeline by stage, by owner, by industry. Sales funnel with conversion rates. Forecast by quarter.', href: '/dashboard', color: '#7c3aed' },
-        { icon: TrendingUp, title: 'Forecasting', description: 'Commit / Best Case / Pipeline categories. Weighted forecast, win rate tracking, rep-level breakdown.', href: '/forecasting', color: '#3b82f6' },
+        { icon: BarChart3, title: 'Analytics Dashboard', description: 'Pipeline by stage, by owner, by industry. Sales funnel with signal counts. Forecast by quarter.', href: '/dashboard', color: '#7c3aed' },
+        { icon: TrendingUp, title: 'Forecasting + Smart Scenarios', description: 'Commit/Best Case/Pipeline categories + Smart Forecast: 3 scenarios (Base/Optimistic/Conservative), what-if sliders, 1000-iteration Monte Carlo with P10-P90 confidence intervals.', href: '/forecasting', color: '#3b82f6', tag: 'Monte Carlo' },
         { icon: Eye, title: 'Deal Graph', description: 'Interactive pipeline visualization — graph, sankey, and list views. Click any node to drill into deal details.', href: '/graph', color: '#22c55e' },
       ],
     },
