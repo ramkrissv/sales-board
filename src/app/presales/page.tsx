@@ -678,11 +678,12 @@ User message: ${text.trim()}`;
   /* ── Apply pricing to deal ── */
   const applyPricingToDeal = useCallback(() => {
     if (!selectedDealId) return;
+    // Auto-populate both TCV and Margin % from presales pricing
     updateOppMutation.mutate(
-      { id: selectedDealId, tcv: Math.round(pricingCalcs.totalWithMargin) } as any,
+      { id: selectedDealId, tcv: Math.round(pricingCalcs.totalWithMargin), margin: pricingMargin } as any,
       { onSuccess: () => utils.opportunity.list.invalidate() }
     );
-  }, [selectedDealId, pricingCalcs.totalWithMargin, updateOppMutation, utils]);
+  }, [selectedDealId, pricingCalcs.totalWithMargin, pricingMargin, updateOppMutation, utils]);
 
   /* ═══════════════════════════════════════════════════════
      RENDER

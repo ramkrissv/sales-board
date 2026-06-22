@@ -21,8 +21,8 @@ export type Industry =
 
 export type Region = 'North America' | 'Europe' | 'APAC' | 'Latin America' | 'Middle East';
 
-export type ServiceLine = 'IT Services' | 'Staffing';
-export type BillingModel = 'Time & Material' | 'Fixed Price' | 'Retainer' | 'Milestone-based';
+export type ServiceLine = 'Legacy Modernization' | 'Data & AI' | 'Testing & QA' | 'Managed Services / SRE' | 'Cloud & Infrastructure' | 'Staffing';
+export type BillingModel = 'Fixed Price' | 'T&M' | 'Product Licensing' | 'Outcome-Based' | 'Time & Material' | 'Retainer' | 'Milestone-based';
 
 export type ClientType = 'New' | 'Existing';
 export type OpportunityType = 'New Deal' | 'Upsell' | 'Cross-sell' | 'Renewal' | 'Enhancement';

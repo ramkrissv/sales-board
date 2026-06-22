@@ -15,13 +15,7 @@ const DEAL_CLASSIFICATIONS = [
   { code: 'EE', label: 'Existing-Existing', description: 'Existing client, renewal/expand', color: 'bg-[var(--g-green)]/10 text-[var(--g-green)] border-[var(--g-green)]/30' },
 ];
 
-const LIFECYCLE_PHASES = [
-  { value: 'opportunity', label: 'Opportunity', description: 'Early stage — qualifying fit and interest' },
-  { value: 'pursuit', label: 'Pursuit', description: 'Actively pursuing — RFP/proposal in progress' },
-  { value: 'deal', label: 'Deal', description: 'Negotiating terms and contracts' },
-  { value: 'engagement', label: 'Engagement', description: 'Signed — active delivery in progress' },
-  { value: 'delivery', label: 'Delivery', description: 'Executing and delivering value' },
-];
+// Lifecycle Phase removed — Stage field is sufficient for deal progression
 
 interface NewDealModalProps {
   isOpen: boolean;
@@ -54,7 +48,6 @@ export function NewDealModal({ isOpen, onClose }: NewDealModalProps) {
     pricingModel: '',
     margin: 28,
     accountId: '',
-    lifecyclePhase: 'opportunity',
     dealClassification: 'NN',
     clientType: 'New',
   };
@@ -210,7 +203,7 @@ Return JSON only:
         conversationLog: '',
         activityLog: [],
         ...(form.accountId ? { accountId: form.accountId } : {}),
-        lifecyclePhase: form.lifecyclePhase || 'opportunity',
+        // lifecyclePhase derived from stage, not a separate field
         clientType: form.clientType || 'New',
       } as any);
     } catch (err: any) {
@@ -305,12 +298,7 @@ Return JSON only:
                     <Zap className="h-2.5 w-2.5 text-[#7c3aed]" /> TCV: ${(aiSuggestions.suggestedTcv/1000).toFixed(0)}k
                   </button>
                 )}
-                {aiSuggestions.phase && (
-                  <button type="button" onClick={() => applyAiSuggestion('lifecyclePhase', aiSuggestions.phase)}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] rounded-lg bg-card border border-border text-foreground hover:border-[#7c3aed]/30 transition-colors">
-                    <Zap className="h-2.5 w-2.5 text-[#7c3aed]" /> Phase: {aiSuggestions.phase}
-                  </button>
-                )}
+                {/* Lifecycle phase removed — stage is sufficient */}
               </div>
             </div>
           )}

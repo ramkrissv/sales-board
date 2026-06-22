@@ -86,7 +86,7 @@ const OpportunitySchema = new Schema<IOpportunity>(
     },
     serviceLine: {
       type: String,
-      enum: ['IT Services', 'Staffing'],
+      enum: ['Legacy Modernization', 'Data & AI', 'Testing & QA', 'Managed Services / SRE', 'Cloud & Infrastructure', 'Staffing'],
       required: false,
     },
     clientType: {
@@ -101,7 +101,7 @@ const OpportunitySchema = new Schema<IOpportunity>(
     },
     billingModel: {
       type: String,
-      enum: ['Time & Material', 'Fixed Price', 'Retainer', 'Milestone-based'],
+      enum: ['Fixed Price', 'T&M', 'Product Licensing', 'Outcome-Based', 'Time & Material', 'Retainer', 'Milestone-based'],
       required: false,
     },
     margin: { type: Number, min: 0, max: 100, required: false },

@@ -51,7 +51,7 @@ function TableContent() {
       if (bizFilter === 'new') return o.clientType === 'New';
       if (bizFilter === 'existing') return o.clientType === 'Existing';
       if (bizFilter === 'product') return (o.engagementType || '').toLowerCase().includes('product') || (o.opportunityType || '').toLowerCase().includes('product');
-      if (bizFilter === 'services') return o.serviceLine === 'IT Services' || o.serviceLine === 'Staffing';
+      if (bizFilter === 'services') return !!o.serviceLine;
       if (bizFilter === 'hybrid') return (o.engagementType || '').includes('Hybrid') || (o.engagementType || '').includes('Combined');
       return true;
     }).filter(o => {

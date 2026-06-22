@@ -408,14 +408,18 @@ export function OpportunityModal({ opportunityId, onClose }: OpportunityModalPro
                           <Controller
                             name="serviceLine"
                             control={control}
-                            defaultValue="IT Services"
+                            defaultValue="Legacy Modernization"
                             render={({ field }) => (
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select service line" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="IT Services">IT Services</SelectItem>
+                                  <SelectItem value="Legacy Modernization">Legacy Modernization</SelectItem>
+                                  <SelectItem value="Data & AI">Data & AI</SelectItem>
+                                  <SelectItem value="Testing & QA">Testing & QA</SelectItem>
+                                  <SelectItem value="Managed Services / SRE">Managed Services / SRE</SelectItem>
+                                  <SelectItem value="Cloud & Infrastructure">Cloud & Infrastructure</SelectItem>
                                   <SelectItem value="Staffing">Staffing</SelectItem>
                                 </SelectContent>
                               </Select>

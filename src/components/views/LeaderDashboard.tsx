@@ -114,6 +114,90 @@ export default function LeaderDashboard({ onDealClick }: LeaderDashboardProps) {
         ))}
       </div>
 
+      {/* Targets vs Actuals — per salesperson */}
+      <div className="p-5 rounded-xl g-surface g-elevated">
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <Target className="h-3 w-3" /> Targets vs Actuals — Per Salesperson
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border text-[9px] uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-2 pr-3">Rep</th>
+                <th className="text-right py-2 px-2">Target</th>
+                <th className="text-right py-2 px-2">Closed</th>
+                <th className="text-right py-2 px-2">Pipeline</th>
+                <th className="text-right py-2 px-2">Weighted</th>
+                <th className="text-right py-2 px-2">Attain %</th>
+                <th className="text-left py-2 px-2 w-28">Pacing</th>
+                <th className="text-right py-2 px-2">Gap</th>
+                <th className="text-right py-2 px-2">Deals</th>
+              </tr>
+            </thead>
+            <tbody>
+              {metrics.owners.map((owner) => {
+                // Default quota per rep (configurable in Settings → Territory)
+                const quota = 1500000;
+                const attainment = quota > 0 ? Math.round((owner.revenue / quota) * 100) : 0;
+                const pacing = quota > 0 ? Math.round(((owner.revenue + owner.pipeline * 0.5) / quota) * 100) : 0;
+                const gap = Math.max(0, quota - owner.revenue);
+                return (
+                  <tr key={owner.name} className="border-b border-border/50 hover:bg-card/50">
+                    <td className="py-2.5 pr-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-[#7c3aed]/10 flex items-center justify-center text-[#7c3aed] text-[8px] font-bold">
+                          {owner.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <span className="font-medium text-foreground">{owner.name}</span>
+                      </div>
+                    </td>
+                    <td className="text-right py-2.5 px-2 font-mono text-muted-foreground">${(quota / 1000).toFixed(0)}k</td>
+                    <td className="text-right py-2.5 px-2 font-mono text-emerald-400 font-semibold">${(owner.revenue / 1000).toFixed(0)}k</td>
+                    <td className="text-right py-2.5 px-2 font-mono text-[#7c3aed]">${(owner.pipeline / 1000).toFixed(0)}k</td>
+                    <td className="text-right py-2.5 px-2 font-mono text-blue-400">${(owner.weighted / 1000).toFixed(0)}k</td>
+                    <td className={`text-right py-2.5 px-2 font-mono font-semibold ${attainment >= 80 ? 'text-emerald-400' : attainment >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {attainment}%
+                    </td>
+                    <td className="py-2.5 px-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+                          <div className="h-full rounded-full transition-all" style={{
+                            width: `${Math.min(100, pacing)}%`,
+                            backgroundColor: pacing >= 80 ? '#22c55e' : pacing >= 50 ? '#f59e0b' : '#ef4444',
+                          }} />
+                        </div>
+                        <span className="text-[9px] text-muted-foreground w-8">{pacing}%</span>
+                      </div>
+                    </td>
+                    <td className={`text-right py-2.5 px-2 font-mono ${gap > 500000 ? 'text-red-400' : 'text-amber-400'}`}>
+                      ${(gap / 1000).toFixed(0)}k
+                    </td>
+                    <td className="text-right py-2.5 px-2 text-muted-foreground">{owner.active + owner.won}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-[#7c3aed]/20 font-semibold">
+                <td className="py-2.5 pr-3 text-foreground">Total ({metrics.owners.length} reps)</td>
+                <td className="text-right py-2.5 px-2 font-mono text-muted-foreground">${(metrics.owners.length * 1500000 / 1e6).toFixed(1)}M</td>
+                <td className="text-right py-2.5 px-2 font-mono text-emerald-400">${(metrics.wonRevenue / 1e6).toFixed(1)}M</td>
+                <td className="text-right py-2.5 px-2 font-mono text-[#7c3aed]">${(metrics.totalPipeline / 1e6).toFixed(1)}M</td>
+                <td className="text-right py-2.5 px-2 font-mono text-blue-400">${(metrics.weightedForecast / 1e6).toFixed(1)}M</td>
+                <td className="text-right py-2.5 px-2 font-mono text-foreground">
+                  {metrics.owners.length > 0 ? Math.round((metrics.wonRevenue / (metrics.owners.length * 1500000)) * 100) : 0}%
+                </td>
+                <td></td>
+                <td className="text-right py-2.5 px-2 font-mono text-amber-400">
+                  ${(Math.max(0, metrics.owners.length * 1500000 - metrics.wonRevenue) / 1e6).toFixed(1)}M
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Rep Performance */}
         <div className="p-5 rounded-xl g-surface g-elevated">
