@@ -1,7 +1,9 @@
 'use client';
 
 import { workshopStats, levelReadiness, gapsForWorkshop, priorityRank } from '@/lib/workshop/scoring';
-import { BarChart3, Target, Layers, Zap, Users, Flag, TrendingUp } from 'lucide-react';
+import { BarChart3, Target, Layers, Zap, Users, Flag, TrendingUp, FileText, Award } from 'lucide-react';
+import ReadinessSpine from './exhibits/ReadinessSpine';
+import GapHeatmap from './exhibits/GapHeatmap';
 
 const MATURITY_COLORS = ['#C3C9D4', '#9DB0C6', '#6E97C2', '#3A93A0', '#0A867F'];
 
@@ -70,61 +72,52 @@ export default function WorkshopCockpit({ workshop }: WorkshopCockpitProps) {
         </div>
       </div>
 
-      {/* Level Readiness Bars */}
-      <div className="p-5 rounded-xl bg-card border border-border">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-1.5">
-          <TrendingUp className="h-3 w-3" /> Per-Level Readiness
+      {/* Readiness Spine Exhibit — the signature visualization */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-5 rounded-xl bg-card border border-border">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-1.5">
+            <TrendingUp className="h-3 w-3" /> Readiness Spine
+          </div>
+          <ReadinessSpine levels={workshop.framework?.levels || []} />
         </div>
-        <div className="space-y-3">
-          {stats.levelReadiness.map((lr: any) => (
-            <div key={lr.levelId} className="flex items-center gap-3">
-              <div className="text-[10px] font-mono font-semibold text-white bg-[#0B1120] w-7 h-6 rounded-md flex items-center justify-center shrink-0">
-                {lr.levelId}
-              </div>
-              <span className="text-xs font-semibold text-foreground w-44 truncate">{lr.name}</span>
-              <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden relative">
-                <div className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${lr.currentPct}%`, background: `linear-gradient(90deg, #6E97C2, #0A867F)` }} />
-                {lr.targetPct > 0 && (
-                  <div className="absolute top-[-2px] w-0.5 h-[12px] bg-amber-500 rounded"
-                    style={{ left: `${lr.targetPct}%` }} title={`Target: ${lr.targetPct}%`} />
-                )}
-              </div>
-              <span className="text-xs font-mono font-semibold text-foreground w-10 text-right">{lr.currentPct}%</span>
-              <span className="text-[10px] text-muted-foreground w-12 text-right">{lr.scored}/{lr.total}</span>
-            </div>
-          ))}
+
+        {/* Gap Heatmap */}
+        <div className="p-5 rounded-xl bg-card border border-border">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+            <Flag className="h-3 w-3" /> Gap Heatmap
+          </div>
+          <GapHeatmap workshop={workshop} maxGaps={10} />
+          {topGaps.length === 0 && (
+            <div className="text-[10px] text-muted-foreground text-center py-4">Score dimensions to surface gaps</div>
+          )}
         </div>
       </div>
 
-      {/* Top Gaps */}
-      {topGaps.length > 0 && (
-        <div className="p-5 rounded-xl bg-card border border-border">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
-            <Flag className="h-3 w-3" /> Top Gaps
+      {/* Workshop progress + recommendations */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 rounded-xl bg-card border border-border">
+          <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-2">Assessment Progress</div>
+          <div className="relative h-2 rounded-full bg-secondary overflow-hidden mb-2">
+            <div className="h-full rounded-full bg-[#0A867F] transition-all" style={{ width: `${Math.round((stats.dimensionsScored / Math.max(1, stats.totalDimensions)) * 100)}%` }} />
           </div>
-          <div className="space-y-2">
-            {topGaps.map(g => {
-              const rank = priorityRank(g);
-              const rankColors = ['#9DB0C6', '#3A93A0', '#D97A2B', '#C8472E'];
-              return (
-                <div key={g.dimensionId} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
-                  <div className="w-1.5 self-stretch rounded-full" style={{ backgroundColor: rankColors[rank] }} />
-                  <span className="text-[10px] font-mono text-muted-foreground w-6">{g.dimensionId}</span>
-                  <span className="text-xs text-foreground flex-1 truncate">{g.dimensionName}</span>
-                  <div className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
-                    <span style={{ color: MATURITY_COLORS[g.current] }}>{g.current}</span>
-                    <span className="text-[#0A867F]">→</span>
-                    <span style={{ color: MATURITY_COLORS[g.target] }}>{g.target}</span>
-                  </div>
-                  <span className="text-xs font-bold font-display" style={{ color: rankColors[rank] }}>+{g.gap}</span>
-                  {g.priority && <Flag className="h-3 w-3 text-red-400" />}
-                </div>
-              );
-            })}
+          <div className="text-xs text-foreground">{stats.dimensionsScored} of {stats.totalDimensions} dimensions scored</div>
+        </div>
+        <div className="p-4 rounded-xl bg-card border border-border">
+          <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-2">Scope Readiness</div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold font-display text-[#0A867F]">{stats.gapCount}</span>
+            <span className="text-xs text-muted-foreground">gaps → {stats.scopeItemCount} scope items</span>
+          </div>
+          <div className="text-[10px] text-muted-foreground mt-1">{stats.priorityGapCount} priority · {stats.totalEffort} effort pts</div>
+        </div>
+        <div className="p-4 rounded-xl bg-card border border-border">
+          <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-2">Use Cases</div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold font-display text-[#7c3aed]">{stats.useCaseCount}</span>
+            <span className="text-xs text-muted-foreground">identified · {stats.pilotCount} pilots</span>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
