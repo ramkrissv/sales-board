@@ -37,9 +37,21 @@ function renderMiniChart(text: string): React.ReactElement | null {
 }
 
 function AskContent() {
-  const { opportunities } = useOpportunities();
+  const { opportunities, refreshOpportunities } = useOpportunities();
   const router = useRouter();
+  const utils = trpc.useUtils();
   const createTaskMutation = trpc.task.create.useMutation();
+  const createOppMutation = trpc.opportunity.create.useMutation({
+    onSuccess: (data: any) => {
+      utils.opportunity.list.invalidate();
+      refreshOpportunities();
+      setActionFeedback(`Opportunity created: ${data.customerName || 'New Deal'} — click to open`);
+      setSelectedOppId(data.id);
+      setTimeout(() => setActionFeedback(null), 5000);
+    },
+    onError: (err) => { setActionFeedback(`Error creating opportunity: ${err.message}`); setTimeout(() => setActionFeedback(null), 5000); },
+  });
+  const createAccountMutation = trpc.account.create.useMutation();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ type: string; content: string; timestamp: Date }[]>([]);
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
@@ -70,11 +82,54 @@ function AskContent() {
   const chatMutation = trpc.ai.chat.useMutation({
     onSuccess: (data) => {
       setResults(prev => [...prev, { type: 'answer', content: data.response, timestamp: new Date() }]);
+      // Check if AI response contains a deal creation JSON
+      tryExtractAndCreateDeal(data.response);
     },
   });
 
+  // Detect deal creation intent from AI response
+  const tryExtractAndCreateDeal = (response: string) => {
+    try {
+      const match = response.match(/\{[\s\S]*?"customerName"[\s\S]*?\}/);
+      if (match) {
+        const data = JSON.parse(match[0]);
+        if (data.customerName && data._action === 'create_opportunity') {
+          handleCreateFromAI(data);
+        }
+      }
+    } catch {} // Not a deal creation response — that's fine
+  };
+
+  // Create opportunity from AI-extracted or user-described data
+  const handleCreateFromAI = (data: any) => {
+    // Also create account if needed
+    const accountExists = opportunities.some(o => o.customerName.toLowerCase() === (data.customerName || '').toLowerCase());
+    if (!accountExists && data.customerName) {
+      createAccountMutation.mutate({ companyName: data.customerName } as any);
+    }
+    createOppMutation.mutate({
+      customerName: data.customerName || 'New Lead',
+      opportunityName: data.opportunityName || `${data.customerName} — New Opportunity`,
+      status: data.status || 'Discovery',
+      tcv: data.tcv || 0,
+      dealDuration: data.dealDuration || '12 months',
+      expectedCloseDate: data.expectedCloseDate || new Date(Date.now() + 90 * 86400000).toISOString(),
+      startDate: new Date().toISOString(),
+      primaryOwner: data.primaryOwner || data.salesRep || 'Unassigned',
+      industry: data.industry || '',
+      region: data.region || 'North America',
+      source: 'Ask Galent',
+      serviceLine: data.serviceLine || undefined,
+    } as any);
+  };
+
   const handleAsk = () => {
     if (!query.trim()) return;
+
+    // Detect create/new opportunity intent — add special instruction to AI
+    const lower = query.toLowerCase();
+    const isCreateIntent = /\b(new|create|add|log|register)\b.*\b(opportunity|deal|opp|lead|engagement|project)\b/i.test(lower)
+      || /\b(opportunity|deal)\b.*\b(with|for|from)\b/i.test(lower);
 
     // Add context about the pipeline to the query
     const context = `Current pipeline data: ${opportunities.length} total opportunities. By stage: ${
@@ -85,9 +140,13 @@ function AskContent() {
       [...new Set(opportunities.map(o => o.customerName))].slice(0, 5).join(', ')
     }.`;
 
+    const createInstruction = isCreateIntent ? `\n\nIMPORTANT: The user wants to CREATE a new opportunity. Extract all fields from their message and include this JSON in your response (in addition to a friendly confirmation):
+{"_action":"create_opportunity","customerName":"<company>","opportunityName":"<company — description>","primaryOwner":"<sales rep if mentioned>","serviceLine":"<if mentioned>","tcv":0,"status":"Discovery","stakeholders":[{"name":"<if mentioned>","role":"<if mentioned>"}]}
+Make sure to populate as many fields as possible from the user's message.` : '';
+
     setResults(prev => [...prev, { type: 'question', content: query, timestamp: new Date() }]);
     chatMutation.mutate({
-      message: `${query}\n\nContext: ${context}`,
+      message: `${query}\n\nContext: ${context}${createInstruction}`,
       context: { page: 'conversational-dashboard' }
     });
     setQuery('');
