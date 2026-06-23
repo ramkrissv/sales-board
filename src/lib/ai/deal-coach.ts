@@ -94,20 +94,40 @@ Be specific to THIS deal. Reference actual stakeholder names, dates, and data po
       }
     } catch {}
 
+    // Generate rule-based analysis from deal data as fallback
+    const risks: DealAnalysis['risks'] = [];
+    const actions: DealAnalysis['actions'] = [];
+    let health = 50;
+
+    if (!stakeholders.some((s: any) => s.isDecisionMaker)) {
+      risks.push({ type: 'no_decision_maker', message: `No decision maker mapped for ${opportunity.customerName}. Identify and add the DM.`, severity: 'high' });
+      actions.push({ action: `Map the decision maker at ${opportunity.customerName}`, reason: 'Deals without a DM are 3x less likely to close', priority: 'high' });
+      health -= 15;
+    }
+    if ((opportunity.tcv || 0) === 0) {
+      risks.push({ type: 'low_tcv', message: 'TCV is $0 — no deal value set yet.', severity: 'medium' });
+      actions.push({ action: 'Set the TCV estimate based on scope discussions', reason: 'Deals with $0 TCV cannot be forecasted', priority: 'high' });
+      health -= 10;
+    }
+    if (overdueTasks > 0) {
+      risks.push({ type: 'overdue_tasks', message: `${overdueTasks} overdue task(s) need attention.`, severity: 'medium' });
+      health -= 10;
+    }
+    if (stakeholders.length === 0) {
+      risks.push({ type: 'missing_stakeholder', message: 'No stakeholders added to this deal.', severity: 'high' });
+      actions.push({ action: 'Add key stakeholders (DM, champion, primary contact)', reason: 'Stakeholder mapping is critical for deal progress', priority: 'high' });
+      health -= 10;
+    }
+    if (risks.length === 0) {
+      actions.push({ action: `Continue progressing ${opportunity.customerName} through ${opportunity.status}`, reason: 'Deal appears on track', priority: 'medium' });
+    }
+
     return {
-      healthScore: 50,
-      winProbability: 30,
-      risks: [
-        {
-          type: 'parse_error',
-          message: 'AI analysis could not be parsed. Please refresh to retry.',
-          severity: 'low',
-        },
-      ],
-      actions: [
-        { action: 'Review deal manually', reason: 'AI analysis needs review', priority: 'medium' },
-      ],
-      summary: 'Analysis encountered a parsing error. Click refresh to retry.',
+      healthScore: Math.max(10, health),
+      winProbability: Math.max(10, health - 10),
+      risks,
+      actions,
+      summary: `${opportunity.customerName} is in ${opportunity.status} stage. ${risks.length > 0 ? `Key risks: ${risks.map(r => r.message).join(' ')}` : 'No major risks detected.'} ${actions[0]?.action || ''}`,
       generatedAt: new Date().toISOString(),
     };
   }
