@@ -27,7 +27,7 @@ import { Document, Packer, Paragraph, HeadingLevel, TextRun } from 'docx';
    Types
    ═══════════════════════════════════════════════════════ */
 type SectionStatus = 'ai-draft' | 'edited' | 'approved';
-type PresalesTab = 'command' | 'studio' | 'pricing' | 'solutioning';
+type PresalesTab = 'command' | 'studio' | 'pricing' | 'solutioning' | 'workshops';
 
 interface ProposalSection {
   id: string;
@@ -127,6 +127,7 @@ const TAB_CONFIG: { id: PresalesTab; label: string; icon: typeof Target }[] = [
   { id: 'studio', label: 'Studio', icon: Sparkles },
   { id: 'pricing', label: 'Pricing', icon: DollarSign },
   { id: 'solutioning', label: 'Solutioning', icon: Cpu },
+  { id: 'workshops', label: 'Workshops', icon: ClipboardList },
 ];
 
 /* ═══════════════════════════════════════════════════════
@@ -1998,6 +1999,162 @@ User message: ${text.trim()}`;
             </div>
           )}
         </>
+      )}
+
+      {/* ═════ WORKSHOPS TAB ═════ */}
+      {activeTab === 'workshops' && (
+        <WorkshopsTab />
+      )}
+    </div>
+  );
+}
+
+function WorkshopsTab() {
+  const { data: workshops = [], isLoading } = trpc.workshop.list.useQuery();
+  const createMutation = trpc.workshop.create.useMutation();
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({ customerName: '', title: '', mode: 'with_ai' as const, format: 'in-person' as const, sponsor: '' });
+
+  const handleCreate = () => {
+    if (!form.customerName) return;
+    createMutation.mutate({
+      customerName: form.customerName,
+      title: form.title || `${form.customerName} — AI Assessment Workshop`,
+      mode: form.mode,
+      format: form.format,
+      sponsor: form.sponsor || undefined,
+    }, {
+      onSuccess: (data: any) => {
+        setShowCreate(false);
+        window.location.href = `/workshop/${data.id}`;
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Client Workshops</h2>
+          <p className="text-[10px] text-muted-foreground mt-0.5">AI-led assessment workshops — score → gaps → scope → proposal</p>
+        </div>
+        <button onClick={() => setShowCreate(!showCreate)}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A867F] text-white text-xs font-medium hover:bg-[#0A867F]/90 transition-colors">
+          <Layers className="h-3.5 w-3.5" /> New Workshop
+        </button>
+      </div>
+
+      {/* Create form */}
+      {showCreate && (
+        <div className="p-5 rounded-xl g-surface g-elevated space-y-3 animate-flow-in">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Customer Name *</label>
+              <input value={form.customerName} onChange={e => setForm(p => ({ ...p, customerName: e.target.value }))}
+                placeholder="e.g. Hughes Networks" className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40" />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Workshop Title</label>
+              <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+                placeholder="AI Transformation Assessment" className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40" />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Mode</label>
+              <select value={form.mode} onChange={e => setForm(p => ({ ...p, mode: e.target.value as any }))}
+                className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground">
+                <option value="with_ai">With Galent AI</option>
+                <option value="without_ai">Manual (No AI)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Format</label>
+              <select value={form.format} onChange={e => setForm(p => ({ ...p, format: e.target.value as any }))}
+                className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground">
+                <option value="in-person">In-Person</option>
+                <option value="virtual">Virtual</option>
+                <option value="hybrid">Hybrid</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-xs text-muted-foreground">Cancel</button>
+            <button onClick={handleCreate} disabled={!form.customerName || createMutation.isPending}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A867F] text-white text-xs font-medium hover:bg-[#0A867F]/90 disabled:opacity-50 transition-colors">
+              {createMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers className="h-3.5 w-3.5" />}
+              Create & Open Workshop
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Workshop list */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-[#0A867F]" /></div>
+      ) : (workshops as any[]).length > 0 ? (
+        <div className="space-y-3">
+          {(workshops as any[]).map((ws: any) => {
+            // Inline stats computation (avoiding server-side import issues)
+            const levels = ws.framework?.levels || [];
+            const allDims = levels.flatMap((l: any) => l.dimensions || []);
+            const scored = allDims.filter((d: any) => d.currentScore != null);
+            const rawSum = levels.reduce((s: number, l: any) => s + (l.weight || 1), 0);
+            let idx = 0, wsum = 0;
+            levels.forEach((l: any) => {
+              const lScored = (l.dimensions || []).filter((d: any) => d.currentScore != null);
+              if (lScored.length > 0) {
+                const cur = (lScored.reduce((s: number, d: any) => s + d.currentScore, 0) / lScored.length / 4) * 100;
+                const nw = (l.weight || 1) / rawSum;
+                idx += cur * nw; wsum += nw;
+              }
+            });
+            const index = wsum > 0 ? Math.round(idx / wsum) : 0;
+            const stage = index === 0 ? 'Not Started' : index < 20 ? 'Emerging' : index < 40 ? 'Developing' : index < 60 ? 'Governed' : index < 80 ? 'Scaling' : 'Optimized';
+            const stats = { index, stage, dimensionsScored: scored.length, totalDimensions: allDims.length };
+            return (
+              <a key={ws.id} href={`/workshop/${ws.id}`}
+                className="flex items-center gap-4 p-4 rounded-xl g-surface g-elevated hover-lift transition-all group cursor-pointer">
+                {/* Mini index ring */}
+                <div className="relative w-12 h-12 shrink-0">
+                  <svg width="48" height="48" className="transform -rotate-90">
+                    <circle cx="24" cy="24" r="18" stroke="var(--g-line)" strokeWidth="4" fill="none" />
+                    <circle cx="24" cy="24" r="18" stroke="#0A867F" strokeWidth="4" fill="none" strokeLinecap="round"
+                      strokeDasharray={2 * Math.PI * 18} strokeDashoffset={2 * Math.PI * 18 * (1 - (stats.index || 0) / 100)} />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground">{stats.index || 0}</div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-foreground group-hover:text-[#0A867F] transition-colors">{ws.customerName}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                      ws.status === 'In Progress' ? 'bg-amber-500/10 text-amber-400' :
+                      ws.status === 'Scoring Complete' ? 'bg-emerald-500/10 text-emerald-400' :
+                      ws.status === 'Proposal Generated' ? 'bg-[#7c3aed]/10 text-[#7c3aed]' :
+                      'bg-blue-500/10 text-blue-400'
+                    }`}>{ws.status}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${ws.mode === 'with_ai' ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : 'bg-secondary text-muted-foreground'}`}>
+                      {ws.mode === 'with_ai' ? 'AI' : 'Manual'}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{ws.title}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-xs font-mono text-foreground">{stats.dimensionsScored}/{stats.totalDimensions}</div>
+                  <div className="text-[9px] text-muted-foreground">scored</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-xs text-muted-foreground">{stats.stage}</div>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <Layers className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-30" />
+          <p className="text-sm text-muted-foreground">No workshops yet</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Create your first workshop to start an AI assessment</p>
+        </div>
       )}
     </div>
   );
