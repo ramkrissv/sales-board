@@ -137,137 +137,73 @@ Return JSON only (no markdown):
       }
     } catch { /* Graph update best-effort */ }
 
-    // Auto-create opportunity for new leads with no deal match
-    let autoCreatedDealId: string | null = null;
-    let autoCreatedDealName: string | null = null;
-    if (!aiResult?.matchedDealId && aiResult?.intent === 'new_lead' && aiResult?.customerName && Opp) {
+    // Auto-link to existing deals (prevent duplicates) but DON'T auto-create
+    // Opportunity creation requires user acknowledgement on Home screen
+    let linkedDealId: string | null = null;
+    if (!aiResult?.matchedDealId && aiResult?.customerName && Opp) {
       try {
-        // Check if opportunity already exists for this customer (prevent duplicates)
         const existing = await Opp.findOne({
           customerName: { $regex: new RegExp(aiResult.customerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
           status: { $nin: ['Won', 'Lost'] },
         });
-
         if (existing) {
-          // Link to existing deal instead
           aiResult.matchedDealId = (existing as any).id;
           aiResult.matchedDealName = `${(existing as any).customerName} — ${(existing as any).opportunityName}`;
-          autoCreatedDealId = (existing as any).id;
-          autoCreatedDealName = (existing as any).customerName;
-
-          // Append signal to conversation log
+          linkedDealId = (existing as any).id;
           const logEntry = `\n\n--- SIGNAL (${new Date().toISOString().split('T')[0]}) ---\n${aiResult.summary || subject}\nSource: Outlook · From: ${from}`;
           await Opp.findOneAndUpdate(
             { id: (existing as any).id },
             { $set: { conversationLog: ((existing as any).conversationLog || '') + logEntry, updatedAt: new Date() } },
           );
-        } else {
-          // Create new opportunity automatically
-          const newOppId = `OPP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-          const newOpp = await Opp.create({
-            id: newOppId,
-            customerName: aiResult.customerName,
-            opportunityName: `${aiResult.customerName} — ${subject ? subject.slice(0, 60) : 'Inbound Signal'}`,
-            status: 'Discovery',
-            tcv: 0,
-            dealDuration: '12 months',
-            expectedCloseDate: new Date(Date.now() + 90 * 86400000),
-            startDate: new Date(),
-            primaryOwner: aiResult.contactName || from?.split('@')[0] || 'Unassigned',
-            industry: '',
-            region: 'North America',
-            source: 'Signal',
-            conversationLog: `--- ORIGINAL SIGNAL ---\nFrom: ${from}\nSubject: ${subject}\n\n${aiResult.summary || ''}\n\nAction Items:\n${(aiResult.actionItems || []).map((a: string) => `• ${a}`).join('\n')}`,
-            createdBy: 'AI Signal Processor',
-            updatedBy: 'AI Signal Processor',
-          });
-          autoCreatedDealId = newOppId;
-          autoCreatedDealName = aiResult.customerName;
-
-          // Create tasks on the new opportunity
-          if (aiResult.actionItems?.length > 0) {
-            for (const action of aiResult.actionItems.slice(0, 5)) {
-              try {
-                const taskId = `task-auto-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-                // Add as sub-task directly on the opportunity
-                await Opp.findOneAndUpdate(
-                  { id: newOppId },
-                  { $push: { subTasks: {
-                    opportunityId: newOppId,
-                    name: action.slice(0, 150),
-                    owner: aiResult.contactName || 'Unassigned',
-                    dueDate: new Date(Date.now() + 7 * 86400000),
-                    priority: aiResult.urgency === 'high' ? 'High' : 'Medium',
-                    status: 'pending',
-                  } } },
-                );
-              } catch { /* best effort */ }
-            }
-          }
-
-          // Log activity for the auto-creation
-          if (Activity) {
-            await Activity.create({
-              type: 'deal_created',
-              entityType: 'opportunity',
-              entityId: newOppId,
-              entityName: aiResult.customerName,
-              description: `AI auto-created opportunity from Outlook signal: ${aiResult.customerName}`,
-              userName: 'AI Signal Processor',
-            });
-          }
         }
-      } catch (e) {
-        // Auto-creation failed — fall through to notification-only
-      }
+      } catch { /* best effort */ }
     }
 
-    // Create notification — include auto-created deal info if applicable
+    // Create notification — user will confirm opportunity creation on Home screen
     if (Notification) {
       const icon = aiResult?.sentiment === 'positive' ? '🟢' :
                    aiResult?.sentiment === 'negative' ? '🔴' : '🔵';
-      const dealCreated = !!autoCreatedDealId && !aiResult?.matchedDealId;
       const dealLinked = !!aiResult?.matchedDealId;
       await Notification.create({
         userId: 'default-user',
         type: 'ai_signal',
-        title: `${icon} ${autoCreatedDealId ? 'New Deal Created' : dealLinked ? 'Signal Linked' : 'Email Signal'}: ${aiResult?.customerName || subject || 'No subject'}`,
+        title: `${icon} ${dealLinked ? 'Signal Linked' : 'New Lead'}: ${aiResult?.customerName || subject || 'No subject'}`,
         message: aiResult?.summary || `From ${from}: ${(emailBody || '').slice(0, 150)}`,
         read: false,
         metadata: {
           source: 'outlook',
-          matchedDealId: aiResult?.matchedDealId || autoCreatedDealId,
-          matchedDealName: aiResult?.matchedDealName || autoCreatedDealName,
+          matchedDealId: aiResult?.matchedDealId,
+          matchedDealName: aiResult?.matchedDealName,
           customerName: aiResult?.customerName,
           contactName: aiResult?.contactName,
+          senderName: from,
           intent: aiResult?.intent,
           urgency: aiResult?.urgency,
           sentiment: aiResult?.sentiment,
           actionItems: aiResult?.actionItems,
-          autoCreated: !!autoCreatedDealId,
-          status: autoCreatedDealId ? 'auto_created' : dealLinked ? 'linked' : 'pending_acceptance',
+          summary: aiResult?.summary,
+          subject,
+          status: dealLinked ? 'linked' : 'pending_acceptance',
         },
       });
     }
 
     return NextResponse.json({
       success: true,
-      message: autoCreatedDealId
-        ? `Opportunity auto-created for ${aiResult?.customerName}`
-        : aiResult?.matchedDealId
-          ? `Signal linked to ${aiResult.matchedDealName}`
-          : 'Email processed — signal logged',
+      message: aiResult?.matchedDealId
+        ? `Signal linked to ${aiResult.matchedDealName}`
+        : `Signal captured for ${aiResult?.customerName || 'review'} — confirm on Home screen`,
       result: {
         matched: !!aiResult?.matchedDealId,
-        autoCreated: !!autoCreatedDealId,
-        dealId: aiResult?.matchedDealId || autoCreatedDealId,
-        dealName: aiResult?.matchedDealName || autoCreatedDealName,
+        dealId: aiResult?.matchedDealId,
+        dealName: aiResult?.matchedDealName,
+        customerName: aiResult?.customerName,
         intent: aiResult?.intent,
         summary: aiResult?.summary,
         actionItems: aiResult?.actionItems || [],
-        tasksCreated: aiResult?.actionItems?.length || 0,
         urgency: aiResult?.urgency,
         sentiment: aiResult?.sentiment,
+        pendingConfirmation: !aiResult?.matchedDealId,
       },
     });
   } catch (e: any) {

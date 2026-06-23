@@ -4,7 +4,8 @@ import { useState } from 'react';
 import {
   CheckCircle2, XCircle, Loader2, Mail, MessageSquare,
   ArrowRight, Zap, AlertTriangle, Target, Users,
-  FileText, GitBranch, Sparkles
+  FileText, GitBranch, Sparkles, ChevronDown, ChevronUp,
+  Building2, DollarSign, Calendar, User, Briefcase, Edit2,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 
@@ -31,6 +32,10 @@ export default function SignalCards({ onAccept, onOpenDeal }: SignalCardsProps) 
   const [processing, setProcessing] = useState<string | null>(null);
   const [acceptedSignals, setAcceptedSignals] = useState<Set<string>>(new Set());
   const [processView, setProcessView] = useState<{ notifId: string; steps: ProcessStep[] } | null>(null);
+  const [confirmingSignal, setConfirmingSignal] = useState<string | null>(null);
+  const [confirmForm, setConfirmForm] = useState({
+    customerName: '', opportunityName: '', primaryOwner: '', serviceLine: '', tcv: 0, stage: 'Discovery',
+  });
 
   const markRead = trpc.notification.markRead.useMutation({
     onSuccess: () => { utils.notification.list.invalidate(); utils.notification.getUnreadCount.invalidate(); },
@@ -41,7 +46,11 @@ export default function SignalCards({ onAccept, onOpenDeal }: SignalCardsProps) 
   const updateOpp = trpc.opportunity.update.useMutation({
     onSuccess: () => { utils.opportunity.list.invalidate(); },
   });
+  const createAccount = trpc.account.create.useMutation({
+    onSuccess: () => { utils.account.list.invalidate(); },
+  });
   const { data: existingOpps = [] } = trpc.opportunity.list.useQuery();
+  const { data: existingAccounts = [] } = trpc.account.list.useQuery();
 
   // Filter to only unread signal notifications
   const signals = (notifications as any[]).filter(
@@ -117,27 +126,64 @@ export default function SignalCards({ onAccept, onOpenDeal }: SignalCardsProps) 
         // Notify parent to open the matched deal
         onOpenDeal?.(clientMatch.id);
       } else {
-        // Truly new — create opportunity
+        // Truly new — create opportunity using confirmForm data if available
         steps.push({ id: 'match', label: 'No Existing Deal', status: 'complete', detail: 'Creating new opportunity...' });
         steps.push({ id: 'create', label: 'Creating Opportunity', status: 'running' });
         setProcessView({ notifId: notif._id, steps });
 
+        // Use confirmForm if user filled it, otherwise fall back to AI-extracted metadata
+        const custName = confirmForm.customerName || meta.customerName || notif.title?.replace(/^.*:\s*/, '') || 'New Lead';
+        const oppName = confirmForm.opportunityName || `Signal: ${custName} — ${meta.intent || 'Inbound'}`;
+
+        // Final dedup check right before create — prevent any race condition duplicates
+        const lastCheck = (existingOpps as any[]).find((o: any) => {
+          const n = (o.customerName || '').toLowerCase();
+          const c = custName.toLowerCase();
+          return n === c || n.includes(c) || c.includes(n);
+        });
+
+        if (lastCheck) {
+          // Duplicate caught at last moment — link instead
+          steps[2].status = 'complete';
+          steps[2].detail = `Linked to existing: ${lastCheck.customerName}`;
+          markRead.mutate({ id: notif._id });
+          steps.push({ id: 'graph', label: 'Duplicate Prevented', status: 'complete', detail: 'Signal linked to existing deal' });
+          setProcessView({ notifId: notif._id, steps });
+          onOpenDeal?.(lastCheck.id);
+          setAcceptedSignals(prev => new Set([...prev, notif._id]));
+          setProcessing(null);
+          setTimeout(() => setProcessView(prev => prev?.notifId === notif._id ? null : prev), 5000);
+          return;
+        }
+
         try {
+          // Step 1: Create account if it doesn't exist
+          const accountExists = (existingAccounts as any[]).some((a: any) =>
+            (a.companyName || '').toLowerCase() === custName.toLowerCase()
+          );
+          if (!accountExists) {
+            try {
+              await createAccount.mutateAsync({ companyName: custName } as any);
+            } catch { /* account may already exist — continue */ }
+          }
+
+          // Step 2: Create opportunity
           await createOpp.mutateAsync({
-            customerName: meta.customerName || notif.title?.replace(/^.*:\s*/, '') || 'New Lead',
-            opportunityName: `Signal: ${meta.customerName || 'New Lead'} — ${meta.intent || 'Inbound'}`,
-            status: 'Discovery',
-            tcv: 0,
+            customerName: custName,
+            opportunityName: oppName,
+            status: confirmForm.stage || 'Discovery',
+            tcv: confirmForm.tcv || 0,
             expectedCloseDate: new Date(Date.now() + 90 * 86400000).toISOString(),
             startDate: new Date().toISOString(),
-            primaryOwner: meta.senderName || 'Unassigned',
+            primaryOwner: confirmForm.primaryOwner || meta.senderName || 'Unassigned',
             industry: '',
             region: 'North America',
             source: meta.source || 'Signal',
+            serviceLine: confirmForm.serviceLine || undefined,
             dealDuration: '12 months',
           } as any);
           steps[2].status = 'complete';
-          steps[2].detail = 'Opportunity created in Discovery stage';
+          steps[2].detail = `${custName} created in ${confirmForm.stage || 'Discovery'}${!accountExists ? ' + Account added' : ''}`;
         } catch {
           steps[2].status = 'error';
           steps[2].detail = 'Failed to create — try manually';
@@ -268,14 +314,26 @@ export default function SignalCards({ onAccept, onOpenDeal }: SignalCardsProps) 
               </div>
 
               {/* Action buttons */}
-              {meta.autoCreated && meta.matchedDealId ? (
-                // Auto-created by webhook — show "Open Deal" + "Complete Setup" prominently
+              {isAccepted ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 text-[10px] text-emerald-400">
+                    <CheckCircle2 className="h-3 w-3" /> Opportunity Created
+                  </div>
+                  {meta.matchedDealId && (
+                    <button onClick={() => onOpenDeal?.(meta.matchedDealId)}
+                      className="flex items-center gap-1 text-[10px] text-[#7c3aed] hover:underline">
+                      <ArrowRight className="h-3 w-3" /> Open Deal
+                    </button>
+                  )}
+                </div>
+              ) : meta.autoCreated && meta.matchedDealId ? (
+                /* Auto-created by webhook — acknowledge + open */
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 bg-emerald-500/5 px-2 py-1 rounded-lg">
                     <CheckCircle2 className="h-3 w-3" /> Deal auto-created in Discovery
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => { onOpenDeal?.(meta.matchedDealId); markRead.mutate({ id: notif._id }); }}
+                    <button onClick={() => { onOpenDeal?.(meta.matchedDealId); markRead.mutate({ id: notif._id }); setAcceptedSignals(prev => new Set([...prev, notif._id])); }}
                       className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors">
                       <ArrowRight className="h-3 w-3" /> Open & Complete Setup
                     </button>
@@ -285,22 +343,120 @@ export default function SignalCards({ onAccept, onOpenDeal }: SignalCardsProps) 
                     </button>
                   </div>
                 </div>
-              ) : !isAccepted ? (
+              ) : meta.matchedDealId ? (
+                /* Signal matched to existing deal — accept to link */
                 <div className="flex gap-2">
-                  <button onClick={() => handleAccept(notif)}
-                    disabled={isProcessing}
+                  <button onClick={() => handleAccept(notif)} disabled={isProcessing}
                     className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50">
                     {isProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                    {meta.matchedDealId ? 'Accept & Link' : 'Accept & Create Opp'}
+                    Accept & Link
                   </button>
                   <button onClick={() => handleDismiss(notif)}
                     className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-muted-foreground hover:bg-secondary transition-colors">
                     <XCircle className="h-3 w-3" />
                   </button>
                 </div>
+              ) : confirmingSignal === notif._id ? (
+                /* Confirmation form — user reviews and confirms opportunity creation */
+                <div className="space-y-3 pt-1 border-t border-border mt-2 animate-flow-in">
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#7c3aed] uppercase tracking-wider">
+                    <Sparkles className="h-3 w-3" /> Confirm Opportunity Creation
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[9px] text-muted-foreground uppercase">Customer</label>
+                      <input value={confirmForm.customerName}
+                        onChange={e => setConfirmForm(p => ({ ...p, customerName: e.target.value }))}
+                        className="w-full px-2 py-1.5 text-[11px] bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-muted-foreground uppercase">Owner</label>
+                      <input value={confirmForm.primaryOwner}
+                        onChange={e => setConfirmForm(p => ({ ...p, primaryOwner: e.target.value }))}
+                        className="w-full px-2 py-1.5 text-[11px] bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[9px] text-muted-foreground uppercase">Opportunity Name</label>
+                      <input value={confirmForm.opportunityName}
+                        onChange={e => setConfirmForm(p => ({ ...p, opportunityName: e.target.value }))}
+                        className="w-full px-2 py-1.5 text-[11px] bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-muted-foreground uppercase">Service Line</label>
+                      <select value={confirmForm.serviceLine}
+                        onChange={e => setConfirmForm(p => ({ ...p, serviceLine: e.target.value }))}
+                        className="w-full px-2 py-1.5 text-[11px] bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40">
+                        <option value="">Select...</option>
+                        {['Legacy Modernization', 'Data & AI', 'Testing & QA', 'Managed Services / SRE', 'Cloud & Infrastructure', 'Staffing'].map(s =>
+                          <option key={s} value={s}>{s}</option>
+                        )}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-muted-foreground uppercase">Est. TCV ($)</label>
+                      <input type="number" value={confirmForm.tcv || ''}
+                        onChange={e => setConfirmForm(p => ({ ...p, tcv: Number(e.target.value) }))}
+                        placeholder="0"
+                        className="w-full px-2 py-1.5 text-[11px] bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+                    </div>
+                  </div>
+                  {/* Action items preview */}
+                  {meta.actionItems?.length > 0 && (
+                    <div>
+                      <div className="text-[9px] text-muted-foreground uppercase mb-1">Action items ({meta.actionItems.length}) — will be created as tasks</div>
+                      <div className="space-y-0.5 max-h-20 overflow-y-auto">
+                        {meta.actionItems.slice(0, 4).map((item: string, i: number) => (
+                          <div key={i} className="text-[10px] text-foreground flex items-start gap-1.5">
+                            <ArrowRight className="h-2.5 w-2.5 text-[#7c3aed] shrink-0 mt-0.5" />
+                            <span className="line-clamp-1">{item}</span>
+                          </div>
+                        ))}
+                        {meta.actionItems.length > 4 && (
+                          <div className="text-[9px] text-muted-foreground">+{meta.actionItems.length - 4} more</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { handleAccept(notif); setConfirmingSignal(null); }}
+                      disabled={isProcessing || !confirmForm.customerName}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors disabled:opacity-50">
+                      {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      Confirm & Create Opportunity
+                    </button>
+                    <button onClick={() => setConfirmingSignal(null)}
+                      className="px-3 py-2 rounded-lg text-[11px] font-medium text-muted-foreground hover:bg-secondary transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <div className="flex items-center gap-1 text-[10px] text-emerald-400">
-                  <CheckCircle2 className="h-3 w-3" /> Accepted
+                /* New signal — no match — show "Create Opportunity" button that opens confirmation */
+                <div className="flex gap-2">
+                  <button onClick={() => {
+                    setConfirmingSignal(notif._id);
+                    setConfirmForm({
+                      customerName: meta.customerName || notif.title?.replace(/^.*:\s*/, '').replace(/^[🟢🔴🔵]\s*/, '') || '',
+                      opportunityName: `${meta.customerName || 'New Lead'} — ${meta.intent === 'new_lead' ? 'Inbound Signal' : meta.summary?.slice(0, 40) || 'Signal'}`,
+                      primaryOwner: meta.senderName || meta.contactName || '',
+                      serviceLine: '',
+                      tcv: 0,
+                      stage: 'Discovery',
+                    });
+                  }}
+                    className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors">
+                    <Briefcase className="h-3 w-3" /> Create Opportunity
+                  </button>
+                  <button onClick={() => handleAccept(notif)} disabled={isProcessing}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50">
+                    {isProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                    Quick Accept
+                  </button>
+                  <button onClick={() => handleDismiss(notif)}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-muted-foreground hover:bg-secondary transition-colors">
+                    <XCircle className="h-3 w-3" />
+                  </button>
                 </div>
               )}
             </div>
