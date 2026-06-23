@@ -62,7 +62,7 @@ async function enrichOpportunity(opp: any) {
 }
 
 const createOpportunitySchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
   customerName: z.string(),
   opportunityName: z.string(),
   status: z.enum(['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Lost', 'On Hold']),
@@ -74,15 +74,12 @@ const createOpportunitySchema = z.object({
   salesPOCs: z.array(z.string()).default([]),
   presalesPOCs: z.array(z.string()).default([]),
   conversationLog: z.string().default(''),
-  industry: z.enum([
-    'Healthcare', 'Financial Services', 'Hospitality', 'Professional Services',
-    'Manufacturing', 'Retail', 'Technology', 'Other',
-  ]),
-  region: z.enum(['North America', 'Europe', 'APAC', 'Latin America', 'Middle East']),
-  serviceLine: z.enum(['IT Services', 'Staffing']).optional(),
+  industry: z.string().default(''),
+  region: z.enum(['North America', 'Europe', 'APAC', 'Latin America', 'Middle East']).default('North America'),
+  serviceLine: z.enum(['Legacy Modernization', 'Data & AI', 'Testing & QA', 'Managed Services / SRE', 'Cloud & Infrastructure', 'Staffing', 'IT Services']).optional(),
   clientType: z.enum(['New', 'Existing']).optional(),
   opportunityType: z.enum(['New Deal', 'Upsell', 'Cross-sell', 'Renewal', 'Enhancement']).optional(),
-  billingModel: z.enum(['Time & Material', 'Fixed Price', 'Retainer', 'Milestone-based']).optional(),
+  billingModel: z.enum(['Fixed Price', 'T&M', 'Product Licensing', 'Outcome-Based', 'Time & Material', 'Retainer', 'Milestone-based']).optional(),
   margin: z.number().min(0).max(100).optional(),
   source: z.string(),
   customTags: z.array(z.string()).default([]),
@@ -163,8 +160,10 @@ export const opportunityRouter = router({
     .mutation(async ({ input, ctx }) => {
       await connectDB();
       const now = new Date();
+      const autoId = input.id || `OPP-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
       const opportunity = await Opportunity.create({
         ...input,
+        id: autoId,
         expectedCloseDate: new Date(input.expectedCloseDate),
         startDate: new Date(input.startDate),
         createdBy: ctx.userName || ctx.userId || 'admin@galent.com',
