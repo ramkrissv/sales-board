@@ -79,7 +79,7 @@ function WinProbabilityBar({ probability }: { probability: number }) {
 export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
   const { opportunities, updateOpportunity, deleteOpportunity } = useOpportunities();
   const opp = opportunities.find(o => o.id === opportunityId);
-  const [activeTab, setActiveTab] = useState<'details' | 'stakeholders' | 'tasks' | 'meetings' | 'email' | 'competitive' | 'health' | 'log' | 'documents' | 'pricing' | 'presales' | 'contracts'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'stakeholders' | 'tasks' | 'meetings' | 'email' | 'competitive' | 'health' | 'workshop' | 'log' | 'documents' | 'pricing' | 'presales' | 'contracts'>('details');
   const [showAutopsy, setShowAutopsy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
@@ -301,6 +301,7 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
     { id: 'meetings' as const, label: 'Meetings' },
     { id: 'email' as const, label: 'Email' },
     { id: 'competitive' as const, label: 'Competitive' },
+    { id: 'workshop' as const, label: 'Workshop' },
     ...(opp.status === 'Won' ? [{ id: 'health' as const, label: 'Health' }] : []),
     { id: 'pricing' as const, label: 'Pricing' },
     { id: 'presales' as const, label: 'Presales' },
@@ -1198,6 +1199,37 @@ export function DealDetail({ opportunityId, onClose }: DealDetailProps) {
               customerName={opp.customerName}
               competitors={(opp as any).competitorNames || []}
             />
+          )}
+
+          {activeTab === 'workshop' && (
+            <div className="space-y-4">
+              {(opp as any).workshopId ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-[#0A867F]/5 border border-[#0A867F]/20">
+                    <div className="w-10 h-10 rounded-xl bg-[#0A867F]/15 flex items-center justify-center">
+                      <Sparkles className="h-5 w-5 text-[#0A867F]" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold text-foreground">Workshop Linked</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">{(opp as any).workshopId}</div>
+                    </div>
+                    <a href={`/workshop/${(opp as any).workshopId}`}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A867F] text-white text-xs font-medium hover:bg-[#0A867F]/90 transition-colors">
+                      <ArrowUpRight className="h-3.5 w-3.5" /> Open Workshop
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Sparkles className="h-8 w-8 text-muted-foreground mx-auto mb-3 opacity-30" />
+                  <p className="text-xs text-muted-foreground mb-3">No workshop linked to this deal</p>
+                  <a href="/presales"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A867F] text-white text-xs font-medium hover:bg-[#0A867F]/90 transition-colors">
+                    <Sparkles className="h-3.5 w-3.5" /> Create Workshop in Presales
+                  </a>
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === 'health' && (

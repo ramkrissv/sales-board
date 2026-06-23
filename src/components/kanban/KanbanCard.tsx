@@ -156,6 +156,12 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
             <AlertTriangle className="h-2 w-2" /> No DM
           </span>
         )}
+        {/* Workshop badge */}
+        {(opp as any).workshopId && (
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#0A867F]/10 text-[#0A867F] flex items-center gap-0.5">
+            <Sparkles className="h-2 w-2" /> Workshop
+          </span>
+        )}
         {/* Recent activity signal */}
         {daysInStage <= 2 && (
           <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed] flex items-center gap-0.5">
