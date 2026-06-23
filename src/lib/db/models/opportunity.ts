@@ -69,16 +69,6 @@ const OpportunitySchema = new Schema<IOpportunity>(
     conversationLog: { type: String, default: '' },
     industry: {
       type: String,
-      enum: [
-        'Healthcare',
-        'Financial Services',
-        'Hospitality',
-        'Professional Services',
-        'Manufacturing',
-        'Retail',
-        'Technology',
-        'Other',
-      ],
     },
     region: {
       type: String,
