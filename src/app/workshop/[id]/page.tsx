@@ -12,6 +12,7 @@ import DimensionCard from '@/components/workshop/DimensionCard';
 import WorkshopScope from '@/components/workshop/WorkshopScope';
 import WorkshopUseCases from '@/components/workshop/WorkshopUseCases';
 import FrameworkBuilder from '@/components/workshop/FrameworkBuilder';
+import WorkshopProposal from '@/components/workshop/WorkshopProposal';
 import { Wrench } from 'lucide-react';
 
 type WorkshopTab = 'overview' | 'assess' | 'usecases' | 'scope' | 'proposal' | 'builder' | 'settings';
@@ -44,6 +45,13 @@ export default function WorkshopPage() {
     { id: workshopId },
     { enabled: !!workshopId, refetchOnWindowFocus: false }
   );
+
+  // Linked opportunity
+  const { data: allOpps = [] } = trpc.opportunity.list.useQuery();
+  const linkedOpp = (allOpps as any[]).find((o: any) => o.workshopId === workshopId || o.id === (workshop as any)?.opportunityId);
+  const updateOppMutation = trpc.opportunity.update.useMutation({
+    onSuccess: () => utils.opportunity.list.invalidate(),
+  });
 
   const scoreMutation = trpc.workshop.scoreDimension.useMutation({
     onSuccess: () => utils.workshop.getById.invalidate({ id: workshopId }),
@@ -145,6 +153,45 @@ export default function WorkshopPage() {
           </div>
         </div>
       </div>
+
+      {/* Deal stage progression — links workshop to opportunity lifecycle */}
+      {linkedOpp && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-card border border-border">
+          <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground shrink-0">Deal:</div>
+          <span className="text-xs font-medium text-foreground truncate">{linkedOpp.customerName}</span>
+          <span className="text-[10px] text-muted-foreground">·</span>
+          <span className="text-[10px] font-mono text-muted-foreground">{linkedOpp.id}</span>
+          <div className="flex-1" />
+          {/* Stage pills */}
+          <div className="flex items-center gap-0.5">
+            {['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'].map((stage, i) => {
+              const stages = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won'];
+              const currentIdx = stages.indexOf(linkedOpp.status);
+              const isActive = i === currentIdx;
+              const isPast = i < currentIdx;
+              const isNext = i === currentIdx + 1;
+              return (
+                <button key={stage} onClick={() => {
+                  if (isNext) updateOppMutation.mutate({ id: linkedOpp.id, status: stage } as any);
+                }}
+                  className={`px-2 py-1 rounded-md text-[9px] font-medium transition-all ${
+                    isActive ? 'bg-[#0A867F] text-white' :
+                    isPast ? 'bg-[#0A867F]/10 text-[#0A867F]' :
+                    isNext ? 'bg-amber-500/10 text-amber-500 border border-amber-500/30 cursor-pointer hover:bg-amber-500/20' :
+                    'bg-secondary/50 text-muted-foreground'
+                  }`}
+                  title={isNext ? `Advance to ${stage}` : stage}
+                >
+                  {stage}
+                </button>
+              );
+            })}
+          </div>
+          {linkedOpp.tcv > 0 && (
+            <span className="text-xs font-mono font-semibold text-foreground ml-2">${((linkedOpp.tcv || 0) / 1000).toFixed(0)}k</span>
+          )}
+        </div>
+      )}
 
       {/* Tab navigation */}
       <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 w-fit">
@@ -252,11 +299,7 @@ export default function WorkshopPage() {
 
       {/* ── PROPOSAL TAB ── */}
       {activeTab === 'proposal' && (
-        <div className="text-center py-16">
-          <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-          <p className="text-sm text-muted-foreground">Proposal Generator</p>
-          <p className="text-xs text-muted-foreground mt-1">Score dimensions + build scope → then generate a traceable commercial proposal</p>
-        </div>
+        <WorkshopProposal workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
       )}
 
       {/* ── FRAMEWORK BUILDER TAB ── */}
