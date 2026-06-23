@@ -353,6 +353,52 @@ export const workshopRouter = router({
       ).lean();
     }),
 
+  // ── Framework editing: add level ──
+  addLevel: protectedProcedure
+    .input(z.object({
+      workshopId: z.string(),
+      id: z.string(),
+      name: z.string(),
+      weight: z.number().default(0.33),
+      summary: z.string().optional(),
+      order: z.number().default(0),
+    }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      return WS.findOneAndUpdate(
+        { id: input.workshopId },
+        { $push: { 'framework.levels': { id: input.id, name: input.name, weight: input.weight, summary: input.summary || '', order: input.order, sections: [], dimensions: [] } } },
+        { new: true }
+      ).lean();
+    }),
+
+  // ── Framework editing: add dimension to level ──
+  addDimension: protectedProcedure
+    .input(z.object({
+      workshopId: z.string(),
+      levelId: z.string(),
+      id: z.string(),
+      name: z.string(),
+      probe: z.string().optional(),
+      workstreamCode: z.string().optional(),
+      guidance: z.string().optional(),
+      order: z.number().default(0),
+    }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      return WS.findOneAndUpdate(
+        { id: input.workshopId, 'framework.levels.id': input.levelId },
+        { $push: { 'framework.levels.$.dimensions': {
+          id: input.id, name: input.name, probe: input.probe || '',
+          workstreamCode: input.workstreamCode || '', guidance: input.guidance || '',
+          order: input.order, priority: false, evidence: [], details: [],
+        } } },
+        { new: true }
+      ).lean();
+    }),
+
   // ── Delete ──
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))

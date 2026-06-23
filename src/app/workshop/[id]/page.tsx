@@ -9,8 +9,12 @@ import {
 } from 'lucide-react';
 import WorkshopCockpit from '@/components/workshop/WorkshopCockpit';
 import DimensionCard from '@/components/workshop/DimensionCard';
+import WorkshopScope from '@/components/workshop/WorkshopScope';
+import WorkshopUseCases from '@/components/workshop/WorkshopUseCases';
+import FrameworkBuilder from '@/components/workshop/FrameworkBuilder';
+import { Wrench } from 'lucide-react';
 
-type WorkshopTab = 'overview' | 'assess' | 'usecases' | 'scope' | 'proposal' | 'settings';
+type WorkshopTab = 'overview' | 'assess' | 'usecases' | 'scope' | 'proposal' | 'builder' | 'settings';
 
 const TABS: { id: WorkshopTab; label: string; icon: any }[] = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -18,6 +22,7 @@ const TABS: { id: WorkshopTab; label: string; icon: any }[] = [
   { id: 'usecases', label: 'Use Cases', icon: Target },
   { id: 'scope', label: 'Scope', icon: FileText },
   { id: 'proposal', label: 'Proposal', icon: FileText },
+  { id: 'builder', label: 'Builder', icon: Wrench },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -235,31 +240,28 @@ export default function WorkshopPage() {
         </div>
       )}
 
-      {/* ── USE CASES TAB (Phase 3) ── */}
+      {/* ── USE CASES TAB ── */}
       {activeTab === 'usecases' && (
-        <div className="text-center py-16">
-          <Target className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-          <p className="text-sm text-muted-foreground">Use Case Prioritization</p>
-          <p className="text-xs text-muted-foreground mt-1">Coming in Phase 3 — value/feasibility matrix with pilot selection</p>
-        </div>
+        <WorkshopUseCases workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
       )}
 
-      {/* ── SCOPE TAB (Phase 2) ── */}
+      {/* ── SCOPE TAB ── */}
       {activeTab === 'scope' && (
-        <div className="text-center py-16">
-          <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-          <p className="text-sm text-muted-foreground">Scope Builder</p>
-          <p className="text-xs text-muted-foreground mt-1">Coming in Phase 2 — gaps → scope items → workstream rollup</p>
-        </div>
+        <WorkshopScope workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
       )}
 
-      {/* ── PROPOSAL TAB (Phase 2) ── */}
+      {/* ── PROPOSAL TAB ── */}
       {activeTab === 'proposal' && (
         <div className="text-center py-16">
           <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-30" />
           <p className="text-sm text-muted-foreground">Proposal Generator</p>
-          <p className="text-xs text-muted-foreground mt-1">Coming in Phase 2 — AI-assembled commercial proposal from scope</p>
+          <p className="text-xs text-muted-foreground mt-1">Score dimensions + build scope → then generate a traceable commercial proposal</p>
         </div>
+      )}
+
+      {/* ── FRAMEWORK BUILDER TAB ── */}
+      {activeTab === 'builder' && (
+        <FrameworkBuilder workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
       )}
 
       {/* ── SETTINGS TAB ── */}
