@@ -22,6 +22,7 @@ import { approvalRouter } from './approval';
 import { harnessRouter } from './harness';
 import { campaignRouter } from './campaign';
 import { directoryRouter } from './directory';
+import { workshopRouter } from './workshop';
 
 export const appRouter = router({
   opportunity: opportunityRouter,
@@ -47,6 +48,7 @@ export const appRouter = router({
   harness: harnessRouter,
   campaign: campaignRouter,
   directory: directoryRouter,
+  workshop: workshopRouter,
 });
 
 export type AppRouter = typeof appRouter;

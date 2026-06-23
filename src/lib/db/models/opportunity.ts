@@ -46,6 +46,7 @@ export interface IOpportunity extends Document {
   childOpportunityIds?: string[];
   contractIds?: string[];
   convertedFromLeadId?: string;
+  workshopId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -125,6 +126,7 @@ const OpportunitySchema = new Schema<IOpportunity>(
     childOpportunityIds: { type: [String], default: [] },
     contractIds: { type: [String], default: [] },
     convertedFromLeadId: { type: String, required: false },
+    workshopId: { type: String, required: false, index: true },
   },
   { timestamps: true }
 );
