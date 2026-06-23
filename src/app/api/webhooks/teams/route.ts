@@ -93,13 +93,51 @@ async function processSignal(text: string, senderName: string, source: string) {
     });
   }
 
+  // Auto-create opportunity for unmatched signals with a customer name
+  let autoCreatedId: string | null = null;
+  if (!ai?.matchedDealId && ai?.customerName && Opp) {
+    try {
+      const existing = await Opp.findOne({
+        customerName: { $regex: new RegExp(ai.customerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+        status: { $nin: ['Won', 'Lost'] },
+      });
+      if (existing) {
+        ai.matchedDealId = (existing as any).id;
+        ai.matchedDealName = `${(existing as any).customerName} — ${(existing as any).opportunityName}`;
+        autoCreatedId = (existing as any).id;
+        const logEntry = `\n\n--- SIGNAL (${new Date().toISOString().split('T')[0]}) ---\n${ai.summary || text.slice(0, 200)}\nSource: Teams · From: ${senderName}`;
+        await Opp.findOneAndUpdate({ id: (existing as any).id }, { $set: { conversationLog: ((existing as any).conversationLog || '') + logEntry, updatedAt: new Date() } });
+      } else {
+        const newId = `OPP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        await Opp.create({
+          id: newId, customerName: ai.customerName,
+          opportunityName: `${ai.customerName} — Teams Signal`,
+          status: 'Discovery', tcv: 0, dealDuration: '12 months',
+          expectedCloseDate: new Date(Date.now() + 90 * 86400000), startDate: new Date(),
+          primaryOwner: senderName || 'Unassigned', industry: '', region: 'North America', source: 'Signal',
+          conversationLog: `--- ORIGINAL SIGNAL (Teams) ---\nFrom: ${senderName}\n\n${ai.summary || text.slice(0, 500)}\n\nAction Items:\n${(ai.actionItems || []).map((a: string) => `• ${a}`).join('\n')}`,
+          createdBy: 'AI Signal Processor', updatedBy: 'AI Signal Processor',
+        });
+        autoCreatedId = newId;
+        ai.matchedDealId = newId;
+        ai.matchedDealName = ai.customerName;
+        if (Activity) {
+          await Activity.create({ type: 'deal_created', entityType: 'opportunity', entityId: newId,
+            entityName: ai.customerName, description: `AI auto-created from Teams signal: ${ai.customerName}`, userName: 'AI Signal Processor' });
+        }
+      }
+    } catch { /* best effort */ }
+  }
+
   if (Notification) {
     await Notification.create({
       userId: 'default-user', type: 'teams_signal',
-      title: `${source}: ${senderName}`, message: ai?.summary || text.slice(0, 200), read: false,
+      title: `${autoCreatedId ? '🟢 Deal Created' : source}: ${ai?.customerName || senderName}`,
+      message: ai?.summary || text.slice(0, 200), read: false,
       metadata: { source, senderName, matchedDealId: ai?.matchedDealId, matchedDealName: ai?.matchedDealName,
-        intent: ai?.intent, urgency: ai?.urgency, sentiment: ai?.sentiment,
-        actionItems: ai?.actionItems, originalText: text.slice(0, 500), status: 'pending_acceptance' },
+        customerName: ai?.customerName, intent: ai?.intent, urgency: ai?.urgency, sentiment: ai?.sentiment,
+        actionItems: ai?.actionItems, originalText: text.slice(0, 500),
+        autoCreated: !!autoCreatedId, status: autoCreatedId ? 'auto_created' : ai?.matchedDealId ? 'linked' : 'pending_acceptance' },
     });
   }
 

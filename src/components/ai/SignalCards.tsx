@@ -268,13 +268,30 @@ export default function SignalCards({ onAccept, onOpenDeal }: SignalCardsProps) 
               </div>
 
               {/* Action buttons */}
-              {!isAccepted ? (
+              {meta.autoCreated && meta.matchedDealId ? (
+                // Auto-created by webhook — show "Open Deal" + "Complete Setup" prominently
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 bg-emerald-500/5 px-2 py-1 rounded-lg">
+                    <CheckCircle2 className="h-3 w-3" /> Deal auto-created in Discovery
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => { onOpenDeal?.(meta.matchedDealId); markRead.mutate({ id: notif._id }); }}
+                      className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors">
+                      <ArrowRight className="h-3 w-3" /> Open & Complete Setup
+                    </button>
+                    <button onClick={() => handleDismiss(notif)}
+                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-muted-foreground hover:bg-secondary transition-colors">
+                      <XCircle className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ) : !isAccepted ? (
                 <div className="flex gap-2">
                   <button onClick={() => handleAccept(notif)}
                     disabled={isProcessing}
                     className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50">
                     {isProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                    {meta.matchedDealId ? 'Accept' : 'Accept & Create Opp'}
+                    {meta.matchedDealId ? 'Accept & Link' : 'Accept & Create Opp'}
                   </button>
                   <button onClick={() => handleDismiss(notif)}
                     className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-muted-foreground hover:bg-secondary transition-colors">
