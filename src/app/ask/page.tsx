@@ -56,6 +56,7 @@ function AskContent() {
   const [results, setResults] = useState<{ type: string; content: string; timestamp: Date }[]>([]);
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [pendingDeal, setPendingDeal] = useState<any>(null); // Confirmation state
 
   const handleGenUIAction = (action: string, data?: any) => {
     if (action === 'open_deal' && data?.id) { setSelectedOppId(data.id); return; }
@@ -87,40 +88,49 @@ function AskContent() {
     },
   });
 
-  // Detect deal creation intent from AI response
+  // Detect deal creation intent from AI response — show confirmation, don't auto-create
   const tryExtractAndCreateDeal = (response: string) => {
     try {
       const match = response.match(/\{[\s\S]*?"customerName"[\s\S]*?\}/);
       if (match) {
         const data = JSON.parse(match[0]);
         if (data.customerName && data._action === 'create_opportunity') {
-          handleCreateFromAI(data);
+          // Show confirmation card instead of auto-creating
+          setPendingDeal({
+            customerName: data.customerName || '',
+            opportunityName: data.opportunityName || `${data.customerName} — New Opportunity`,
+            primaryOwner: data.primaryOwner || data.salesRep || '',
+            serviceLine: data.serviceLine || '',
+            tcv: data.tcv || 0,
+            stakeholders: data.stakeholders || [],
+          });
         }
       }
     } catch {} // Not a deal creation response — that's fine
   };
 
-  // Create opportunity from AI-extracted or user-described data
-  const handleCreateFromAI = (data: any) => {
-    // Also create account if needed
-    const accountExists = opportunities.some(o => o.customerName.toLowerCase() === (data.customerName || '').toLowerCase());
-    if (!accountExists && data.customerName) {
-      createAccountMutation.mutate({ companyName: data.customerName } as any);
+  // Confirmed — actually create the opportunity
+  const handleConfirmCreate = () => {
+    if (!pendingDeal) return;
+    const accountExists = opportunities.some(o => o.customerName.toLowerCase() === (pendingDeal.customerName || '').toLowerCase());
+    if (!accountExists && pendingDeal.customerName) {
+      createAccountMutation.mutate({ companyName: pendingDeal.customerName } as any);
     }
     createOppMutation.mutate({
-      customerName: data.customerName || 'New Lead',
-      opportunityName: data.opportunityName || `${data.customerName} — New Opportunity`,
-      status: data.status || 'Discovery',
-      tcv: data.tcv || 0,
-      dealDuration: data.dealDuration || '12 months',
-      expectedCloseDate: data.expectedCloseDate || new Date(Date.now() + 90 * 86400000).toISOString(),
+      customerName: pendingDeal.customerName || 'New Lead',
+      opportunityName: pendingDeal.opportunityName || `${pendingDeal.customerName} — New Opportunity`,
+      status: 'Discovery',
+      tcv: pendingDeal.tcv || 0,
+      dealDuration: '12 months',
+      expectedCloseDate: new Date(Date.now() + 90 * 86400000).toISOString(),
       startDate: new Date().toISOString(),
-      primaryOwner: data.primaryOwner || data.salesRep || 'Unassigned',
-      industry: data.industry || '',
-      region: data.region || 'North America',
+      primaryOwner: pendingDeal.primaryOwner || 'Unassigned',
+      industry: '',
+      region: 'North America',
       source: 'Ask Galent',
-      serviceLine: data.serviceLine || undefined,
+      serviceLine: pendingDeal.serviceLine || undefined,
     } as any);
+    setPendingDeal(null);
   };
 
   const handleAsk = () => {
@@ -211,6 +221,77 @@ Make sure to populate as many fields as possible from the user's message.` : '';
           </div>
         )}
       </div>
+
+      {/* Confirmation Card — appears when AI detects deal creation intent */}
+      {pendingDeal && (
+        <div className="p-5 rounded-xl bg-[#7c3aed]/5 border-2 border-[#7c3aed]/30 space-y-4 animate-flow-in">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[#7c3aed]" />
+            <span className="text-sm font-semibold text-[#7c3aed]">Confirm Opportunity Creation</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Customer Name</label>
+              <input value={pendingDeal.customerName}
+                onChange={e => setPendingDeal((p: any) => ({ ...p, customerName: e.target.value }))}
+                className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Sales Rep / Owner</label>
+              <input value={pendingDeal.primaryOwner}
+                onChange={e => setPendingDeal((p: any) => ({ ...p, primaryOwner: e.target.value }))}
+                className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+            </div>
+            <div className="col-span-2">
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Opportunity Name</label>
+              <input value={pendingDeal.opportunityName}
+                onChange={e => setPendingDeal((p: any) => ({ ...p, opportunityName: e.target.value }))}
+                className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Service Line</label>
+              <select value={pendingDeal.serviceLine}
+                onChange={e => setPendingDeal((p: any) => ({ ...p, serviceLine: e.target.value }))}
+                className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40">
+                <option value="">Select...</option>
+                {['Legacy Modernization', 'Data & AI', 'Testing & QA', 'Managed Services / SRE', 'Cloud & Infrastructure', 'Staffing'].map(s =>
+                  <option key={s} value={s}>{s}</option>
+                )}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Est. TCV ($)</label>
+              <input type="number" value={pendingDeal.tcv || ''}
+                onChange={e => setPendingDeal((p: any) => ({ ...p, tcv: Number(e.target.value) }))}
+                placeholder="0"
+                className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#7c3aed]/40" />
+            </div>
+          </div>
+          {/* Stakeholders extracted */}
+          {pendingDeal.stakeholders?.length > 0 && (
+            <div className="text-xs text-muted-foreground">
+              <span className="text-[10px] uppercase tracking-wider font-semibold">Stakeholders: </span>
+              {pendingDeal.stakeholders.map((s: any, i: number) => (
+                <span key={i} className="inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px]">
+                  <Users className="h-2.5 w-2.5" /> {s.name}{s.role ? ` (${s.role})` : ''}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button onClick={handleConfirmCreate}
+              disabled={!pendingDeal.customerName || createOppMutation.isPending}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#7c3aed] text-white text-sm font-semibold hover:bg-[#6d28d9] transition-colors disabled:opacity-50">
+              {createOppMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+              Confirm & Create Opportunity
+            </button>
+            <button onClick={() => setPendingDeal(null)}
+              className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Input */}
       {actionFeedback && (
