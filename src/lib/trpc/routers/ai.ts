@@ -398,7 +398,7 @@ KEY METRIC: 21 overdue tasks — clear 5 today${pipelineContext}`;
 
       const response = await client.messages.create({
         model,
-        max_tokens: isDealFocused ? 800 : 600,
+        max_tokens: input.context?.page === 'workshop-create' ? 3000 : input.context?.page?.startsWith('workshop') ? 1500 : isDealFocused ? 800 : 600,
         system: systemPrompt,
         messages: [{ role: 'user', content: input.message }],
       });
