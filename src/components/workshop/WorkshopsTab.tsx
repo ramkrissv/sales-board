@@ -44,7 +44,9 @@ JSON: {"customerName":"<company>","title":"<short title>","assessmentType":"<typ
     }, {
       onSuccess: (data) => {
         try {
-          const match = data.response.match(/\{[\s\S]*\}/);
+          // Strip markdown code fences if present
+          const cleaned = data.response.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+          const match = cleaned.match(/\{[\s\S]*\}/);
           if (match) {
             setPendingWorkshop(JSON.parse(match[0]));
           } else {

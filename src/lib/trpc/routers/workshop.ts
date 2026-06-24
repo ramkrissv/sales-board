@@ -14,10 +14,23 @@ function getOppModel() {
 }
 
 export const workshopRouter = router({
-  // ── List templates ──
+  // ── List templates (auto-seed on first access) ──
   listTemplates: protectedProcedure.query(async () => {
     await connectDB();
     const WT = getTemplateModel();
+    const count = await WT.countDocuments();
+    if (count === 0) {
+      try {
+        const { seedAllWorkshopTemplates } = await import('@/lib/db/seed-workshop-templates');
+        await seedAllWorkshopTemplates();
+      } catch (e) {
+        // Seed the basic template as fallback
+        try {
+          const { seedWorkshopTemplate } = await import('@/lib/db/seed-workshop-template');
+          await seedWorkshopTemplate();
+        } catch {}
+      }
+    }
     return WT.find().sort({ isDefault: -1, createdAt: -1 }).lean();
   }),
 
