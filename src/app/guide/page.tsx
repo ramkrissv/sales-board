@@ -575,6 +575,7 @@ export default function GuidePage() {
         { icon: Zap, title: 'Buyer Intent Signals', description: 'Inline on expanded accounts. AI-generated intent score + signals: job postings, tech signals, news, web activity. Strength badges and actionable recommendations.', href: '/accounts', color: '#f59e0b' },
         { icon: DollarSign, title: 'Territory & Quota', description: 'Settings → Territory & Quota. Define territories, assign owners, set quotas. Attainment tracking, pacing bars, gap analysis, stacked bar chart.', href: '/settings', color: '#10b981' },
         { icon: MessageSquare, title: 'AI Deal Rooms', description: 'Enhanced "Deal Room" tab in Deal Detail. Team chat with AI assistant, document management (add/share/track), client micro-portal with shareable link.', href: '/pipeline', color: '#8b5cf6', tag: 'Portal' },
+        { icon: BookOpen, title: 'Client Workshops', description: '10 assessment templates: AI Transformation, App Modernization, Engineering, IT Ops, SRE/Platform, SaaS/Salesforce, ERP, Legacy Modernization, Customer Support, Security. AI conversational creation from description/email/doc upload. Maturity scoring (0-4) with ReadinessSpine + GapHeatmap exhibits. Scope builder with execution model recommendations (Pod Squad, Managed Capacity, Outcome-Based, AI-Powered). Proposal generator. Deal stage progression. Dynamic framework builder.', href: '/presales', color: '#0A867F', tag: '10 Templates' },
       ],
     },
   ];

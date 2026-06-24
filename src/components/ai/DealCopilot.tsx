@@ -53,6 +53,13 @@ function getContextPrompts(page: string, dealName?: string | null): { label: str
       { label: 'Competitive edge', prompt: 'What competitive advantages should I highlight?', icon: Lightbulb },
     ];
   }
+  if (page.includes('workshop')) {
+    return [
+      { label: 'Assessment status', prompt: 'Summarize the current assessment — readiness index, key gaps, and what to score next', icon: Target },
+      { label: 'Gap analysis', prompt: 'What are the biggest gaps and what execution model would you recommend?', icon: Zap },
+      { label: 'Draft finding', prompt: 'Help me write a finding for the dimension I just scored', icon: Lightbulb },
+    ];
+  }
   // Default (home, tasks, etc.)
   return [
     { label: 'Today\'s focus', prompt: 'What should I focus on today?', icon: Target },
