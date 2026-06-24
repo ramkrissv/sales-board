@@ -23,10 +23,13 @@ export default function WorkshopsTab() {
   const createMutation = trpc.workshop.create.useMutation();
   const chatMutation = trpc.ai.chat.useMutation();
 
+  const { data: templates = [] } = trpc.workshop.listTemplates.useQuery();
   const [showCreate, setShowCreate] = useState(false);
+  const [createMode, setCreateMode] = useState<'ai' | 'template'>('ai');
   const [aiInput, setAiInput] = useState('');
   const [aiParsing, setAiParsing] = useState(false);
   const [pendingWorkshop, setPendingWorkshop] = useState<any>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   const handleAiCreate = () => {
     if (!aiInput.trim()) return;
@@ -139,9 +142,69 @@ JSON: {"customerName":"<company>","title":"<short title>","assessmentType":"<typ
         </button>
       </div>
 
-      {/* AI-first conversational creation */}
+      {/* Creation mode selector + forms */}
       {showCreate && (
         <div className="space-y-4 animate-flow-in">
+          {/* Mode tabs */}
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary/40 w-fit">
+            <button onClick={() => setCreateMode('ai')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-medium transition-colors ${createMode === 'ai' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>
+              <Sparkles className="h-3.5 w-3.5" /> AI from Description
+            </button>
+            <button onClick={() => setCreateMode('template')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-medium transition-colors ${createMode === 'template' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>
+              <Layers className="h-3.5 w-3.5" /> From Template
+            </button>
+          </div>
+
+          {/* Template picker mode */}
+          {createMode === 'template' && (
+            <div className="p-5 rounded-xl g-surface g-elevated space-y-4">
+              <div className="text-xs font-semibold text-foreground">Pick a starting template — you can customize everything after creation</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(templates as any[]).map((tpl: any) => {
+                  const isSelected = selectedTemplateId === tpl.id;
+                  const dimCount = (tpl.framework?.levels || []).reduce((s: number, l: any) => s + (l.dimensions?.length || 0), 0);
+                  const wsCount = (tpl.framework?.workstreams || []).length;
+                  return (
+                    <button key={tpl.id} onClick={() => setSelectedTemplateId(isSelected ? null : tpl.id)}
+                      className={`p-4 rounded-xl text-left transition-all ${isSelected ? 'bg-[#0A867F]/10 border-2 border-[#0A867F]/40' : 'bg-card border border-border hover:border-[#0A867F]/20'}`}>
+                      <div className="text-xs font-semibold text-foreground">{tpl.name}</div>
+                      <div className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{tpl.description}</div>
+                      <div className="flex gap-2 mt-2 text-[9px] text-muted-foreground">
+                        <span>{dimCount} dimensions</span>
+                        <span>·</span>
+                        <span>{wsCount} workstreams</span>
+                        <span>·</span>
+                        <span>{(tpl.framework?.levels || []).length} levels</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedTemplateId && (
+                <div className="flex items-center gap-3">
+                  <input value={pendingWorkshop?.customerName || ''}
+                    onChange={e => setPendingWorkshop((p: any) => ({ ...(p || {}), customerName: e.target.value }))}
+                    placeholder="Customer name *" className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground" />
+                  <button onClick={() => {
+                    const name = pendingWorkshop?.customerName;
+                    if (!name) return;
+                    createMutation.mutate({ customerName: name, title: `${name} — Assessment`, templateId: selectedTemplateId, mode: 'with_ai', format: 'in-person' }, {
+                      onSuccess: (data: any) => { window.location.href = `/workshop/${data.id}`; },
+                    });
+                  }} disabled={!pendingWorkshop?.customerName || createMutation.isPending}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A867F] text-white text-xs font-medium disabled:opacity-50">
+                    {createMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                    Create from Template
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* AI creation mode */}
+          {createMode === 'ai' && (<>
           <div className="p-5 rounded-xl g-surface g-elevated"
             style={{ background: 'linear-gradient(135deg, rgba(10,134,127,0.05), transparent)' }}>
             <div className="flex items-center gap-2 mb-3">
@@ -268,6 +331,7 @@ JSON: {"customerName":"<company>","title":"<short title>","assessmentType":"<typ
               </div>
             </div>
           )}
+        </>)}
         </div>
       )}
 
