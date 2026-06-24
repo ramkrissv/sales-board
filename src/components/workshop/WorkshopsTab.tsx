@@ -32,37 +32,11 @@ export default function WorkshopsTab() {
     if (!aiInput.trim()) return;
     setAiParsing(true);
     chatMutation.mutate({
-      message: `Parse this workshop description and extract structured data. The user wants to create a client assessment workshop.
+      message: `Extract workshop details from this input. Return JSON only — no markdown.
 
-USER INPUT: "${aiInput}"
+"${aiInput.slice(0, 2000)}"
 
-Based on the description, determine:
-1. The customer name
-2. The type of assessment (AI Transformation, Modernization, Engineering Maturity, IT Operations, Customer Support, Security, Data & Analytics, or Custom)
-3. Relevant dimensions to assess (suggest 8-15 specific to this type of engagement)
-4. Relevant workstreams for the proposal
-5. Key stakeholders mentioned
-6. Any specific technologies, platforms, or constraints mentioned
-
-Return ONLY valid JSON:
-{
-  "_action": "create_workshop",
-  "customerName": "<company>",
-  "title": "<company — assessment type>",
-  "assessmentType": "<type>",
-  "sponsor": "<stakeholder if mentioned>",
-  "context": "<1-2 sentence summary of what the client needs>",
-  "suggestedLevels": [
-    {"name": "<level name>", "weight": 0.33, "dimensions": [
-      {"name": "<dimension>", "probe": "<diagnostic question to ask in the room>"}
-    ]}
-  ],
-  "suggestedWorkstreams": [
-    {"code": "WS1", "name": "<workstream>", "objective": "<what it delivers>"}
-  ],
-  "stakeholders": [{"name": "<person>", "title": "<role>"}],
-  "technologies": ["<tech mentioned>"]
-}`,
+JSON: {"customerName":"<company>","title":"<short title>","assessmentType":"<type>","context":"<1 sentence>","suggestedLevels":[{"name":"<level>","weight":0.33,"dimensions":[{"name":"<dim>","probe":"<question>"}]}],"suggestedWorkstreams":[{"code":"WS1","name":"<name>","objective":"<goal>"}],"stakeholders":[{"name":"<person>","title":"<role>"}],"technologies":["<tech>"]}`,
       context: { page: 'workshop-create' },
     }, {
       onSuccess: (data) => {
