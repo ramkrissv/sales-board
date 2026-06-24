@@ -68,11 +68,51 @@ Return ONLY valid JSON:
       onSuccess: (data) => {
         try {
           const match = data.response.match(/\{[\s\S]*\}/);
-          if (match) setPendingWorkshop(JSON.parse(match[0]));
-        } catch {}
+          if (match) {
+            setPendingWorkshop(JSON.parse(match[0]));
+          } else {
+            // AI didn't return JSON — create basic workshop from input
+            const nameMatch = aiInput.match(/(?:for|with|at)\s+([A-Z][A-Za-z\s&]+?)(?:\s*[-—–]|\s*$|\s*,)/);
+            setPendingWorkshop({
+              customerName: nameMatch?.[1]?.trim() || 'New Client',
+              title: `${nameMatch?.[1]?.trim() || 'New Client'} — Assessment Workshop`,
+              assessmentType: 'Custom',
+              context: data.response.slice(0, 200),
+              suggestedLevels: [],
+              suggestedWorkstreams: [],
+              stakeholders: [],
+              technologies: [],
+            });
+          }
+        } catch {
+          setPendingWorkshop({
+            customerName: 'New Client',
+            title: 'Assessment Workshop',
+            assessmentType: 'Custom',
+            context: 'AI parsing failed — edit the fields below and confirm.',
+            suggestedLevels: [],
+            suggestedWorkstreams: [],
+            stakeholders: [],
+            technologies: [],
+          });
+        }
         setAiParsing(false);
       },
-      onError: () => setAiParsing(false),
+      onError: (err) => {
+        console.error('Workshop AI creation error:', err);
+        // Fallback: create basic workshop even if AI fails
+        setPendingWorkshop({
+          customerName: 'New Client',
+          title: 'Assessment Workshop',
+          assessmentType: 'Custom',
+          context: 'AI unavailable — fill in the details manually.',
+          suggestedLevels: [],
+          suggestedWorkstreams: [],
+          stakeholders: [],
+          technologies: [],
+        });
+        setAiParsing(false);
+      },
     });
   };
 
@@ -159,8 +199,23 @@ Return ONLY valid JSON:
             <div className="flex items-center justify-between mt-3">
               <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-border cursor-pointer hover:border-[#0A867F]/30 transition-colors text-[10px] text-muted-foreground hover:text-foreground">
                 <Upload className="h-3 w-3" /> Upload doc / email
-                <input type="file" className="hidden" accept=".pdf,.docx,.txt,.eml,.msg"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onload = () => setAiInput(p => p + '\n\n[Uploaded: ' + f.name + ']\n' + (r.result as string).slice(0, 3000)); r.readAsText(f); } }} />
+                <input type="file" className="hidden" accept=".pdf,.docx,.txt,.eml,.msg,.html"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    if (f.type === 'application/pdf' || f.name.endsWith('.pdf')) {
+                      // PDFs: just note the filename, AI will work with the description
+                      setAiInput(p => p + `\n\n[Document uploaded: ${f.name} (${(f.size / 1024).toFixed(0)}KB PDF) — Please build the workshop framework based on the document title and any context I've provided above.]`);
+                    } else {
+                      // Text-based files: read content
+                      const r = new FileReader();
+                      r.onload = () => {
+                        const text = (r.result as string).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').slice(0, 4000);
+                        setAiInput(p => p + `\n\n[Uploaded: ${f.name}]\n${text}`);
+                      };
+                      r.readAsText(f);
+                    }
+                  }} />
               </label>
               <div className="flex gap-2">
                 <button onClick={() => { setShowCreate(false); setPendingWorkshop(null); setAiInput(''); }} className="px-3 py-1.5 text-xs text-muted-foreground">Cancel</button>
