@@ -35,11 +35,12 @@ export default function WorkshopsTab() {
     if (!aiInput.trim()) return;
     setAiParsing(true);
     chatMutation.mutate({
-      message: `Extract workshop details from this input. Return JSON only — no markdown.
+      message: `Build a client assessment workshop from this input. Return ONLY a raw JSON object — no markdown fences, no explanation, just the JSON.
 
-"${aiInput.slice(0, 2000)}"
+INPUT: ${aiInput.slice(0, 3000)}
 
-JSON: {"customerName":"<company>","title":"<short title>","assessmentType":"<type>","context":"<1 sentence>","suggestedLevels":[{"name":"<level>","weight":0.33,"dimensions":[{"name":"<dim>","probe":"<question>"}]}],"suggestedWorkstreams":[{"code":"WS1","name":"<name>","objective":"<goal>"}],"stakeholders":[{"name":"<person>","title":"<role>"}],"technologies":["<tech>"]}`,
+Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 workstreams):
+{"customerName":"REAL_COMPANY","title":"COMPANY — Assessment Type","assessmentType":"TYPE","context":"What client needs","suggestedLevels":[{"name":"Level Name","weight":0.33,"dimensions":[{"name":"Dimension","probe":"Diagnostic question?"}]}],"suggestedWorkstreams":[{"code":"WS1","name":"Name","objective":"Goal"}],"stakeholders":[{"name":"Person","title":"Role"}],"technologies":["tech"]}`,
       context: { page: 'workshop-create' },
     }, {
       onSuccess: (data) => {
@@ -50,13 +51,18 @@ JSON: {"customerName":"<company>","title":"<short title>","assessmentType":"<typ
           if (match) {
             setPendingWorkshop(JSON.parse(match[0]));
           } else {
-            // AI didn't return JSON — create basic workshop from input
-            const nameMatch = aiInput.match(/(?:for|with|at)\s+([A-Z][A-Za-z\s&]+?)(?:\s*[-—–]|\s*$|\s*,)/);
+            // AI returned text but no parseable JSON — extract what we can
+            const text = cleaned;
+            // Try to find company name from the input or response
+            const nameMatch = aiInput.match(/(?:for|with|at|—)\s+([A-Z][A-Za-z\s&.']+?)(?:\s*[-—–,\.]|\s*$)/);
+            const docMatch = aiInput.match(/Document:\s*(.+?)(?:\n|$)/);
+            const titleFromDoc = docMatch?.[1]?.replace(/[-_\.]/g, ' ').replace(/\.(pdf|docx)$/i, '').trim();
+            const customerName = nameMatch?.[1]?.trim() || (titleFromDoc ? titleFromDoc.split(/\s+/).slice(0, 3).join(' ') : 'New Client');
             setPendingWorkshop({
-              customerName: nameMatch?.[1]?.trim() || 'New Client',
-              title: `${nameMatch?.[1]?.trim() || 'New Client'} — Assessment Workshop`,
+              customerName,
+              title: `${customerName} — Assessment Workshop`,
               assessmentType: 'Custom',
-              context: data.response.slice(0, 200),
+              context: text.slice(0, 300) || 'Edit the fields below and confirm to create the workshop.',
               suggestedLevels: [],
               suggestedWorkstreams: [],
               stakeholders: [],
@@ -242,15 +248,36 @@ JSON: {"customerName":"<company>","title":"<short title>","assessmentType":"<typ
                   onChange={e => {
                     const f = e.target.files?.[0];
                     if (!f) return;
+                    // Read all files as text — for PDFs, extract readable strings
+                    const r = new FileReader();
                     if (f.type === 'application/pdf' || f.name.endsWith('.pdf')) {
-                      // PDFs: just note the filename, AI will work with the description
-                      setAiInput(p => p + `\n\n[Document uploaded: ${f.name} (${(f.size / 1024).toFixed(0)}KB PDF) — Please build the workshop framework based on the document title and any context I've provided above.]`);
+                      // Read PDF as binary and extract visible text strings
+                      r.onload = () => {
+                        const bytes = new Uint8Array(r.result as ArrayBuffer);
+                        // Extract text between parentheses (PDF text objects) and readable ASCII
+                        let extracted = '';
+                        let inText = false;
+                        for (let i = 0; i < bytes.length && extracted.length < 5000; i++) {
+                          const ch = bytes[i];
+                          if (ch === 40) { inText = true; continue; } // '('
+                          if (ch === 41) { inText = false; extracted += ' '; continue; } // ')'
+                          if (inText && ch >= 32 && ch < 127) extracted += String.fromCharCode(ch);
+                        }
+                        // Clean up and deduplicate spaces
+                        extracted = extracted.replace(/\s+/g, ' ').replace(/[^\w\s.,;:!?@#$%&*()\-+=/<>'"]/g, '').trim();
+                        if (extracted.length > 100) {
+                          setAiInput(p => (p ? p + '\n\n' : '') + `Document: ${f.name}\n\n${extracted.slice(0, 4000)}`);
+                        } else {
+                          // Fallback: use filename context
+                          const nameContext = f.name.replace(/[-_\.]/g, ' ').replace(/\.(pdf|docx|doc)$/i, '');
+                          setAiInput(p => (p ? p + '\n\n' : '') + `Workshop based on: "${nameContext}". This is a ${(f.size/1024).toFixed(0)}KB document. Please build a comprehensive assessment framework based on the document title.`);
+                        }
+                      };
+                      r.readAsArrayBuffer(f);
                     } else {
-                      // Text-based files: read content
-                      const r = new FileReader();
                       r.onload = () => {
                         const text = (r.result as string).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').slice(0, 4000);
-                        setAiInput(p => p + `\n\n[Uploaded: ${f.name}]\n${text}`);
+                        setAiInput(p => (p ? p + '\n\n' : '') + `Document: ${f.name}\n\n${text}`);
                       };
                       r.readAsText(f);
                     }
