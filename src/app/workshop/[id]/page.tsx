@@ -15,6 +15,7 @@ import FrameworkBuilder from '@/components/workshop/FrameworkBuilder';
 import WorkshopProposal from '@/components/workshop/WorkshopProposal';
 import WorkshopIntake from '@/components/workshop/WorkshopIntake';
 import WorkshopFindings from '@/components/workshop/WorkshopFindings';
+import StageGate from '@/components/workshop/StageGate';
 import { Wrench, ClipboardList, Award } from 'lucide-react';
 
 type WorkshopTab = 'overview' | 'intake' | 'assess' | 'usecases' | 'scope' | 'findings' | 'proposal' | 'builder' | 'settings';
@@ -220,12 +221,22 @@ export default function WorkshopPage() {
 
       {/* ── INTAKE TAB ── */}
       {activeTab === 'intake' && (
-        <WorkshopIntake workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        <div className="space-y-4">
+          <StageGate stage="Intake" entry={[
+            { label: 'Workshop created', met: true },
+            { label: 'Customer identified', met: !!ws.customerName },
+          ]} output={['Business context', 'Technical landscape', 'Stakeholder map', 'Success criteria']} />
+          <WorkshopIntake workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        </div>
       )}
 
       {/* ── ASSESS TAB ── */}
       {activeTab === 'assess' && (
         <div className="space-y-4">
+          <StageGate stage="Assessment" entry={[
+            { label: 'Framework defined', met: levels.length > 0 },
+            { label: 'Intake complete', met: !!ws.description },
+          ]} output={['Maturity scores (current + target)', 'Findings per dimension', 'Gap identification', 'Priority flags']} />
           {/* Level selector */}
           <div className="flex items-center gap-2">
             {levels.map((level: any) => {
