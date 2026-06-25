@@ -318,6 +318,17 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
       <li><strong>Badges</strong> — Kanban cards show: AI health score, win probability, missing DM, signal origin, active indicator.</li>
     </ul>
 
+    <h3>Client Workshops (Assessment Engine)</h3>
+    <ul>
+      <li><strong>Creation</strong> — AI from description (paste email/doc, AI builds framework) OR composable assembly (pick service lines, combine templates). 10+ assessment templates: AI Transformation, Modernization, Engineering, IT Ops, SRE, SaaS, ERP, Legacy, CX, Security.</li>
+      <li><strong>9-Tab Workshop</strong> — Overview (readiness index, spine, heatmap) → Intake (4 sections, custom Qs, AI autofill, doc upload) → Assess (0-4 scoring, AI chat sidebar, Deep Discovery) → Use Cases (tower grouping, matrix, AI pilot recommend) → Scope (AI generation, execution models) → Findings (infographics, narrative, recommendations, HTML/PDF export) → Proposal (editable, traceable, HTML/PDF export) → Builder (dynamic framework editor) → Settings.</li>
+      <li><strong>Stage Gates</strong> — Entry/exit criteria on every tab showing what's needed and what comes out.</li>
+      <li><strong>AI Assists</strong> — 12 registered assists: finding.synthesize, dimension.detail, dimension.suggest, gap.narrative, usecase.enrich, pilot.recommend, scope.synthesize, currentstate.narrative, proposal.generate, exec.summary, consistency.check, deep.discovery. Model-routed (sonnet/opus), zod-validated, interaction-logged.</li>
+      <li><strong>Exit at Any Stage</strong> — Generate a findings report from the Findings tab at any point. Don't need to complete all stages to get a deliverable.</li>
+      <li><strong>Deal Integration</strong> — Auto-creates Discovery opportunity, deal stage progression bar, workshop tab in Deal Detail, workshop badge on kanban cards, workshop column in Command Center.</li>
+      <li><strong>Exports</strong> — Findings HTML/PDF, Proposal HTML/PDF, Workshop JSON export/import.</li>
+    </ul>
+
     <hr class="section-divider" />
     <h2>Getting Started</h2>
     <ol>
@@ -334,10 +345,13 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
       <li><strong>Forecasting</strong> — Smart Forecast with what-if sliders + Monte Carlo (1k simulations).</li>
       <li><strong>Accounts</strong> — Expand any account for <strong>Buyer Intent Signals</strong> + Relationship Map.</li>
       <li><strong>Settings</strong> → <strong>Territory & Quota</strong> for territory management. Plugins, MCP Tools, Security (2FA).</li>
+      <li><strong>Presales → Workshops</strong> — Create a workshop (describe in NL or pick service lines). Score dimensions, generate findings, build scope, create proposal. Exit at any stage with a downloadable report.</li>
+      <li><strong>Workshop Findings</strong> — Generate findings report with infographics at any point. Download as HTML/PDF.</li>
+      <li><strong>Workshop → Proposal</strong> — Same proposal features as Presales Proposal Studio, fed from workshop assessment data. Both paths produce the same output format.</li>
     </ol>
 
     <div class="footer">
-      Galent SalesPilot v3.0 — Wave 3 AI Intelligence Suite · ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} · https://salespilot.galent.ai
+      Galent SalesPilot v4.0 — Wave 3 + Workshops · ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} · https://salespilot.galent.ai
     </div>
   </body></html>`;
 }
@@ -575,7 +589,7 @@ export default function GuidePage() {
         { icon: Zap, title: 'Buyer Intent Signals', description: 'Inline on expanded accounts. AI-generated intent score + signals: job postings, tech signals, news, web activity. Strength badges and actionable recommendations.', href: '/accounts', color: '#f59e0b' },
         { icon: DollarSign, title: 'Territory & Quota', description: 'Settings → Territory & Quota. Define territories, assign owners, set quotas. Attainment tracking, pacing bars, gap analysis, stacked bar chart.', href: '/settings', color: '#10b981' },
         { icon: MessageSquare, title: 'AI Deal Rooms', description: 'Enhanced "Deal Room" tab in Deal Detail. Team chat with AI assistant, document management (add/share/track), client micro-portal with shareable link.', href: '/pipeline', color: '#8b5cf6', tag: 'Portal' },
-        { icon: BookOpen, title: 'Client Workshops', description: '10 assessment templates: AI Transformation, App Modernization, Engineering, IT Ops, SRE/Platform, SaaS/Salesforce, ERP, Legacy Modernization, Customer Support, Security. AI conversational creation from description/email/doc upload. Maturity scoring (0-4) with ReadinessSpine + GapHeatmap exhibits. Scope builder with execution model recommendations (Pod Squad, Managed Capacity, Outcome-Based, AI-Powered). Proposal generator. Deal stage progression. Dynamic framework builder.', href: '/presales', color: '#0A867F', tag: '10 Templates' },
+        { icon: BookOpen, title: 'Client Workshops', description: 'Full assessment engine: 9-tab workshop page (Overview → Intake → Assess → Use Cases → Scope → Findings → Proposal → Builder → Settings). AI conversational creation or composable template assembly from 10+ service lines. 0-4 maturity scoring with Deep Discovery, ReadinessSpine + GapHeatmap exhibits. Stage gates on every tab. Findings report with infographics + recommendations. Scope builder with execution models. Proposal generator with traceability. HTML/PDF export. Deal stage progression. AI assist registry (12 assists). Assessment chat with doc upload.', href: '/presales', color: '#0A867F', tag: '9 Tabs' },
       ],
     },
   ];
