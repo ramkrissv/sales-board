@@ -161,11 +161,31 @@ Be specific to ${workshop.customerName}. Reference actual assessment findings. I
         </div>
         <div className="flex gap-2">
           {proposal && (
-            <button onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground">
-              {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-              {copied ? 'Copied!' : 'Copy Markdown'}
-            </button>
+            <>
+              <button onClick={handleCopy}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground">
+                {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button onClick={() => {
+                import('@/lib/workshop/export').then(({ generateProposalHTML }) => {
+                  const html = generateProposalHTML(workshop, proposal);
+                  const w = window.open('', '_blank');
+                  if (w) { w.document.write(html); w.document.close(); }
+                });
+              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground">
+                <Download className="h-3 w-3" /> HTML
+              </button>
+              <button onClick={() => {
+                import('@/lib/workshop/export').then(({ generateProposalHTML }) => {
+                  const html = generateProposalHTML(workshop, proposal);
+                  const w = window.open('', '_blank');
+                  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+                });
+              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground">
+                <FileText className="h-3 w-3" /> PDF
+              </button>
+            </>
           )}
           <button onClick={handleGenerate} disabled={generating || gaps.length === 0}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A867F] text-white text-xs font-medium hover:bg-[#0A867F]/90 disabled:opacity-50 transition-colors">

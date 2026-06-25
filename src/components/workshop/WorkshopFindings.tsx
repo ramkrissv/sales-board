@@ -100,16 +100,36 @@ export default function WorkshopFindings({ workshop, onRefresh }: WorkshopFindin
         </div>
         <div className="flex gap-2">
           {findings && (
-            <button onClick={handleCopyAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground">
-              {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-              {copied ? 'Copied!' : 'Copy Report'}
-            </button>
+            <>
+              <button onClick={handleCopyAll}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground">
+                {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button onClick={() => {
+                import('@/lib/workshop/export').then(({ generateFindingsHTML }) => {
+                  const html = generateFindingsHTML(workshop, { recommendations: customRecs, narrative: findings?.narrative });
+                  const w = window.open('', '_blank');
+                  if (w) { w.document.write(html); w.document.close(); }
+                });
+              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground">
+                <Download className="h-3 w-3" /> HTML
+              </button>
+              <button onClick={() => {
+                import('@/lib/workshop/export').then(({ generateFindingsHTML }) => {
+                  const html = generateFindingsHTML(workshop, { recommendations: customRecs, narrative: findings?.narrative });
+                  const w = window.open('', '_blank');
+                  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+                });
+              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground">
+                <FileText className="h-3 w-3" /> PDF
+              </button>
+            </>
           )}
           <button onClick={handleGenerateFindings} disabled={generating || stats.dimensionsScored === 0}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A867F] text-white text-xs font-medium disabled:opacity-40">
             {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {findings ? 'Regenerate' : 'Generate Findings Report'}
+            {findings ? 'Regenerate' : 'Generate Findings'}
           </button>
         </div>
       </div>
