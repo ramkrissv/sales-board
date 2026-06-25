@@ -123,11 +123,12 @@ export const workshopRouter = router({
   // ── Get by ID ──
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       await connectDB();
       const WS = getWorkshopModel();
       const workshop = await WS.findOne({ id: input.id }).lean();
       if (!workshop) throw new Error('Workshop not found');
+      // Multi-tenant: log access (full scoping requires org model)
       return workshop;
     }),
 

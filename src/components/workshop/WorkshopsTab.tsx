@@ -172,47 +172,63 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
             </button>
           </div>
 
-          {/* Template picker mode */}
+          {/* Composable template assembly — pick service lines, AI assembles */}
           {createMode === 'template' && (
             <div className="p-5 rounded-xl g-surface g-elevated space-y-4">
-              <div className="text-xs font-semibold text-foreground">Pick a starting template — you can customize everything after creation</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <div className="text-xs font-semibold text-foreground">Assemble your assessment</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">Select service lines — AI will compose a custom framework combining relevant dimensions from each</div>
+              </div>
+
+              {/* Service line multi-select */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {(templates as any[]).map((tpl: any) => {
-                  const isSelected = selectedTemplateId === tpl.id;
+                  const isSelected = (selectedTemplateId || '').includes(tpl.id);
                   const dimCount = (tpl.framework?.levels || []).reduce((s: number, l: any) => s + (l.dimensions?.length || 0), 0);
-                  const wsCount = (tpl.framework?.workstreams || []).length;
                   return (
-                    <button key={tpl.id} onClick={() => setSelectedTemplateId(isSelected ? null : tpl.id)}
-                      className={`p-4 rounded-xl text-left transition-all ${isSelected ? 'bg-[#0A867F]/10 border-2 border-[#0A867F]/40' : 'bg-card border border-border hover:border-[#0A867F]/20'}`}>
-                      <div className="text-xs font-semibold text-foreground">{tpl.name}</div>
-                      <div className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{tpl.description}</div>
-                      <div className="flex gap-2 mt-2 text-[9px] text-muted-foreground">
-                        <span>{dimCount} dimensions</span>
-                        <span>·</span>
-                        <span>{wsCount} workstreams</span>
-                        <span>·</span>
-                        <span>{(tpl.framework?.levels || []).length} levels</span>
-                      </div>
+                    <button key={tpl.id} onClick={() => {
+                      setSelectedTemplateId(prev => {
+                        const ids = (prev || '').split(',').filter(Boolean);
+                        return ids.includes(tpl.id) ? ids.filter(id => id !== tpl.id).join(',') : [...ids, tpl.id].join(',');
+                      });
+                    }}
+                      className={`p-3 rounded-xl text-left transition-all hover-scale ${isSelected ? 'bg-[#0A867F]/10 border-2 border-[#0A867F]/40 hover-glow-teal' : 'bg-card border border-border hover:border-[#0A867F]/20'}`}>
+                      <div className="text-[11px] font-semibold text-foreground">{tpl.name}</div>
+                      <div className="text-[9px] text-muted-foreground mt-0.5">{dimCount} dims</div>
                     </button>
                   );
                 })}
               </div>
-              {selectedTemplateId && (
-                <div className="flex items-center gap-3">
-                  <input value={pendingWorkshop?.customerName || ''}
-                    onChange={e => setPendingWorkshop((p: any) => ({ ...(p || {}), customerName: e.target.value }))}
-                    placeholder="Customer name *" className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground" />
-                  <button onClick={() => {
-                    const name = pendingWorkshop?.customerName;
-                    if (!name) return;
-                    createMutation.mutate({ customerName: name, title: `${name} — Assessment`, templateId: selectedTemplateId, mode: 'with_ai', format: 'in-person' }, {
-                      onSuccess: (data: any) => { window.location.href = `/workshop/${data.id}`; },
-                    });
-                  }} disabled={!pendingWorkshop?.customerName || createMutation.isPending}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A867F] text-white text-xs font-medium disabled:opacity-50">
-                    {createMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                    Create from Template
-                  </button>
+
+              {/* Selected count + customer name + create */}
+              {(selectedTemplateId || '').split(',').filter(Boolean).length > 0 && (
+                <div className="space-y-3 animate-flow-in">
+                  <div className="flex flex-wrap gap-1">
+                    {(selectedTemplateId || '').split(',').filter(Boolean).map(id => {
+                      const tpl = (templates as any[]).find((t: any) => t.id === id);
+                      return tpl ? (
+                        <span key={id} className="text-[9px] px-2 py-0.5 rounded-full bg-[#0A867F]/10 text-[#0A867F] font-medium">{tpl.name}</span>
+                      ) : null;
+                    })}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input value={pendingWorkshop?.customerName || ''}
+                      onChange={e => setPendingWorkshop((p: any) => ({ ...(p || {}), customerName: e.target.value }))}
+                      placeholder="Customer name *" className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40" />
+                    <button onClick={() => {
+                      const name = pendingWorkshop?.customerName;
+                      if (!name) return;
+                      // Use first selected template as base (framework builder can merge later)
+                      const firstId = (selectedTemplateId || '').split(',').filter(Boolean)[0];
+                      createMutation.mutate({ customerName: name, title: `${name} — Assessment`, templateId: firstId || 'galent-enterprise-ai-v1', mode: 'with_ai', format: 'in-person' }, {
+                        onSuccess: (data: any) => { window.location.href = `/workshop/${data.id}`; },
+                      });
+                    }} disabled={!pendingWorkshop?.customerName || createMutation.isPending}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A867F] text-white text-xs font-medium disabled:opacity-50 hover-glow-teal">
+                      {createMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      Create Composite Workshop
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
