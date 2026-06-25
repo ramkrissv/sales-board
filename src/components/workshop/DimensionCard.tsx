@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Flag, Sparkles, ChevronDown, ChevronUp, Loader2, Check, X } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import MaturityChips from './MaturityChips';
+import DeepDiscovery from './DeepDiscovery';
 
 interface DimensionCardProps {
   dimension: any;
@@ -234,6 +235,23 @@ Return JSON only:
           </div>
         )}
       </div>
+
+      {/* Deep Discovery — exhaustive drill-down */}
+      {mode === 'with_ai' && expanded && (
+        <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--g-line)' }}>
+          <DeepDiscovery
+            workshop={{}}
+            levelId={levelId}
+            dimensionId={dimension.id}
+            dimensionName={dimension.name}
+            currentScore={dimension.currentScore}
+            targetScore={dimension.targetScore}
+            finding={dimension.finding?.body || ''}
+            customerName=""
+            onRefresh={() => {}}
+          />
+        </div>
+      )}
     </div>
   );
 }
