@@ -14,9 +14,10 @@ import WorkshopUseCases from '@/components/workshop/WorkshopUseCases';
 import FrameworkBuilder from '@/components/workshop/FrameworkBuilder';
 import WorkshopProposal from '@/components/workshop/WorkshopProposal';
 import WorkshopIntake from '@/components/workshop/WorkshopIntake';
-import { Wrench, ClipboardList } from 'lucide-react';
+import WorkshopFindings from '@/components/workshop/WorkshopFindings';
+import { Wrench, ClipboardList, Award } from 'lucide-react';
 
-type WorkshopTab = 'overview' | 'intake' | 'assess' | 'usecases' | 'scope' | 'proposal' | 'builder' | 'settings';
+type WorkshopTab = 'overview' | 'intake' | 'assess' | 'usecases' | 'scope' | 'findings' | 'proposal' | 'builder' | 'settings';
 
 const TABS: { id: WorkshopTab; label: string; icon: any }[] = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -24,6 +25,7 @@ const TABS: { id: WorkshopTab; label: string; icon: any }[] = [
   { id: 'assess', label: 'Assess', icon: Layers },
   { id: 'usecases', label: 'Use Cases', icon: Target },
   { id: 'scope', label: 'Scope', icon: FileText },
+  { id: 'findings', label: 'Findings', icon: Award },
   { id: 'proposal', label: 'Proposal', icon: FileText },
   { id: 'builder', label: 'Builder', icon: Wrench },
   { id: 'settings', label: 'Settings', icon: Settings },
@@ -341,6 +343,11 @@ export default function WorkshopPage() {
       {/* ── SCOPE TAB ── */}
       {activeTab === 'scope' && (
         <WorkshopScope workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+      )}
+
+      {/* ── FINDINGS TAB ── */}
+      {activeTab === 'findings' && (
+        <WorkshopFindings workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
       )}
 
       {/* ── PROPOSAL TAB ── */}
