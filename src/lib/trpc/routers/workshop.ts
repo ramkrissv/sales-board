@@ -412,6 +412,116 @@ export const workshopRouter = router({
       ).lean();
     }),
 
+  // ── Run AI Assist (through registry) ──
+  runAssist: protectedProcedure
+    .input(z.object({
+      workshopId: z.string(),
+      assistKey: z.string(),
+      input: z.any(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      const workshop = await WS.findOne({ id: input.workshopId }).lean();
+      if (!workshop) throw new Error('Workshop not found');
+
+      const { getAssist } = await import('@/lib/workshop/ai-registry');
+      const assist = getAssist(input.assistKey);
+      if (!assist) throw new Error(`Assist "${input.assistKey}" not found`);
+
+      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
+      const client = getAnthropicClient();
+
+      const context = {
+        workshopId: input.workshopId,
+        customerName: (workshop as any).customerName,
+        title: (workshop as any).title,
+        framework: (workshop as any).framework,
+      };
+
+      const prompt = assist.buildPrompt(context, input.input);
+      const model = process.env.AI_DEFAULT_MODEL || assist.model;
+
+      const response = await client.messages.create({
+        model,
+        max_tokens: 3000,
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+
+      // Log AI interaction
+      const interactionId = `ai-${Date.now().toString(36)}`;
+      await WS.findOneAndUpdate(
+        { id: input.workshopId },
+        { $push: { aiInteractions: {
+          id: interactionId,
+          assist: input.assistKey,
+          model,
+          input: input.input,
+          output: text,
+          status: 'proposed',
+          userId: ctx.userName || ctx.userId,
+          createdAt: new Date(),
+        } } }
+      );
+
+      // Parse if schema exists
+      let parsed = text;
+      if (assist.schema) {
+        try {
+          const cleaned = text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+          const match = cleaned.match(/\{[\s\S]*\}/);
+          if (match) parsed = JSON.parse(match[0]);
+        } catch {}
+      }
+
+      return { output: parsed, interactionId, raw: text };
+    }),
+
+  // ── Accept/Reject AI interaction ──
+  updateInteraction: protectedProcedure
+    .input(z.object({
+      workshopId: z.string(),
+      interactionId: z.string(),
+      status: z.enum(['accepted', 'edited', 'rejected']),
+    }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      return WS.findOneAndUpdate(
+        { id: input.workshopId, 'aiInteractions.id': input.interactionId },
+        { $set: { 'aiInteractions.$.status': input.status } },
+        { new: true }
+      ).lean();
+    }),
+
+  // ── Save dimension details (persist Deep Discovery) ──
+  saveDimensionDetails: protectedProcedure
+    .input(z.object({
+      workshopId: z.string(),
+      levelId: z.string(),
+      dimensionId: z.string(),
+      details: z.array(z.object({
+        id: z.string(),
+        label: z.string(),
+        body: z.string(),
+        kind: z.string().default('subrubric'),
+        order: z.number().default(0),
+        aiGenerated: z.boolean().default(true),
+        edited: z.boolean().default(false),
+      })),
+    }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      return WS.findOneAndUpdate(
+        { id: input.workshopId },
+        { $set: { 'framework.levels.$[lvl].dimensions.$[dim].details': input.details } },
+        { arrayFilters: [{ 'lvl.id': input.levelId }, { 'dim.id': input.dimensionId }], new: true }
+      ).lean();
+    }),
+
   // ── Export as JSON ──
   exportJSON: protectedProcedure
     .input(z.object({ id: z.string() }))
