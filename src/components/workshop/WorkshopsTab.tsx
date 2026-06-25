@@ -248,35 +248,22 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
                   onChange={e => {
                     const f = e.target.files?.[0];
                     if (!f) return;
-                    // Read all files as text — for PDFs, extract readable strings
-                    const r = new FileReader();
-                    if (f.type === 'application/pdf' || f.name.endsWith('.pdf')) {
-                      // Read PDF as binary and extract visible text strings
-                      r.onload = () => {
-                        const bytes = new Uint8Array(r.result as ArrayBuffer);
-                        // Extract text between parentheses (PDF text objects) and readable ASCII
-                        let extracted = '';
-                        let inText = false;
-                        for (let i = 0; i < bytes.length && extracted.length < 5000; i++) {
-                          const ch = bytes[i];
-                          if (ch === 40) { inText = true; continue; } // '('
-                          if (ch === 41) { inText = false; extracted += ' '; continue; } // ')'
-                          if (inText && ch >= 32 && ch < 127) extracted += String.fromCharCode(ch);
-                        }
-                        // Clean up and deduplicate spaces
-                        extracted = extracted.replace(/\s+/g, ' ').replace(/[^\w\s.,;:!?@#$%&*()\-+=/<>'"]/g, '').trim();
-                        if (extracted.length > 100) {
-                          setAiInput(p => (p ? p + '\n\n' : '') + `Document: ${f.name}\n\n${extracted.slice(0, 4000)}`);
-                        } else {
-                          // Fallback: use filename context
-                          const nameContext = f.name.replace(/[-_\.]/g, ' ').replace(/\.(pdf|docx|doc)$/i, '');
-                          setAiInput(p => (p ? p + '\n\n' : '') + `Workshop based on: "${nameContext}". This is a ${(f.size/1024).toFixed(0)}KB document. Please build a comprehensive assessment framework based on the document title.`);
-                        }
-                      };
-                      r.readAsArrayBuffer(f);
+                    const isPdf = f.type === 'application/pdf' || f.name.endsWith('.pdf');
+                    const isDoc = f.name.endsWith('.docx') || f.name.endsWith('.doc');
+                    if (isPdf || isDoc) {
+                      // For PDF/DOCX: show clean filename, let AI work from title + user context
+                      const cleanName = f.name.replace(/[-_\.]/g, ' ').replace(/\.\w+$/, '').trim();
+                      setAiInput(p => {
+                        const existing = p.trim();
+                        return existing
+                          ? `${existing}\n\nDocument: "${cleanName}" (${(f.size/1024).toFixed(0)}KB ${isPdf ? 'PDF' : 'DOCX'})`
+                          : `Workshop based on document: "${cleanName}"\n\nPlease build an assessment framework for this engagement.`;
+                      });
                     } else {
+                      // Text files: read and include content
+                      const r = new FileReader();
                       r.onload = () => {
-                        const text = (r.result as string).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').slice(0, 4000);
+                        const text = (r.result as string).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').slice(0, 4000);
                         setAiInput(p => (p ? p + '\n\n' : '') + `Document: ${f.name}\n\n${text}`);
                       };
                       r.readAsText(f);
@@ -298,31 +285,59 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
           {pendingWorkshop && (
             <div className="p-5 rounded-xl border-2 border-[#0A867F]/30 space-y-4 animate-flow-in"
               style={{ background: 'linear-gradient(135deg, rgba(10,134,127,0.03), transparent)' }}>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#0A867F]" />
-                <span className="text-sm font-semibold text-[#0A867F]">AI Workshop Blueprint</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-[#0A867F]" />
+                  <span className="text-sm font-semibold text-[#0A867F]">AI Workshop Blueprint</span>
+                </div>
+                <button onClick={() => setPendingWorkshop(null)} className="text-muted-foreground hover:text-foreground text-xs">✕ Clear</button>
               </div>
+
+              {/* Editable fields */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Customer</label>
+                  <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Customer *</label>
                   <input value={pendingWorkshop.customerName || ''} onChange={e => setPendingWorkshop((p: any) => ({ ...p, customerName: e.target.value }))}
-                    className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:border-[#0A867F]/40" />
+                    className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40" />
                 </div>
                 <div>
                   <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Title</label>
                   <input value={pendingWorkshop.title || ''} onChange={e => setPendingWorkshop((p: any) => ({ ...p, title: e.target.value }))}
-                    className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:border-[#0A867F]/40" />
+                    className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40" />
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Assessment Type</label>
+                  <input value={pendingWorkshop.assessmentType || ''} onChange={e => setPendingWorkshop((p: any) => ({ ...p, assessmentType: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40" />
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Sponsor</label>
+                  <input value={pendingWorkshop.sponsor || ''} onChange={e => setPendingWorkshop((p: any) => ({ ...p, sponsor: e.target.value }))}
+                    placeholder="Key stakeholder" className="w-full mt-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40" />
                 </div>
               </div>
-              {pendingWorkshop.context && <div className="text-xs text-foreground bg-card/50 p-3 rounded-lg border border-border italic">{pendingWorkshop.context}</div>}
+
+              {/* Context — editable */}
+              <div>
+                <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Context & Requirements</label>
+                <textarea value={pendingWorkshop.context || ''} onChange={e => setPendingWorkshop((p: any) => ({ ...p, context: e.target.value }))}
+                  rows={2} placeholder="Add more context about what the client needs..."
+                  className="w-full mt-1 px-3 py-2 text-xs bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40 resize-none" />
+              </div>
+
+              {/* Tags — editable */}
               <div className="flex flex-wrap gap-2">
                 {pendingWorkshop.assessmentType && <span className="text-[10px] px-2.5 py-1 rounded-full bg-[#0A867F]/10 text-[#0A867F] font-medium">{pendingWorkshop.assessmentType}</span>}
-                {(pendingWorkshop.technologies || []).map((t: string) => <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400">{t}</span>)}
-                {(pendingWorkshop.stakeholders || []).map((s: any) => <span key={s.name} className="text-[10px] px-2 py-0.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed]">{s.name}{s.title ? ` (${s.title})` : ''}</span>)}
+                {(pendingWorkshop.technologies || []).map((t: string, i: number) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400">{t}</span>)}
+                {(pendingWorkshop.stakeholders || []).map((s: any, i: number) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed]">{s.name}{s.title ? ` (${s.title})` : ''}</span>)}
               </div>
+
+              {/* Levels + Dimensions — shown but note they'll be in the Builder */}
               {(pendingWorkshop.suggestedLevels || []).length > 0 && (
                 <div>
-                  <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Suggested Levels & Dimensions</div>
+                  <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Suggested Framework ({(pendingWorkshop.suggestedLevels || []).reduce((s: number, l: any) => s + (l.dimensions?.length || 0), 0)} dimensions) — editable after creation in Builder tab
+                  </div>
                   {pendingWorkshop.suggestedLevels.map((level: any, i: number) => (
                     <div key={i} className="p-3 rounded-lg bg-card border border-border mb-2">
                       <div className="flex items-center gap-2 mb-1.5">
@@ -337,12 +352,14 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
                   ))}
                 </div>
               )}
+
+              {/* Workstreams */}
               {(pendingWorkshop.suggestedWorkstreams || []).length > 0 && (
                 <div>
-                  <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Suggested Workstreams</div>
+                  <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Workstreams</div>
                   <div className="grid grid-cols-2 gap-1.5">
-                    {pendingWorkshop.suggestedWorkstreams.map((ws: any) => (
-                      <div key={ws.code} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-secondary/30 text-[10px]">
+                    {pendingWorkshop.suggestedWorkstreams.map((ws: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-secondary/30 text-[10px]">
                         <span className="font-mono font-semibold text-[#7c3aed]">{ws.code}</span>
                         <span className="text-foreground truncate">{ws.name}</span>
                       </div>
@@ -350,13 +367,31 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
                   </div>
                 </div>
               )}
+
+              {/* Refine with AI — add more context and re-analyze */}
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/20 border border-border">
+                <input value={pendingWorkshop._refineInput || ''} onChange={e => setPendingWorkshop((p: any) => ({ ...p, _refineInput: e.target.value }))}
+                  placeholder="Add more context to refine... e.g. 'Also include security assessment and data migration dimensions'"
+                  className="flex-1 px-3 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40" />
+                <button onClick={() => {
+                  const extra = pendingWorkshop._refineInput || '';
+                  if (!extra.trim()) return;
+                  setAiInput(prev => prev + '\n\nAdditional requirements: ' + extra);
+                  setPendingWorkshop(null);
+                  setTimeout(() => handleAiCreate(), 100);
+                }} disabled={!pendingWorkshop._refineInput?.trim()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7c3aed] text-white text-[10px] font-medium disabled:opacity-40">
+                  <Sparkles className="h-3 w-3" /> Refine
+                </button>
+              </div>
+
+              {/* Actions */}
               <div className="flex gap-2 pt-2">
                 <button onClick={handleConfirmCreate} disabled={!pendingWorkshop.customerName || createMutation.isPending}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0A867F] text-white text-sm font-semibold hover:bg-[#0A867F]/90 disabled:opacity-50 transition-colors">
                   {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   Confirm & Create Workshop
                 </button>
-                <button onClick={() => setPendingWorkshop(null)} className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors">Edit</button>
               </div>
             </div>
           )}
