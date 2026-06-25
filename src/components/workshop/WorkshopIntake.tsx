@@ -68,9 +68,52 @@ export default function WorkshopIntake({ workshop, onRefresh }: WorkshopIntakePr
   );
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [autoFilling, setAutoFilling] = useState(false);
 
   const updateMeta = trpc.workshop.updateMeta.useMutation({ onSuccess: onRefresh });
   const chatMutation = trpc.ai.chat.useMutation();
+  const runAssistMutation = trpc.workshop.runAssist.useMutation();
+
+  // AI Autofill — uses workshop context + any uploaded docs to pre-fill intake
+  const handleAutoFill = () => {
+    setAutoFilling(true);
+    const existingContext = workshop.description || workshop.title || '';
+    const allQuestions = INTAKE_SECTIONS.flatMap(s => s.questions.map(q => ({ id: q.id, label: q.label, section: s.title })));
+
+    chatMutation.mutate({
+      message: `Auto-fill this workshop intake for ${workshop.customerName} (${workshop.title}).
+
+Context: ${existingContext}
+Assessment type: ${workshop.framework?.name || 'General'}
+
+Fill in reasonable draft answers for each question based on the customer context. If you don't have enough info, provide a smart placeholder the consultant can refine.
+
+Questions to fill:
+${allQuestions.map(q => `${q.id}: ${q.label} [${q.section}]`).join('\n')}
+
+Return JSON only (no markdown): {${allQuestions.map(q => `"${q.id}":"<draft answer>"`).join(',')}}`,
+      context: { page: 'workshop-intake' },
+    }, {
+      onSuccess: (data) => {
+        try {
+          const cleaned = data.response.replace(/\`\`\`json\n?/gi, '').replace(/\`\`\`\n?/g, '').trim();
+          const match = cleaned.match(/\{[\s\S]*\}/);
+          if (match) {
+            const filled = JSON.parse(match[0]);
+            setAnswers(prev => {
+              const merged = { ...prev };
+              Object.entries(filled).forEach(([k, v]) => {
+                if (!merged[k]?.trim() && typeof v === 'string') merged[k] = v;
+              });
+              return merged;
+            });
+          }
+        } catch {}
+        setAutoFilling(false);
+      },
+      onError: () => setAutoFilling(false),
+    });
+  };
 
   const handleSave = () => {
     updateMeta.mutate({
@@ -121,13 +164,43 @@ Be concise — max 200 words total.`,
           <p className="text-[10px] text-muted-foreground">{answeredCount}/{totalQuestions} questions answered</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-32 h-1.5 rounded-full bg-secondary overflow-hidden">
+          <div className="w-24 h-1.5 rounded-full bg-secondary overflow-hidden">
             <div className="h-full rounded-full bg-[#0A867F] transition-all" style={{ width: `${(answeredCount / totalQuestions) * 100}%` }} />
           </div>
+          {/* Document upload for intake context */}
+          <label className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dashed border-border text-[10px] text-muted-foreground hover:text-foreground hover:border-[#0A867F]/30 cursor-pointer transition-colors">
+            <FileText className="h-3 w-3" /> Add docs
+            <input type="file" multiple className="hidden" accept=".pdf,.docx,.txt,.eml,.csv,.xlsx"
+              onChange={e => {
+                const files = Array.from(e.target.files || []);
+                files.forEach(f => {
+                  if (f.name.endsWith('.pdf') || f.name.endsWith('.docx')) {
+                    // Note filename for AI context
+                    const current = answers['_docs'] || '';
+                    setAnswers(prev => ({ ...prev, _docs: current + (current ? ', ' : '') + f.name }));
+                  } else {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const text = (reader.result as string).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').slice(0, 3000);
+                      const current = answers['_docs_content'] || '';
+                      setAnswers(prev => ({ ...prev, _docs_content: current + `\n\n[${f.name}]\n${text}` }));
+                    };
+                    reader.readAsText(f);
+                  }
+                });
+              }} />
+          </label>
+          {/* AI Autofill */}
+          <button onClick={handleAutoFill} disabled={autoFilling}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] text-[10px] font-medium hover:bg-[#7c3aed]/20 disabled:opacity-40">
+            {autoFilling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+            AI Autofill
+          </button>
+          {/* Analyze */}
           <button onClick={handleAnalyze} disabled={aiAnalyzing || answeredCount < 3}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0A867F] text-white text-[10px] font-medium disabled:opacity-40">
             {aiAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-            Analyze Intake
+            Analyze
           </button>
         </div>
       </div>
