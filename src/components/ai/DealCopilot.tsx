@@ -86,9 +86,11 @@ export function DealCopilot({ activeDealId, activeDealName }: DealCopilotProps) 
   const contextPrompts = getContextPrompts(pathname, activeDealName);
   const contextLabel = activeDealName
     ? `Focused: ${activeDealName}`
-    : pathname.includes('pipeline')
-      ? 'Pipeline Context'
-      : pathname.includes('accounts')
+    : pathname.includes('workshop')
+      ? 'Workshop Context'
+      : pathname.includes('pipeline')
+        ? 'Pipeline Context'
+        : pathname.includes('accounts')
         ? 'Accounts Context'
         : 'General';
 

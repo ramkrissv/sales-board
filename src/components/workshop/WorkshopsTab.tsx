@@ -6,16 +6,19 @@ import {
   Sparkles, Loader2, Layers, Upload, CheckCircle2,
 } from 'lucide-react';
 
-const SOLUTION_STACK = [
-  { id: 'galent_ai', label: 'Galent AI Platform' },
-  { id: 'knowledge_graph', label: 'Knowledge Graph' },
-  { id: 'harness_ai', label: 'HarnessAI' },
-  { id: 'ambient_ai', label: 'AmbientAI' },
-  { id: 'neuro_ql', label: 'NeuroQL' },
-  { id: 'microprompts', label: 'MicroPrompts' },
-  { id: 'spec_driven', label: 'Spec-Driven Dev' },
-  { id: 'fde_pods', label: 'FDE Pod Squads' },
-  { id: 'managed_capacity', label: 'Managed Capacity' },
+const SERVICE_LINES = [
+  { id: 'legacy_mod', label: 'Legacy Modernization' },
+  { id: 'data_ai', label: 'Data & AI' },
+  { id: 'cloud_infra', label: 'Cloud & Infrastructure' },
+  { id: 'testing_qa', label: 'Testing & QA' },
+  { id: 'managed_sre', label: 'Managed Services / SRE' },
+  { id: 'staffing', label: 'Staffing & Augmentation' },
+  { id: 'digital_eng', label: 'Digital Engineering' },
+  { id: 'erp_saas', label: 'ERP & SaaS Integration' },
+  { id: 'security', label: 'Security & Compliance' },
+  { id: 'cx_support', label: 'Customer Experience' },
+  { id: 'strategy', label: 'Enterprise Strategy' },
+  { id: 'ai_coe', label: 'AI CoE Setup' },
 ];
 
 export default function WorkshopsTab() {
@@ -230,9 +233,9 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
 
             {/* Solution Stack */}
             <div className="mt-3">
-              <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Galent Solution Stack (include in assessment)</div>
+              <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Service Lines & Scope (select relevant areas)</div>
               <div className="flex flex-wrap gap-2">
-                {SOLUTION_STACK.map(opt => (
+                {SERVICE_LINES.map(opt => (
                   <label key={opt.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border cursor-pointer hover:border-foreground/30 transition-colors text-[10px]">
                     <input type="checkbox" className="w-3 h-3 rounded accent-[#0A867F]" />
                     <span className="text-foreground">{opt.label}</span>

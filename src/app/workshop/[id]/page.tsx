@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import {
@@ -268,21 +268,60 @@ export default function WorkshopPage() {
             </div>
           )}
 
-          {/* Dimension cards */}
-          <div className="space-y-4">
-            {(currentLevel?.dimensions || [])
-              .sort((a: any, b: any) => a.order - b.order)
-              .map((dim: any) => (
-                <DimensionCard
-                  key={dim.id}
-                  dimension={dim}
-                  levelId={currentLevel.id}
+          {/* Dimension cards + AI assessment sidebar */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Main: dimension cards */}
+            <div className="lg:col-span-2 space-y-4">
+              {(currentLevel?.dimensions || [])
+                .sort((a: any, b: any) => a.order - b.order)
+                .map((dim: any) => (
+                  <DimensionCard
+                    key={dim.id}
+                    dimension={dim}
+                    levelId={currentLevel.id}
+                    workshopId={workshopId}
+                    mode={ws.mode}
+                    onScore={handleScore}
+                    onFindingChange={handleFindingChange}
+                  />
+                ))}
+            </div>
+
+            {/* Right sidebar: AI assessment chat + insights */}
+            {ws.mode === 'with_ai' && (
+              <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+                {/* AI Assessment Assistant */}
+                <AssessmentChat
                   workshopId={workshopId}
-                  mode={ws.mode}
+                  levelName={currentLevel?.name || ''}
+                  dimensions={currentLevel?.dimensions || []}
+                  customerName={ws.customerName}
                   onScore={handleScore}
-                  onFindingChange={handleFindingChange}
+                  levelId={currentLevel?.id || ''}
                 />
-              ))}
+
+                {/* Quick stats for this level */}
+                <div className="p-4 rounded-xl bg-card border border-border">
+                  <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-2">Level Progress</div>
+                  {(() => {
+                    const dims = currentLevel?.dimensions || [];
+                    const scored = dims.filter((d: any) => d.currentScore != null);
+                    const gaps = dims.filter((d: any) => d.currentScore != null && d.targetScore != null && d.targetScore > d.currentScore);
+                    const prio = dims.filter((d: any) => d.priority);
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs"><span className="text-muted-foreground">Scored</span><span className="font-semibold text-foreground">{scored.length}/{dims.length}</span></div>
+                        <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                          <div className="h-full rounded-full bg-[#0A867F] transition-all" style={{ width: `${dims.length > 0 ? (scored.length / dims.length) * 100 : 0}%` }} />
+                        </div>
+                        <div className="flex justify-between text-xs"><span className="text-muted-foreground">Gaps</span><span className="font-semibold text-amber-400">{gaps.length}</span></div>
+                        <div className="flex justify-between text-xs"><span className="text-muted-foreground">Priority</span><span className="font-semibold text-red-400">{prio.length}</span></div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -361,6 +400,139 @@ export default function WorkshopPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Assessment Chat — conversational AI for scoring and strategic insights ──
+function AssessmentChat({ workshopId, levelName, dimensions, customerName, onScore, levelId }: {
+  workshopId: string; levelName: string; dimensions: any[]; customerName: string;
+  onScore: (dimId: string, field: string, value: any) => void; levelId: string;
+}) {
+  const [messages, setMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
+  const [input, setInput] = useState('');
+  const [thinking, setThinking] = useState(false);
+  const chatMutation = trpc.ai.chat.useMutation();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const MATURITY = ['Absent', 'Ad hoc', 'Repeatable', 'Governed', 'Optimized'];
+  const scored = dimensions.filter((d: any) => d.currentScore != null);
+  const unscored = dimensions.filter((d: any) => d.currentScore == null);
+
+  const handleSend = (text?: string) => {
+    const msg = (text || input).trim();
+    if (!msg || thinking) return;
+
+    setMessages(prev => [...prev, { role: 'user', text: msg }]);
+    setInput('');
+    setThinking(true);
+
+    const dimContext = dimensions.map((d: any) =>
+      `${d.id} ${d.name}: ${d.currentScore != null ? MATURITY[d.currentScore] + (d.targetScore != null ? ' → ' + MATURITY[d.targetScore] : '') : 'not scored'}${d.finding?.body ? ' | Finding: ' + d.finding.body.slice(0, 80) : ''}`
+    ).join('\n');
+
+    chatMutation.mutate({
+      message: `You are an expert consultant running an assessment workshop for ${customerName}. Current level: "${levelName}".
+
+DIMENSIONS:
+${dimContext}
+
+USER: ${msg}
+
+Respond concisely (2-4 sentences). If the user describes observations, suggest scores. If they ask strategic questions, give McKinsey-quality insights. If they want to score a dimension, confirm and provide rationale.
+
+If suggesting scores, include at the end: [SCORE: dimId=X.X current=N target=N] for each suggestion.`,
+      context: { page: 'workshop-assess-chat' },
+    }, {
+      onSuccess: (data) => {
+        const response = data.response;
+
+        // Extract and apply any score suggestions
+        const scoreMatches = response.matchAll(/\[SCORE:\s*dimId=(\S+)\s+current=(\d)\s+target=(\d)\]/g);
+        for (const match of scoreMatches) {
+          const [, dimId, cur, tgt] = match;
+          onScore(dimId, 'currentScore', parseInt(cur));
+          onScore(dimId, 'targetScore', parseInt(tgt));
+        }
+
+        // Clean response (remove score tags for display)
+        const cleanResponse = response.replace(/\[SCORE:[^\]]+\]/g, '').trim();
+        setMessages(prev => [...prev, { role: 'ai', text: cleanResponse }]);
+        setThinking(false);
+      },
+      onError: () => {
+        setMessages(prev => [...prev, { role: 'ai', text: 'Unable to respond — try again.' }]);
+        setThinking(false);
+      },
+    });
+  };
+
+  const quickPrompts = [
+    unscored.length > 0 ? `Walk me through scoring "${unscored[0].name}"` : null,
+    scored.length > 0 ? `What are the key gaps in ${levelName}?` : null,
+    `What best practices should ${customerName} adopt for ${levelName}?`,
+    `Suggest strategic priorities for this level`,
+  ].filter(Boolean) as string[];
+
+  return (
+    <div className="rounded-xl bg-card border border-border overflow-hidden">
+      <div className="px-4 py-3 bg-[#0B1120] text-white flex items-center gap-2">
+        <Sparkles className="h-3.5 w-3.5 text-[#0FB5AD]" />
+        <span className="text-xs font-semibold">Assessment AI</span>
+        <span className="text-[9px] text-white/50 ml-auto">{scored.length}/{dimensions.length} scored</span>
+      </div>
+
+      {/* Messages */}
+      <div className="max-h-[350px] overflow-y-auto p-3 space-y-2">
+        {messages.length === 0 && (
+          <div className="space-y-2 py-2">
+            <p className="text-[10px] text-muted-foreground text-center">Ask about scoring, strategy, or best practices</p>
+            {quickPrompts.map((q, i) => (
+              <button key={i} onClick={() => handleSend(q)}
+                className="w-full text-left px-3 py-2 rounded-lg bg-secondary/30 text-[10px] text-foreground hover:bg-secondary/50 transition-colors">
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[90%] px-3 py-2 rounded-xl text-xs leading-relaxed ${
+              msg.role === 'user' ? 'bg-[#0A867F] text-white rounded-tr-sm' : 'bg-secondary/50 text-foreground rounded-tl-sm'
+            }`}>
+              {msg.text}
+            </div>
+          </div>
+        ))}
+
+        {thinking && (
+          <div className="flex justify-start">
+            <div className="px-3 py-2 rounded-xl bg-secondary/50 text-xs text-muted-foreground rounded-tl-sm flex items-center gap-1.5">
+              <Loader2 className="h-3 w-3 animate-spin text-[#0A867F]" /> Analyzing...
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="px-3 py-2 border-t" style={{ borderColor: 'var(--g-line)' }}>
+        <div className="flex gap-2">
+          <input value={input} onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            placeholder="Score, ask, or strategize..."
+            className="flex-1 px-3 py-1.5 text-xs bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#0A867F]/40" />
+          <button onClick={() => handleSend()} disabled={!input.trim() || thinking}
+            className="p-1.5 rounded-lg bg-[#0A867F] text-white disabled:opacity-40">
+            <Zap className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

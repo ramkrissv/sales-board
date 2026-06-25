@@ -72,7 +72,8 @@ Return JSON only:
     }, {
       onSuccess: (data) => {
         try {
-          const match = data.response.match(/\{[\s\S]*\}/);
+          const cleaned = data.response.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+          const match = cleaned.match(/\{[\s\S]*\}/);
           if (match) {
             const parsed = JSON.parse(match[0]);
             (parsed.items || []).forEach((item: any) => {
