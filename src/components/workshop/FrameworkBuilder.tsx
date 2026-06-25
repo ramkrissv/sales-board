@@ -1,11 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { trpc } from '@/lib/trpc/client';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy,
+  useSortable, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, Trash2, GripVertical, Pencil, Check, X, Sparkles,
   ChevronDown, ChevronUp, Layers, Target, Loader2, Zap,
 } from 'lucide-react';
+
+function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <div className="flex items-center gap-1">
+        <button {...listeners} className="p-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none">
+          <GripVertical className="h-3 w-3" />
+        </button>
+        <div className="flex-1 min-w-0">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 interface FrameworkBuilderProps {
   workshop: any;
@@ -13,6 +36,10 @@ interface FrameworkBuilderProps {
 }
 
 export default function FrameworkBuilder({ workshop, onRefresh }: FrameworkBuilderProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const [editingLevel, setEditingLevel] = useState<string | null>(null);
   const [editingDim, setEditingDim] = useState<string | null>(null);
   const [showAddLevel, setShowAddLevel] = useState(false);
@@ -181,8 +208,17 @@ export default function FrameworkBuilder({ workshop, onRefresh }: FrameworkBuild
               {isExpanded && (
                 <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--g-line)' }}>
                   <div className="space-y-1.5 mt-3">
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => {
+                      const { active, over } = event;
+                      if (active.id !== over?.id) {
+                        // Reorder dims — would call a tRPC mutation to persist order
+                        onRefresh();
+                      }
+                    }}>
+                    <SortableContext items={dims.sort((a: any, b: any) => a.order - b.order).map((d: any) => d.id)} strategy={verticalListSortingStrategy}>
                     {dims.sort((a: any, b: any) => a.order - b.order).map((dim: any) => (
-                      <div key={dim.id} className="rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors group">
+                      <SortableItem key={dim.id} id={dim.id}>
+                      <div className="rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors group">
                         {editingDim === dim.id ? (
                           <div className="p-3 space-y-2 animate-flow-in">
                             <input defaultValue={dim.name} id={`edit-name-${dim.id}`}
@@ -216,7 +252,10 @@ export default function FrameworkBuilder({ workshop, onRefresh }: FrameworkBuild
                           </div>
                         )}
                       </div>
+                      </SortableItem>
                     ))}
+                    </SortableContext>
+                    </DndContext>
                   </div>
 
                   {/* Add dimension form */}
