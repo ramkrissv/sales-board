@@ -13,12 +13,14 @@ import WorkshopScope from '@/components/workshop/WorkshopScope';
 import WorkshopUseCases from '@/components/workshop/WorkshopUseCases';
 import FrameworkBuilder from '@/components/workshop/FrameworkBuilder';
 import WorkshopProposal from '@/components/workshop/WorkshopProposal';
-import { Wrench } from 'lucide-react';
+import WorkshopIntake from '@/components/workshop/WorkshopIntake';
+import { Wrench, ClipboardList } from 'lucide-react';
 
-type WorkshopTab = 'overview' | 'assess' | 'usecases' | 'scope' | 'proposal' | 'builder' | 'settings';
+type WorkshopTab = 'overview' | 'intake' | 'assess' | 'usecases' | 'scope' | 'proposal' | 'builder' | 'settings';
 
 const TABS: { id: WorkshopTab; label: string; icon: any }[] = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
+  { id: 'intake', label: 'Intake', icon: ClipboardList },
   { id: 'assess', label: 'Assess', icon: Layers },
   { id: 'usecases', label: 'Use Cases', icon: Target },
   { id: 'scope', label: 'Scope', icon: FileText },
@@ -213,6 +215,11 @@ export default function WorkshopPage() {
 
       {/* ── OVERVIEW TAB ── */}
       {activeTab === 'overview' && <WorkshopCockpit workshop={ws} />}
+
+      {/* ── INTAKE TAB ── */}
+      {activeTab === 'intake' && (
+        <WorkshopIntake workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+      )}
 
       {/* ── ASSESS TAB ── */}
       {activeTab === 'assess' && (
