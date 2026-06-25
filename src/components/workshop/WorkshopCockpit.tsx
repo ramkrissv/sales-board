@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+import { trpc } from '@/lib/trpc/client';
 import { workshopStats, levelReadiness, gapsForWorkshop, priorityRank } from '@/lib/workshop/scoring';
-import { BarChart3, Target, Layers, Zap, Users, Flag, TrendingUp, FileText, Award } from 'lucide-react';
+import { BarChart3, Target, Layers, Zap, Users, Flag, TrendingUp, FileText, Award, Sparkles, Loader2, AlertTriangle, CheckCircle, X } from 'lucide-react';
 import ReadinessSpine from './exhibits/ReadinessSpine';
 import GapHeatmap from './exhibits/GapHeatmap';
 
@@ -118,6 +120,73 @@ export default function WorkshopCockpit({ workshop }: WorkshopCockpitProps) {
           </div>
         </div>
       </div>
+
+      {/* Consistency Check */}
+      {stats.dimensionsScored >= 3 && (
+        <ConsistencyCheck workshop={workshop} />
+      )}
+    </div>
+  );
+}
+
+function ConsistencyCheck({ workshop }: { workshop: any }) {
+  const [issues, setIssues] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const runAssist = trpc.workshop.runAssist.useMutation();
+
+  const handleCheck = () => {
+    setLoading(true);
+    const levels = workshop.framework?.levels || [];
+    const dims = levels.flatMap((l: any) => (l.dimensions || []).filter((d: any) => d.currentScore != null).map((d: any) => ({
+      id: d.id, name: d.name, score: d.currentScore, finding: d.finding?.body,
+    })));
+    runAssist.mutate({
+      workshopId: workshop.id,
+      assistKey: 'consistency.check',
+      input: { dimensions: dims },
+    }, {
+      onSuccess: (data) => {
+        const output: any = typeof data.output === 'object' ? data.output : {};
+        setIssues(output.issues || []);
+        setChecked(true);
+        setLoading(false);
+      },
+      onError: () => { setChecked(true); setLoading(false); },
+    });
+  };
+
+  return (
+    <div className="p-4 rounded-xl bg-card border border-border">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <AlertTriangle className="h-3 w-3" /> Quality Check
+        </div>
+        <button onClick={handleCheck} disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 disabled:opacity-40">
+          {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+          Run Consistency Check
+        </button>
+      </div>
+      {checked && issues.length === 0 && (
+        <div className="flex items-center gap-1.5 text-[10px] text-emerald-400">
+          <CheckCircle className="h-3 w-3" /> No inconsistencies — scores align with findings
+        </div>
+      )}
+      {issues.length > 0 && (
+        <div className="space-y-1.5">
+          {issues.map((issue: any, i: number) => (
+            <div key={i} className="flex items-start gap-2 px-2.5 py-1.5 rounded-lg bg-amber-500/5 text-xs">
+              <AlertTriangle className="h-3 w-3 text-amber-400 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-mono text-[10px] text-muted-foreground">{issue.dimensionId}</span>
+                <span className="text-foreground ml-1">{issue.issue}</span>
+                {issue.suggestion && <div className="text-[10px] text-[#0A867F] mt-0.5">→ {issue.suggestion}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

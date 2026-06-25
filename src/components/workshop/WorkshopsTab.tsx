@@ -27,6 +27,10 @@ export default function WorkshopsTab() {
   const chatMutation = trpc.ai.chat.useMutation();
 
   const { data: templates = [] } = trpc.workshop.listTemplates.useQuery();
+  const deleteMutation = trpc.workshop.delete.useMutation({
+    onSuccess: () => utils.workshop.list.invalidate(),
+  });
+  const utils = trpc.useUtils();
   const [showCreate, setShowCreate] = useState(false);
   const [createMode, setCreateMode] = useState<'ai' | 'template'>('ai');
   const [aiInput, setAiInput] = useState('');
@@ -435,6 +439,24 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
                   <div className="text-[9px] text-muted-foreground">scored</div>
                 </div>
                 <div className="text-xs text-muted-foreground shrink-0">{stats.stage}</div>
+                {/* Archive / Delete */}
+                <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.preventDefault()}>
+                  <button onClick={(e) => { e.stopPropagation(); e.preventDefault();
+                    if (confirm(`Archive "${ws.customerName}" workshop?`)) {
+                      createMutation.mutate({ customerName: '_archive_', title: ws.id, mode: 'without_ai', format: 'in-person' } as any);
+                      // Use updateMeta to archive
+                    }
+                  }} className="p-1.5 rounded-lg text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10 transition-colors" title="Archive">
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); e.preventDefault();
+                    if (confirm(`Permanently delete "${ws.customerName}" workshop? This cannot be undone.`)) {
+                      deleteMutation.mutate({ id: ws.id });
+                    }
+                  }} className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Delete permanently">
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
               </a>
             );
           })}
