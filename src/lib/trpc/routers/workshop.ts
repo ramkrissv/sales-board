@@ -412,6 +412,35 @@ export const workshopRouter = router({
       ).lean();
     }),
 
+  // ── Export as JSON ──
+  exportJSON: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      const workshop = await WS.findOne({ id: input.id }).lean();
+      if (!workshop) throw new Error('Workshop not found');
+      return workshop;
+    }),
+
+  // ── Import from JSON ──
+  importJSON: protectedProcedure
+    .input(z.object({ data: z.any() }))
+    .mutation(async ({ input, ctx }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      const data = input.data as any;
+      const newId = `WKS-${Date.now().toString(36).toUpperCase()}-IMP`;
+      delete data._id;
+      delete data.__v;
+      data.id = newId;
+      data.status = 'Scheduled';
+      data.createdBy = ctx.userName || 'import';
+      data.updatedBy = ctx.userName || 'import';
+      const workshop = await WS.create(data);
+      return workshop.toObject();
+    }),
+
   // ── Delete ──
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))

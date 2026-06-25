@@ -709,6 +709,25 @@ function HomeContent() {
             </div>
           </div>
 
+          {/* Active Workshops KPI */}
+          {(() => {
+            const workshopDeals = opportunities.filter(o => (o as any).workshopId);
+            return workshopDeals.length > 0 ? (
+              <div className="animate-flow-in animate-flow-in-delay-3 p-4 rounded-xl g-surface g-elevated">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="g-section-label flex items-center gap-1.5">
+                    <Sparkles className="h-3 w-3 text-[#0A867F]" /> Workshops
+                  </span>
+                  <Link href="/presales" className="text-xs text-[#0A867F] hover:underline">View all</Link>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-2xl font-bold text-[#0A867F] font-display">{workshopDeals.length}</div>
+                  <div className="text-xs text-muted-foreground">deals with active workshops</div>
+                </div>
+              </div>
+            ) : null;
+          })()}
+
           {/* Pipeline Funnel — proper funnel shape */}
           <div className="animate-flow-in animate-flow-in-delay-3 p-5 rounded-xl g-surface g-elevated">
             <div className="flex items-center justify-between mb-4">

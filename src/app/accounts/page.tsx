@@ -537,6 +537,10 @@ function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, score
 
               {/* Actions */}
               <div className="flex items-center gap-2 pt-2">
+                <a href={`/presales`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[#0A867F]/10 text-[#0A867F] hover:bg-[#0A867F]/20 transition-colors font-medium">
+                  <Sparkles className="h-3 w-3" /> Create Workshop
+                </a>
                 <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
                   <Pencil className="h-3 w-3" /> Edit
                 </button>
