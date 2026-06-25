@@ -182,18 +182,39 @@ export default function FrameworkBuilder({ workshop, onRefresh }: FrameworkBuild
                 <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--g-line)' }}>
                   <div className="space-y-1.5 mt-3">
                     {dims.sort((a: any, b: any) => a.order - b.order).map((dim: any) => (
-                      <div key={dim.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors group">
-                        <span className="text-[10px] font-mono text-muted-foreground w-6">{dim.id}</span>
-                        <span className="text-xs text-foreground flex-1 truncate">{dim.name}</span>
-                        {dim.workstreamCode && (
-                          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#0A867F]/10 text-[#0A867F]">{dim.workstreamCode}</span>
+                      <div key={dim.id} className="rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors group">
+                        {editingDim === dim.id ? (
+                          <div className="p-3 space-y-2 animate-flow-in">
+                            <input defaultValue={dim.name} id={`edit-name-${dim.id}`}
+                              className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40" />
+                            <textarea defaultValue={dim.probe} id={`edit-probe-${dim.id}`} rows={2}
+                              className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40 resize-none" placeholder="Diagnostic probe..." />
+                            <div className="flex gap-2 justify-end">
+                              <button onClick={() => setEditingDim(null)} className="text-[10px] text-muted-foreground px-2 py-1">Cancel</button>
+                              <button onClick={() => { setEditingDim(null); onRefresh(); }}
+                                className="px-2 py-1 text-[10px] rounded-lg bg-[#0A867F] text-white font-medium">Save</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3 px-3 py-2">
+                            <span className="text-[10px] font-mono text-muted-foreground w-6">{dim.id}</span>
+                            <span className="text-xs text-foreground flex-1 truncate">{dim.name}</span>
+                            {dim.workstreamCode && (
+                              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#0A867F]/10 text-[#0A867F]">{dim.workstreamCode}</span>
+                            )}
+                            {dim.currentScore != null && (
+                              <span className="text-[10px] font-mono text-foreground">{dim.currentScore}→{dim.targetScore ?? '?'}</span>
+                            )}
+                            <button onClick={() => setEditingDim(dim.id)}
+                              className="p-1 rounded text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity" title="Edit dimension">
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                            <button onClick={() => { if (confirm(`Delete dimension "${dim.name}"?`)) onRefresh(); }}
+                              className="p-1 rounded text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
                         )}
-                        {dim.currentScore != null && (
-                          <span className="text-[10px] font-mono text-foreground">{dim.currentScore}→{dim.targetScore ?? '?'}</span>
-                        )}
-                        <button className="p-1 rounded text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Pencil className="h-3 w-3" />
-                        </button>
                       </div>
                     ))}
                   </div>

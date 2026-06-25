@@ -79,7 +79,7 @@ export default function DimensionCard({ dimension, levelId, workshopId, mode, on
   const gapBg = gap === null ? 'bg-secondary/30' : gap === 0 ? 'bg-emerald-500/10' : gap <= 1 ? 'bg-blue-500/10' : gap <= 2 ? 'bg-amber-500/10' : 'bg-red-500/10';
 
   return (
-    <div className="p-5 rounded-xl bg-card border border-border transition-all hover:shadow-lg">
+    <div className="p-5 rounded-xl bg-card border border-border transition-all hover:shadow-lg hover-glow-teal animate-slide-up">
       {/* Header */}
       <div className="flex items-start gap-3">
         <span className="text-[10px] font-mono font-semibold text-muted-foreground pt-1 shrink-0">{dimension.id}</span>

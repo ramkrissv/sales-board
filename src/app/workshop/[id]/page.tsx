@@ -348,22 +348,45 @@ export default function WorkshopPage() {
 
       {/* ── USE CASES TAB ── */}
       {activeTab === 'usecases' && (
-        <WorkshopUseCases workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        <div className="space-y-4">
+          <StageGate stage="Use Cases" entry={[
+            { label: 'Assessment started', met: levels.flatMap((l: any) => l.dimensions || []).some((d: any) => d.currentScore != null) },
+          ]} output={['Prioritized use case backlog', 'Value/feasibility ranking', 'Funded pilot selection']} />
+          <WorkshopUseCases workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        </div>
       )}
 
       {/* ── SCOPE TAB ── */}
       {activeTab === 'scope' && (
-        <WorkshopScope workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        <div className="space-y-4">
+          <StageGate stage="Scope" entry={[
+            { label: 'Gaps identified', met: (ws.framework?.levels || []).flatMap((l: any) => (l.dimensions || []).filter((d: any) => d.currentScore != null && d.targetScore != null && d.targetScore > d.currentScore)).length > 0 },
+            { label: 'Workstreams defined', met: (ws.framework?.workstreams || []).length > 0 },
+          ]} output={['Scope items per workstream', 'Effort estimates + phasing', 'Execution model per workstream']} />
+          <WorkshopScope workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        </div>
       )}
 
       {/* ── FINDINGS TAB ── */}
       {activeTab === 'findings' && (
-        <WorkshopFindings workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        <div className="space-y-4">
+          <StageGate stage="Findings" entry={[
+            { label: 'Dimensions scored', met: levels.flatMap((l: any) => l.dimensions || []).filter((d: any) => d.currentScore != null).length >= 3 },
+            { label: 'Findings captured', met: levels.flatMap((l: any) => l.dimensions || []).filter((d: any) => d.finding?.body).length >= 2 },
+          ]} output={['Current-state narrative', 'Infographic report', 'Key recommendations', 'Downloadable findings (HTML/PDF)']} />
+          <WorkshopFindings workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        </div>
       )}
 
       {/* ── PROPOSAL TAB ── */}
       {activeTab === 'proposal' && (
-        <WorkshopProposal workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        <div className="space-y-4">
+          <StageGate stage="Proposal" entry={[
+            { label: 'Scope built', met: (ws.scopeItems || []).length > 0 },
+            { label: 'Findings complete', met: levels.flatMap((l: any) => l.dimensions || []).filter((d: any) => d.finding?.body).length >= 3 },
+          ]} output={['Commercial proposal', 'Per-workstream modules', 'Investment summary', 'Downloadable proposal (HTML/PDF)']} />
+          <WorkshopProposal workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        </div>
       )}
 
       {/* ── FRAMEWORK BUILDER TAB ── */}

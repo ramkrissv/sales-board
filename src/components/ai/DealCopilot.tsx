@@ -54,11 +54,14 @@ function getContextPrompts(page: string, dealName?: string | null): { label: str
     ];
   }
   if (page.includes('workshop')) {
+    // Contextual prompts based on which workshop tab is likely active
     return [
-      { label: 'Assessment status', prompt: 'Summarize the current assessment — readiness index, key gaps, and what to score next', icon: Target },
-      { label: 'Gap analysis', prompt: 'What are the biggest gaps and what execution model would you recommend?', icon: Zap },
-      { label: 'Draft finding', prompt: 'Help me write a finding for the dimension I just scored', icon: Lightbulb },
-    ];
+      { label: 'Score next', prompt: 'Which dimension should I score next and what should I look for? Walk me through it.', icon: Target },
+      { label: 'Gap strategy', prompt: 'Analyze the top gaps — what execution model (Pod Squad, Managed Capacity, Outcome-Based) fits each?', icon: Zap },
+      { label: 'Draft finding', prompt: 'Help me write a McKinsey-grade finding with implication for the dimension I just assessed', icon: Lightbulb },
+      { label: 'Scope check', prompt: 'Review the current scope items — are we missing anything? What should be prioritized for Phase 1?', icon: Target },
+      { label: 'Proposal outline', prompt: 'Draft an executive summary for the proposal based on the assessment findings so far', icon: Zap },
+    ].slice(0, 3); // Show top 3
   }
   // Default (home, tasks, etc.)
   return [

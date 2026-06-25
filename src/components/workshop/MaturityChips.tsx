@@ -28,9 +28,9 @@ export default function MaturityChips({ value, onChange, label, isTarget = false
             <button
               key={v}
               onClick={() => onChange(v)}
-              className={`flex-1 h-9 rounded-md font-mono text-xs font-semibold transition-all relative ${
+              className={`flex-1 h-9 rounded-md font-mono text-xs font-semibold transition-all relative hover-scale ${
                 isSelected
-                  ? 'text-white shadow-sm'
+                  ? 'text-white shadow-sm chip-selected'
                   : 'border border-border bg-card text-muted-foreground hover:border-foreground/30'
               }`}
               style={isSelected ? { backgroundColor: MATURITY_COLORS[v] } : undefined}

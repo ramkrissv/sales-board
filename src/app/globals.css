@@ -269,6 +269,45 @@
 .animate-flow-in-delay-4 { animation-delay: 0.4s; opacity: 0; }
 .animate-pulse-live { animation: pulse-live 2s ease-in-out infinite; }
 
+/* ─── Micro-animations (workshop polish) ─── */
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes slide-up { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes slide-right { from { transform: translateX(-8px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(10,134,127,0); } 50% { box-shadow: 0 0 12px 2px rgba(10,134,127,0.15); } }
+@keyframes count-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes bar-fill { from { width: 0; } }
+@keyframes chip-pop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+.animate-scale-in { animation: scale-in 0.3s ease-out forwards; }
+.animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
+.animate-slide-right { animation: slide-right 0.25s ease-out forwards; }
+.animate-glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
+.animate-count-up { animation: count-up 0.5s ease-out forwards; }
+.animate-bar-fill { animation: bar-fill 0.8s ease-out forwards; }
+.animate-chip-pop { animation: chip-pop 0.2s ease-out; }
+.animate-shimmer { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); background-size: 200% 100%; animation: shimmer 2s infinite; }
+
+/* Smooth hover transitions */
+.hover-scale { transition: transform 0.15s ease; }
+.hover-scale:hover { transform: scale(1.02); }
+.hover-glow-teal:hover { box-shadow: 0 0 16px -4px rgba(10,134,127,0.3); }
+.hover-glow-purple:hover { box-shadow: 0 0 16px -4px rgba(124,58,237,0.3); }
+
+/* Staggered reveal for lists */
+.reveal-stagger > * { animation: slide-up 0.3s ease-out forwards; opacity: 0; }
+.reveal-stagger > *:nth-child(1) { animation-delay: 0s; }
+.reveal-stagger > *:nth-child(2) { animation-delay: 0.05s; }
+.reveal-stagger > *:nth-child(3) { animation-delay: 0.1s; }
+.reveal-stagger > *:nth-child(4) { animation-delay: 0.15s; }
+.reveal-stagger > *:nth-child(5) { animation-delay: 0.2s; }
+.reveal-stagger > *:nth-child(6) { animation-delay: 0.25s; }
+.reveal-stagger > *:nth-child(7) { animation-delay: 0.3s; }
+.reveal-stagger > *:nth-child(8) { animation-delay: 0.35s; }
+
+/* Score chip selection pop */
+.chip-selected { animation: chip-pop 0.2s ease-out; }
+
 /* ─── Focus (v3 brand) ─── */
 :focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
 
