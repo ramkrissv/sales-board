@@ -125,25 +125,31 @@ Return JSON only (no markdown): {${allQuestions.map(q => `"${q.id}":"<draft answ
   const handleAnalyze = () => {
     setAiAnalyzing(true);
     const answeredPairs = Object.entries(answers)
-      .filter(([, v]) => v.trim())
+      .filter(([k, v]) => v.trim() && !k.startsWith('_'))
       .map(([k, v]) => {
         const q = INTAKE_SECTIONS.flatMap(s => s.questions).find(q => q.id === k);
         return `${q?.label || k}: ${v}`;
       }).join('\n');
+    const docsContext = answers['_docs'] ? `\nDocuments referenced: ${answers['_docs']}` : '';
+    const docsContent = answers['_docs_content'] ? `\nDocument content:\n${answers['_docs_content'].slice(0, 2000)}` : '';
 
     chatMutation.mutate({
-      message: `Analyze this workshop intake for ${workshop.customerName} and provide strategic insights.
+      message: `Analyze this workshop intake for ${workshop.customerName} (${workshop.title}).
+Even if incomplete, provide insights based on what's available plus the workshop context.
 
-INTAKE RESPONSES:
-${answeredPairs}
+WORKSHOP: ${workshop.title}
+CUSTOMER: ${workshop.customerName}
+${answeredPairs ? `\nINTAKE RESPONSES:\n${answeredPairs}` : '\nNo intake responses yet — analyze based on workshop title and customer context.'}
+${docsContext}${docsContent}
 
 Provide:
 1. Key themes and patterns (2-3 bullet points)
-2. Assessment focus areas to prioritize (which dimensions matter most)
-3. Potential blind spots the client hasn't mentioned
-4. Recommended engagement approach (workshop type, duration, team)
+2. Assessment focus areas to prioritize
+3. Potential blind spots or risks
+4. Recommended next steps (what to gather, who to talk to)
+${!answeredPairs ? '5. Suggested intake questions specific to this engagement' : ''}
 
-Be concise — max 200 words total.`,
+Be concise — max 250 words.`,
       context: { page: 'workshop-intake' },
     }, {
       onSuccess: (data) => { setAiInsights(data.response); setAiAnalyzing(false); },
@@ -151,9 +157,35 @@ Be concise — max 200 words total.`,
     });
   };
 
+  const [customQuestions, setCustomQuestions] = useState<Record<string, { label: string; type: string }[]>>(
+    (workshop.meta?.customQuestions as any) || {}
+  );
+  const [showAddQ, setShowAddQ] = useState(false);
+  const [newQLabel, setNewQLabel] = useState('');
+
+  const addCustomQuestion = (sectionId: string) => {
+    if (!newQLabel.trim()) return;
+    const qId = `custom-${sectionId}-${Date.now()}`;
+    setCustomQuestions(prev => ({
+      ...prev,
+      [sectionId]: [...(prev[sectionId] || []), { label: newQLabel, type: 'textarea' }],
+    }));
+    setNewQLabel('');
+    setShowAddQ(false);
+  };
+
+  const removeCustomQuestion = (sectionId: string, index: number) => {
+    setCustomQuestions(prev => ({
+      ...prev,
+      [sectionId]: (prev[sectionId] || []).filter((_, i) => i !== index),
+    }));
+  };
+
   const section = INTAKE_SECTIONS[activeSection];
-  const answeredCount = Object.values(answers).filter(v => v.trim()).length;
-  const totalQuestions = INTAKE_SECTIONS.reduce((s, sec) => s + sec.questions.length, 0);
+  const sectionCustomQs = customQuestions[section.id] || [];
+  const allQuestions = [...section.questions, ...sectionCustomQs.map((q, i) => ({ id: `custom-${section.id}-${i}`, ...q }))];
+  const answeredCount = Object.entries(answers).filter(([k, v]) => v.trim() && !k.startsWith('_')).length;
+  const totalQuestions = INTAKE_SECTIONS.reduce((s, sec) => s + sec.questions.length + (customQuestions[sec.id]?.length || 0), 0);
 
   return (
     <div className="space-y-4">
@@ -197,7 +229,7 @@ Be concise — max 200 words total.`,
             AI Autofill
           </button>
           {/* Analyze */}
-          <button onClick={handleAnalyze} disabled={aiAnalyzing || answeredCount < 3}
+          <button onClick={handleAnalyze} disabled={aiAnalyzing}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0A867F] text-white text-[10px] font-medium disabled:opacity-40">
             {aiAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
             Analyze
@@ -232,20 +264,47 @@ Be concise — max 200 words total.`,
           <span className="text-xs font-semibold text-foreground">{section.title}</span>
         </div>
 
-        {section.questions.map(q => (
-          <div key={q.id}>
-            <label className="text-[10px] text-foreground font-medium mb-1.5 block">{q.label}</label>
+        {allQuestions.map((q, qi) => (
+          <div key={q.id} className="group relative">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[10px] text-foreground font-medium">{q.label}</label>
+              {q.id.startsWith('custom-') && (
+                <button onClick={() => removeCustomQuestion(section.id, qi - section.questions.length)}
+                  className="text-[9px] text-red-400 hover:underline opacity-0 group-hover:opacity-100 transition-opacity">Remove</button>
+              )}
+            </div>
             {q.type === 'textarea' ? (
               <textarea value={answers[q.id] || ''} onChange={e => setAnswers(p => ({ ...p, [q.id]: e.target.value }))}
-                onBlur={handleSave} placeholder={q.placeholder} rows={3}
+                onBlur={handleSave} placeholder={(q as any).placeholder || 'Enter details...'} rows={3}
                 className="w-full px-3 py-2 text-xs bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#0A867F]/40 resize-none" />
             ) : (
               <input value={answers[q.id] || ''} onChange={e => setAnswers(p => ({ ...p, [q.id]: e.target.value }))}
-                onBlur={handleSave} placeholder={q.placeholder}
+                onBlur={handleSave} placeholder={(q as any).placeholder || 'Enter details...'}
                 className="w-full px-3 py-2 text-xs bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#0A867F]/40" />
             )}
           </div>
         ))}
+
+        {/* Add custom question */}
+        {showAddQ ? (
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="text-[9px] text-muted-foreground uppercase mb-1 block">New Question</label>
+              <input value={newQLabel} onChange={e => setNewQLabel(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addCustomQuestion(section.id)}
+                placeholder="What do you want to ask?"
+                className="w-full px-3 py-2 text-xs bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#0A867F]/40" />
+            </div>
+            <button onClick={() => addCustomQuestion(section.id)} disabled={!newQLabel.trim()}
+              className="px-3 py-2 text-[10px] rounded-lg bg-[#0A867F] text-white font-medium disabled:opacity-40">Add</button>
+            <button onClick={() => setShowAddQ(false)} className="px-2 py-2 text-[10px] text-muted-foreground">Cancel</button>
+          </div>
+        ) : (
+          <button onClick={() => setShowAddQ(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-border text-[10px] text-muted-foreground hover:text-foreground hover:border-[#0A867F]/30 w-full transition-colors">
+            <Plus className="h-3 w-3" /> Add custom question to {section.title}
+          </button>
+        )}
 
         {/* Navigation */}
         <div className="flex justify-between pt-2">

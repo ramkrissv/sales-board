@@ -527,12 +527,30 @@ If suggesting scores, include at the end: [SCORE: dimId=X.X current=N target=N] 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* Input with doc upload */}
       <div className="px-3 py-2 border-t" style={{ borderColor: 'var(--g-line)' }}>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
+          <label className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-[#0A867F]/30 cursor-pointer transition-colors shrink-0" title="Upload document">
+            <FileText className="h-3.5 w-3.5" />
+            <input type="file" className="hidden" accept=".pdf,.docx,.txt,.csv,.xlsx"
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                if (f.name.endsWith('.pdf') || f.name.endsWith('.docx')) {
+                  setInput(prev => (prev ? prev + ' ' : '') + `[Doc: ${f.name}] `);
+                } else {
+                  const r = new FileReader();
+                  r.onload = () => {
+                    const text = (r.result as string).replace(/[\x00-\x1F\x7F]/g, '').slice(0, 2000);
+                    handleSend(`Analyze this document and suggest scores:\n\n[${f.name}]\n${text}`);
+                  };
+                  r.readAsText(f);
+                }
+              }} />
+          </label>
           <input value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
-            placeholder="Score, ask, or strategize..."
+            placeholder="Score, ask, upload docs..."
             className="flex-1 px-3 py-1.5 text-xs bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#0A867F]/40" />
           <button onClick={() => handleSend()} disabled={!input.trim() || thinking}
             className="p-1.5 rounded-lg bg-[#0A867F] text-white disabled:opacity-40">
