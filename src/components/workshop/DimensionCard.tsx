@@ -17,30 +17,26 @@ interface DimensionCardProps {
 
 export default function DimensionCard({ dimension, levelId, workshopId, mode, onScore, onFindingChange }: DimensionCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const [aiLoading, setAiLoading] = useState<string | null>(null); // 'synthesize' | 'detail'
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [aiDraft, setAiDraft] = useState<any>(null);
-  const chatMutation = trpc.ai.chat.useMutation();
+
+  // Use registry-based assist runner
+  const runAssistMutation = trpc.workshop.runAssist.useMutation();
+  const saveDetailsMutation = trpc.workshop.saveDimensionDetails.useMutation();
+  const updateInteractionMutation = trpc.workshop.updateInteraction.useMutation();
 
   const handleSynthesize = () => {
     const notes = dimension.finding?.body || '';
     if (!notes.trim()) return;
     setAiLoading('synthesize');
-    chatMutation.mutate({
-      message: `Synthesize this assessment finding for dimension "${dimension.name}" (${dimension.id}).
-
-PROBE: ${dimension.probe}
-RAW NOTES: ${notes}
-
-Return JSON only:
-{"finding":"<crisp 2-3 sentence finding>","implication":"<the so-what — why this matters>","suggestedCurrent":${dimension.currentScore ?? 'null'},"suggestedTarget":${dimension.targetScore ?? 'null'},"rationale":"<why these scores>"}`,
-      context: { page: 'workshop-dimension' },
+    runAssistMutation.mutate({
+      workshopId,
+      assistKey: 'finding.synthesize',
+      input: { dimensionName: dimension.name, probe: dimension.probe, notes, currentScore: dimension.currentScore, targetScore: dimension.targetScore },
     }, {
       onSuccess: (data) => {
-        try {
-          const match = data.response.match(/\{[\s\S]*\}/);
-          if (match) setAiDraft({ type: 'synthesize', ...JSON.parse(match[0]) });
-          else setAiDraft({ type: 'synthesize', finding: data.response.slice(0, 300) });
-        } catch { setAiDraft({ type: 'synthesize', finding: data.response.slice(0, 300) }); }
+        const output = typeof data.output === 'object' ? data.output : {};
+        setAiDraft({ type: 'synthesize', _interactionId: data.interactionId, ...output });
         setAiLoading(null);
       },
       onError: () => setAiLoading(null),
@@ -49,22 +45,14 @@ Return JSON only:
 
   const handleDetail = () => {
     setAiLoading('detail');
-    chatMutation.mutate({
-      message: `Detail this assessment dimension into 4-6 sub-rubric items. Each should be a specific, assessable sub-question.
-
-DIMENSION: ${dimension.id} ${dimension.name}
-PROBE: ${dimension.probe}
-${dimension.finding?.body ? `FINDING: ${dimension.finding.body}` : ''}
-
-Return JSON only:
-{"items":[{"label":"<sub-rubric label>","body":"<specific question or criterion>","kind":"subrubric"}]}`,
-      context: { page: 'workshop-dimension-detail' },
+    runAssistMutation.mutate({
+      workshopId,
+      assistKey: 'dimension.detail',
+      input: { dimensionId: dimension.id, dimensionName: dimension.name, probe: dimension.probe, finding: dimension.finding?.body },
     }, {
       onSuccess: (data) => {
-        try {
-          const match = data.response.match(/\{[\s\S]*\}/);
-          if (match) setAiDraft({ type: 'detail', ...JSON.parse(match[0]) });
-        } catch {}
+        const output: any = typeof data.output === 'object' ? data.output : {};
+        setAiDraft({ type: 'detail', _interactionId: data.interactionId, ...(output.items ? output : { items: [] }) });
         setAiLoading(null);
       },
       onError: () => setAiLoading(null),
@@ -73,6 +61,10 @@ Return JSON only:
 
   const acceptSynthesize = () => {
     if (!aiDraft || aiDraft.type !== 'synthesize') return;
+    // Log acceptance
+    if (aiDraft._interactionId) {
+      updateInteractionMutation.mutate({ workshopId, interactionId: aiDraft._interactionId, status: 'accepted' });
+    }
     onFindingChange(dimension.id, aiDraft.finding + (aiDraft.implication ? `\n\nImplication: ${aiDraft.implication}` : ''));
     if (aiDraft.suggestedCurrent != null) onScore(dimension.id, 'currentScore', aiDraft.suggestedCurrent);
     if (aiDraft.suggestedTarget != null) onScore(dimension.id, 'targetScore', aiDraft.suggestedTarget);
@@ -207,9 +199,8 @@ Return JSON only:
               <div className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20 space-y-2 animate-flow-in">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-[9px] font-semibold text-[#7c3aed] uppercase tracking-wider">
-                    <Sparkles className="h-3 w-3" /> AI Sub-Rubric ({aiDraft.items.length} items)
+                    <Sparkles className="h-3 w-3" /> AI Sub-Rubric ({aiDraft.items.length} items) — Review & Accept
                   </div>
-                  <button onClick={() => setAiDraft(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
                 </div>
                 <div className="space-y-1.5 ml-2 border-l-2 border-[#7c3aed]/20 pl-3">
                   {aiDraft.items.map((item: any, i: number) => (
@@ -217,6 +208,35 @@ Return JSON only:
                       <span className="font-medium">{item.label}:</span> {item.body}
                     </div>
                   ))}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => {
+                    // Persist to MongoDB
+                    const details = aiDraft.items.map((item: any, i: number) => ({
+                      id: `detail-${dimension.id}-${i}`,
+                      label: item.label,
+                      body: item.body,
+                      kind: item.kind || 'subrubric',
+                      order: i,
+                      aiGenerated: true,
+                      edited: false,
+                    }));
+                    saveDetailsMutation.mutate({ workshopId, levelId, dimensionId: dimension.id, details });
+                    if (aiDraft._interactionId) {
+                      updateInteractionMutation.mutate({ workshopId, interactionId: aiDraft._interactionId, status: 'accepted' });
+                    }
+                    setAiDraft(null);
+                  }} className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium bg-[#7c3aed] text-white">
+                    <Check className="h-3 w-3" /> Accept & Save
+                  </button>
+                  <button onClick={() => {
+                    if (aiDraft._interactionId) {
+                      updateInteractionMutation.mutate({ workshopId, interactionId: aiDraft._interactionId, status: 'rejected' });
+                    }
+                    setAiDraft(null);
+                  }} className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] text-muted-foreground hover:text-foreground">
+                    <X className="h-3 w-3" /> Discard
+                  </button>
                 </div>
               </div>
             )}

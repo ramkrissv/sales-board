@@ -33,6 +33,7 @@ export default function WorkshopScope({ workshop, onRefresh }: WorkshopScopeProp
   const [generating, setGenerating] = useState(false);
 
   const chatMutation = trpc.ai.chat.useMutation();
+  const runAssistMutation = trpc.workshop.runAssist.useMutation();
   const addScopeMutation = trpc.workshop.addScopeItem.useMutation({ onSuccess: onRefresh });
   const updateScopeMutation = trpc.workshop.updateScopeItem.useMutation({ onSuccess: onRefresh });
 
@@ -52,42 +53,33 @@ export default function WorkshopScope({ workshop, onRefresh }: WorkshopScopeProp
     if (gaps.length === 0) return;
     setGenerating(true);
 
-    const gapList = gaps.map(g => `${g.dimensionId} ${g.dimensionName} [${g.workstreamCode}] ${g.current}→${g.target}${g.priority ? ' ★priority' : ''}: ${g.finding || g.probe || ''}`).join('\n');
-    const wsList = workstreams.map((ws: any) => `${ws.code}: ${ws.name} — ${ws.objective}`).join('\n');
-
-    chatMutation.mutate({
-      message: `Generate scope items from these assessment gaps. Group by workstream, include effort estimates and phasing.
-
-GAPS:
-${gapList}
-
-WORKSTREAMS:
-${wsList}
-
-Also recommend an EXECUTION MODEL for each workstream from: Pod Squad (dedicated eng pods), Managed Capacity (staff aug), Outcome-Based (fixed deliverables), AI-Powered (AI-accelerated), Hybrid.
-
-Return JSON only:
-{"items":[{"workstreamCode":"WS1","title":"<action-oriented title>","description":"<1 sentence>","effort":<points>,"phase":"P1|P2|P3","sourceDimensionId":"<dim id>","executionModel":"pod_squad|managed_capacity|outcome_based|ai_stream|hybrid"}]}`,
-      context: { page: 'workshop-scope' },
+    // Use registry-based assist (routes to opus model)
+    runAssistMutation.mutate({
+      workshopId: workshop.id,
+      assistKey: 'scope.synthesize',
+      input: {
+        gaps: gaps.map(g => ({ dimId: g.dimensionId, dimName: g.dimensionName, wsCode: g.workstreamCode, current: g.current, target: g.target, priority: g.priority, finding: g.finding })),
+        workstreams: workstreams.map((ws: any) => ({ code: ws.code, name: ws.name })),
+      },
     }, {
       onSuccess: (data) => {
         try {
-          const cleaned = data.response.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
-          const match = cleaned.match(/\{[\s\S]*\}/);
-          if (match) {
-            const parsed = JSON.parse(match[0]);
-            (parsed.items || []).forEach((item: any) => {
-              addScopeMutation.mutate({
-                workshopId: workshop.id,
-                workstreamCode: item.workstreamCode,
-                sourceDimensionId: item.sourceDimensionId,
-                title: item.title,
-                description: `${item.description || ''}\n[Execution: ${item.executionModel || 'TBD'}]`,
-                effort: item.effort || 3,
-                phase: item.phase || 'P1',
-              });
+          const parsed: any = typeof data.output === 'object' ? data.output : (() => {
+            const cleaned = (data.raw || '').replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+            const match = cleaned.match(/\{[\s\S]*\}/);
+            return match ? JSON.parse(match[0]) : { items: [] };
+          })();
+          (parsed.items || []).forEach((item: any) => {
+            addScopeMutation.mutate({
+              workshopId: workshop.id,
+              workstreamCode: item.workstreamCode,
+              sourceDimensionId: item.sourceDimensionId,
+              title: item.title,
+              description: `${item.description || ''}\n[Execution: ${item.executionModel || 'TBD'}]`,
+              effort: item.effort || 3,
+              phase: item.phase || 'P1',
             });
-          }
+          });
         } catch {}
         setGenerating(false);
       },
