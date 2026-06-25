@@ -32,6 +32,9 @@ export default function WorkshopUseCases({ workshop, onRefresh }: WorkshopUseCas
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: '', sponsor: '', problem: '', tower: '', value: 3, feasibility: 3 });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pilotRecs, setPilotRecs] = useState<any[]>([]);
+  const [recLoading, setRecLoading] = useState(false);
+  const runAssistMutation = trpc.workshop.runAssist.useMutation();
   const [showMatrix, setShowMatrix] = useState(true);
 
   const addMutation = trpc.workshop.addUseCase.useMutation({ onSuccess: onRefresh });
@@ -82,6 +85,27 @@ export default function WorkshopUseCases({ workshop, onRefresh }: WorkshopUseCas
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] text-muted-foreground hover:text-foreground">
             <Target className="h-3 w-3" /> {showMatrix ? 'Hide' : 'Show'} Matrix
           </button>
+          {useCases.length >= 3 && (
+            <button onClick={() => {
+              setRecLoading(true);
+              runAssistMutation.mutate({
+                workshopId: workshop.id,
+                assistKey: 'pilot.recommend',
+                input: { useCases: useCases.map((uc: any) => ({ name: uc.name, value: uc.value, feasibility: uc.feasibility })) },
+              }, {
+                onSuccess: (data) => {
+                  const output: any = typeof data.output === 'object' ? data.output : {};
+                  setPilotRecs(output.pilots || []);
+                  setRecLoading(false);
+                },
+                onError: () => setRecLoading(false),
+              });
+            }} disabled={recLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] text-[10px] font-medium hover:bg-[#7c3aed]/20 disabled:opacity-40">
+              {recLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              AI: Recommend Pilots
+            </button>
+          )}
           <button onClick={() => setShowAdd(!showAdd)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0A867F] text-white text-[10px] font-medium hover:bg-[#0A867F]/90">
             <Plus className="h-3 w-3" /> Add Use Case
@@ -144,6 +168,33 @@ export default function WorkshopUseCases({ workshop, onRefresh }: WorkshopUseCas
             ))}
             <span className="flex items-center gap-1"><Star className="h-2.5 w-2.5 text-amber-400" /> Pilot</span>
           </div>
+        </div>
+      )}
+
+      {/* AI Pilot Recommendations */}
+      {pilotRecs.length > 0 && (
+        <div className="p-4 rounded-xl bg-[#7c3aed]/5 border border-[#7c3aed]/20 space-y-2 animate-flow-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#7c3aed] uppercase tracking-wider">
+              <Sparkles className="h-3 w-3" /> AI Recommended Pilots
+            </div>
+            <button onClick={() => setPilotRecs([])} className="text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
+          </div>
+          {pilotRecs.map((rec: any, i: number) => (
+            <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-card border border-border">
+              <span className="w-5 h-5 rounded-full bg-[#7c3aed]/10 flex items-center justify-center text-[9px] font-bold text-[#7c3aed] shrink-0">{rec.sequence || i + 1}</span>
+              <div className="flex-1">
+                <div className="text-xs font-medium text-foreground">{rec.name}</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">{rec.reasoning}</div>
+              </div>
+              <button onClick={() => {
+                const uc = useCases.find((u: any) => u.name === rec.name);
+                if (uc) updateMutation.mutate({ workshopId: workshop.id, useCaseId: uc.id, isPilot: true });
+              }} className="px-2 py-1 rounded-md bg-[#7c3aed] text-white text-[9px] font-medium shrink-0">
+                <Star className="h-2.5 w-2.5 inline mr-0.5" /> Select
+              </button>
+            </div>
+          ))}
         </div>
       )}
 

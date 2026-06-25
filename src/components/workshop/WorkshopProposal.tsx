@@ -27,6 +27,7 @@ export default function WorkshopProposal({ workshop, onRefresh }: WorkshopPropos
   const [editBuffer, setEditBuffer] = useState('');
   const [copied, setCopied] = useState(false);
 
+  const runAssistMutation = trpc.workshop.runAssist.useMutation();
   const chatMutation = trpc.ai.chat.useMutation();
   const stats = workshopStats(workshop);
   const gaps = gapsForWorkshop(workshop);
@@ -224,7 +225,12 @@ Be specific to ${workshop.customerName}. Reference actual assessment findings. I
           </div>
 
           {/* Modules */}
-          {(proposal.modules || []).map((mod: any, i: number) => (
+          {(proposal.modules || []).map((mod: any, i: number) => {
+            const isEditing = editingSection === `mod-${i}`;
+            // Find source gaps for traceability
+            const wsGaps = gaps.filter(g => g.workstreamCode === mod.workstreamCode);
+
+            return (
             <div key={i} className="p-5 rounded-xl bg-card border border-border">
               <div className="flex items-start gap-3 mb-3">
                 <div className="w-8 h-8 rounded-lg bg-[#0B1120] flex items-center justify-center text-[10px] font-mono font-bold text-white shrink-0">
@@ -242,20 +248,55 @@ Be specific to ${workshop.customerName}. Reference actual assessment findings. I
                   )}
                   <span className="text-xs font-bold font-display text-[#0A867F]">{mod.effort} pts</span>
                   <span className="text-[10px] font-mono text-muted-foreground">{mod.phase}</span>
+                  {/* Edit toggle */}
+                  <button onClick={() => {
+                    if (isEditing) { setEditingSection(null); }
+                    else { setEditingSection(`mod-${i}`); setEditBuffer(mod.recommendation || ''); }
+                  }} className="p-1 rounded text-muted-foreground hover:text-foreground">
+                    <Pencil className="h-3 w-3" />
+                  </button>
                 </div>
               </div>
 
-              {mod.currentState && (
-                <div className="mb-2">
-                  <span className="text-[9px] font-mono uppercase tracking-wider text-amber-500">Current State: </span>
-                  <span className="text-xs text-foreground">{mod.currentState}</span>
+              {/* Current state — editable */}
+              {isEditing ? (
+                <div className="space-y-2 mb-3">
+                  <div>
+                    <label className="text-[9px] font-mono uppercase text-amber-500">Current State</label>
+                    <textarea defaultValue={mod.currentState} rows={2}
+                      onChange={e => { mod.currentState = e.target.value; }}
+                      className="w-full mt-1 px-3 py-2 text-xs bg-card border border-border rounded-lg text-foreground resize-none focus:outline-none focus:border-[#0A867F]/40" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-mono uppercase text-[#0A867F]">Recommendation</label>
+                    <textarea defaultValue={mod.recommendation} rows={2}
+                      onChange={e => { mod.recommendation = e.target.value; }}
+                      className="w-full mt-1 px-3 py-2 text-xs bg-card border border-border rounded-lg text-foreground resize-none focus:outline-none focus:border-[#0A867F]/40" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-mono uppercase text-muted-foreground">Rationale (So What)</label>
+                    <textarea defaultValue={mod.rationale} rows={2}
+                      onChange={e => { mod.rationale = e.target.value; }}
+                      className="w-full mt-1 px-3 py-2 text-xs bg-card border border-border rounded-lg text-foreground resize-none focus:outline-none focus:border-[#0A867F]/40" />
+                  </div>
+                  <button onClick={() => setEditingSection(null)}
+                    className="text-[10px] text-[#0A867F] hover:underline">Done editing</button>
                 </div>
-              )}
-              {mod.recommendation && (
-                <div className="mb-2">
-                  <span className="text-[9px] font-mono uppercase tracking-wider text-[#0A867F]">Recommendation: </span>
-                  <span className="text-xs text-foreground">{mod.recommendation}</span>
-                </div>
+              ) : (
+                <>
+                  {mod.currentState && (
+                    <div className="mb-2">
+                      <span className="text-[9px] font-mono uppercase tracking-wider text-amber-500">Current State: </span>
+                      <span className="text-xs text-foreground">{mod.currentState}</span>
+                    </div>
+                  )}
+                  {mod.recommendation && (
+                    <div className="mb-2">
+                      <span className="text-[9px] font-mono uppercase tracking-wider text-[#0A867F]">Recommendation: </span>
+                      <span className="text-xs text-foreground">{mod.recommendation}</span>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Scope items */}
@@ -270,14 +311,29 @@ Be specific to ${workshop.customerName}. Reference actual assessment findings. I
                 </div>
               )}
 
-              {mod.rationale && (
+              {mod.rationale && !isEditing && (
                 <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--g-line)' }}>
                   <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">So What: </span>
                   <span className="text-xs text-muted-foreground italic">{mod.rationale}</span>
                 </div>
               )}
+
+              {/* Traceability — source dimensions */}
+              {wsGaps.length > 0 && (
+                <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--g-line)' }}>
+                  <div className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Source Dimensions</div>
+                  <div className="flex flex-wrap gap-1">
+                    {wsGaps.map(g => (
+                      <span key={g.dimensionId} className="text-[9px] px-1.5 py-0.5 rounded bg-secondary/50 text-muted-foreground" title={`${g.dimensionName}: ${MATURITY_LABELS[g.current]} → ${MATURITY_LABELS[g.target]}`}>
+                        {g.dimensionId} {g.dimensionName} (+{g.gap})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          ))}
+            );
+          })}
 
           {/* Investment summary */}
           {proposal.investmentSummary && (
