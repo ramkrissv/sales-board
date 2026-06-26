@@ -983,6 +983,22 @@ User message: ${text.trim()}`;
                             </td>
                             <td className="px-3 py-3">
                               <div className="flex items-center justify-end gap-1">
+                                {/* Smart action: route based on deal stage */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const tab: PresalesTab = deal.status === 'Qualification' ? 'solutioning'
+                                      : deal.status === 'Proposal' ? 'studio'
+                                      : deal.status === 'Negotiation' ? 'pricing'
+                                      : 'studio';
+                                    handleSelectDeal(deal.id, tab);
+                                  }}
+                                  className="px-2.5 py-1 rounded-md text-[10px] font-medium bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors flex items-center gap-1"
+                                  title={`Go to ${deal.status === 'Qualification' ? 'Solutioning' : deal.status === 'Proposal' ? 'Studio' : 'Pricing'}`}
+                                >
+                                  <ArrowRight className="h-2.5 w-2.5" />
+                                  {deal.status === 'Qualification' ? 'Scope' : deal.status === 'Proposal' ? 'Draft' : 'Price'}
+                                </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleSelectDeal(deal.id, 'studio'); }}
                                   className="px-2 py-1 rounded-md text-[10px] font-medium bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors"
