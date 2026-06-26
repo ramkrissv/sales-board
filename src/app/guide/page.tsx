@@ -183,7 +183,7 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
     <ul>
       <li><strong>Proposal Studio</strong> — Conversational AI drafts proposals. 150+ templates across 12 domains. Filters to Qualification+ deals only.</li>
       <li><strong>Pricing Desk</strong> — Rate cards by geo. Apply Pricing auto-populates both TCV and Margin % on the deal.</li>
-      <li><strong>Solutioning</strong> — Effort estimator, SA assignments, architecture notes.</li>
+      <li><strong>Solutioning</strong> — Effort estimator, SA assignments, architecture notes, and <strong>Scope Builder</strong> with workstream-grouped scope items, execution model per item (Pod Squad, Managed Capacity, Outcome-Based, AI-Powered, Hybrid), phase (P1/P2/P3), effort points, and AI scope generation from deal context.</li>
       <li><strong>Contracts</strong> — SOW, MSA, NDA lifecycle with approval chains.</li>
       <li><strong>Export</strong> — PDF, DOCX, Markdown export for proposals.</li>
     </ul>

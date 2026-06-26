@@ -72,6 +72,37 @@ interface TechRequirement {
   done: boolean;
 }
 
+interface PresalesScopeItem {
+  id: string;
+  title: string;
+  description: string;
+  workstream: string;
+  executionModel: string;
+  effort: number;
+  phase: string;
+  owner: string;
+  aiGenerated: boolean;
+}
+
+const EXECUTION_MODELS = [
+  { id: 'pod_squad', name: 'FDE Pod Squad', color: '#7c3aed' },
+  { id: 'managed_capacity', name: 'Managed Capacity', color: '#3b82f6' },
+  { id: 'outcome_based', name: 'Outcome-Based', color: '#22c55e' },
+  { id: 'ai_stream', name: 'AI-Powered Stream', color: '#0A867F' },
+  { id: 'hybrid', name: 'Hybrid Blend', color: '#f59e0b' },
+];
+
+const DEFAULT_WORKSTREAMS = [
+  'Discovery & Assessment',
+  'Architecture & Design',
+  'Development & Build',
+  'Testing & QA',
+  'Deployment & DevOps',
+  'Data & AI/ML',
+  'Training & Enablement',
+  'Program Management',
+];
+
 /* ═══════════════════════════════════════════════════════
    Constants
    ═══════════════════════════════════════════════════════ */
@@ -221,6 +252,11 @@ export default function PresalesPage() {
   const [techRequirements, setTechRequirements] = useState<TechRequirement[]>([]);
   const [archNotes, setArchNotes] = useState('');
   const [newReqText, setNewReqText] = useState('');
+  const [scopeItems, setScopeItems] = useState<PresalesScopeItem[]>([]);
+  const [expandedWorkstream, setExpandedWorkstream] = useState<string | null>(null);
+  const [showScopeAdd, setShowScopeAdd] = useState<string | null>(null);
+  const [scopeForm, setScopeForm] = useState({ title: '', description: '', effort: 3, phase: 'P1', owner: '', executionModel: 'pod_squad' });
+  const [generatingScope, setGeneratingScope] = useState(false);
 
   /* ── Command tab search ── */
   const [commandSearch, setCommandSearch] = useState('');
@@ -1796,6 +1832,7 @@ User message: ${text.trim()}`;
               )}
 
               {selectedDeal && (
+                <div className="space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Effort Estimator */}
                   <div className="g-surface g-elevated rounded-xl overflow-hidden">
@@ -2019,6 +2056,270 @@ User message: ${text.trim()}`;
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* ═══════════════════════════════════════════════════════
+                   SCOPE BUILDER (full-width below the grid)
+                   ═══════════════════════════════════════════════════════ */}
+                <div className="g-surface g-elevated rounded-xl overflow-hidden mt-4">
+                  <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-[#7c3aed]" />
+                      <span className="text-sm font-semibold text-foreground font-display">Scope Builder</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed] font-medium">
+                        {scopeItems.length} items
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {scopeItems.length > 0 && (
+                        <span className="text-[10px] font-medium text-[#7c3aed]">
+                          Total: {scopeItems.reduce((s, i) => s + i.effort, 0)} pts
+                        </span>
+                      )}
+                      <button
+                        onClick={async () => {
+                          if (!selectedDeal || generatingScope) return;
+                          setGeneratingScope(true);
+                          try {
+                            const result = await chatMutation.mutateAsync({
+                              message: `Generate scope items for this deal as a JSON array. Each item: {"title":"...","description":"...","workstream":"...","executionModel":"pod_squad|managed_capacity|outcome_based|ai_stream|hybrid","effort":1-10,"phase":"P1|P2|P3","owner":""}. Workstreams: ${DEFAULT_WORKSTREAMS.join(', ')}. Deal: ${selectedDeal.customerName} - ${selectedDeal.opportunityName}. Service: ${selectedDeal.serviceLine || 'General'}. Requirements: ${techRequirements.map(r => r.text).join('; ') || 'None listed'}. Architecture notes: ${archNotes || 'None'}. Return ONLY a JSON array of 6-10 scope items.`,
+                              context: { page: 'workshop-create', opportunityId: selectedDeal.id },
+                            });
+                            const cleaned = (result.response || '').replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+                            const match = cleaned.match(/\[[\s\S]*\]/);
+                            if (match) {
+                              const items = JSON.parse(match[0]);
+                              const newItems: PresalesScopeItem[] = items.map((item: any) => ({
+                                id: uid(),
+                                title: item.title || 'Untitled',
+                                description: item.description || '',
+                                workstream: DEFAULT_WORKSTREAMS.includes(item.workstream) ? item.workstream : 'Development & Build',
+                                executionModel: item.executionModel || 'pod_squad',
+                                effort: Math.min(10, Math.max(1, item.effort || 3)),
+                                phase: ['P1', 'P2', 'P3'].includes(item.phase) ? item.phase : 'P1',
+                                owner: item.owner || '',
+                                aiGenerated: true,
+                              }));
+                              setScopeItems(prev => [...prev, ...newItems]);
+                            }
+                          } catch { /* ignore */ }
+                          setGeneratingScope(false);
+                        }}
+                        disabled={generatingScope}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors disabled:opacity-50"
+                      >
+                        {generatingScope ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                        AI Generate Scope
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 space-y-2">
+                    {DEFAULT_WORKSTREAMS.map(ws => {
+                      const wsItems = scopeItems.filter(i => i.workstream === ws);
+                      if (wsItems.length === 0 && expandedWorkstream !== ws) return null;
+                      const isExpanded = expandedWorkstream === ws;
+                      const wsEffort = wsItems.reduce((s, i) => s + i.effort, 0);
+                      const wsModel = wsItems.length > 0 ? EXECUTION_MODELS.find(m => m.id === wsItems[0].executionModel) : null;
+
+                      return (
+                        <div key={ws} className="border border-border rounded-lg overflow-hidden">
+                          <button
+                            onClick={() => setExpandedWorkstream(isExpanded ? null : ws)}
+                            className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-muted/30 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: wsModel?.color || '#9DB0C6' }} />
+                              <span className="text-xs font-medium text-foreground">{ws}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{wsItems.length}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-medium text-muted-foreground">{wsEffort} pts</span>
+                              {isExpanded ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
+                            </div>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="border-t border-border">
+                              {wsItems.map(item => (
+                                <div key={item.id} className="px-4 py-2.5 border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors group">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-xs font-medium text-foreground">{item.title}</span>
+                                        {item.aiGenerated && (
+                                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#7c3aed]/10 text-[#7c3aed]">AI</span>
+                                        )}
+                                      </div>
+                                      {item.description && (
+                                        <p className="text-[10px] text-muted-foreground line-clamp-2">{item.description}</p>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <select
+                                        value={item.executionModel}
+                                        onChange={e => setScopeItems(prev => prev.map(i => i.id === item.id ? { ...i, executionModel: e.target.value } : i))}
+                                        className="text-[10px] px-2 py-1 bg-transparent border border-border rounded text-foreground focus:outline-none"
+                                      >
+                                        {EXECUTION_MODELS.map(m => (
+                                          <option key={m.id} value={m.id}>{m.name}</option>
+                                        ))}
+                                      </select>
+                                      <select
+                                        value={item.phase}
+                                        onChange={e => setScopeItems(prev => prev.map(i => i.id === item.id ? { ...i, phase: e.target.value } : i))}
+                                        className="text-[10px] px-2 py-1 bg-transparent border border-border rounded text-foreground focus:outline-none w-14"
+                                      >
+                                        <option value="P1">P1</option>
+                                        <option value="P2">P2</option>
+                                        <option value="P3">P3</option>
+                                      </select>
+                                      <input
+                                        type="number" value={item.effort} min={1} max={10}
+                                        onChange={e => setScopeItems(prev => prev.map(i => i.id === item.id ? { ...i, effort: Number(e.target.value) } : i))}
+                                        className="w-12 text-[10px] px-2 py-1 text-center bg-transparent border border-border rounded text-foreground"
+                                      />
+                                      <button
+                                        onClick={() => setScopeItems(prev => prev.filter(i => i.id !== item.id))}
+                                        className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-red-400 transition-all"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Add scope item inline */}
+                              {showScopeAdd === ws ? (
+                                <div className="px-4 py-3 border-t border-border bg-muted/10 space-y-2">
+                                  <input
+                                    type="text" value={scopeForm.title}
+                                    onChange={e => setScopeForm(f => ({ ...f, title: e.target.value }))}
+                                    placeholder="Scope item title..."
+                                    className="w-full px-3 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#7c3aed]/30"
+                                  />
+                                  <textarea
+                                    value={scopeForm.description}
+                                    onChange={e => setScopeForm(f => ({ ...f, description: e.target.value }))}
+                                    placeholder="Description..."
+                                    rows={2}
+                                    className="w-full px-3 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-[#7c3aed]/30"
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <select
+                                      value={scopeForm.executionModel}
+                                      onChange={e => setScopeForm(f => ({ ...f, executionModel: e.target.value }))}
+                                      className="text-[10px] px-2 py-1.5 bg-card border border-border rounded text-foreground"
+                                    >
+                                      {EXECUTION_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                    </select>
+                                    <select
+                                      value={scopeForm.phase}
+                                      onChange={e => setScopeForm(f => ({ ...f, phase: e.target.value }))}
+                                      className="text-[10px] px-2 py-1.5 bg-card border border-border rounded text-foreground w-14"
+                                    >
+                                      <option value="P1">P1</option>
+                                      <option value="P2">P2</option>
+                                      <option value="P3">P3</option>
+                                    </select>
+                                    <input
+                                      type="number" value={scopeForm.effort} min={1} max={10}
+                                      onChange={e => setScopeForm(f => ({ ...f, effort: Number(e.target.value) }))}
+                                      className="w-12 text-[10px] px-2 py-1.5 text-center bg-card border border-border rounded text-foreground"
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        if (scopeForm.title.trim()) {
+                                          setScopeItems(prev => [...prev, {
+                                            id: uid(),
+                                            title: scopeForm.title.trim(),
+                                            description: scopeForm.description.trim(),
+                                            workstream: ws,
+                                            executionModel: scopeForm.executionModel,
+                                            effort: scopeForm.effort,
+                                            phase: scopeForm.phase,
+                                            owner: scopeForm.owner,
+                                            aiGenerated: false,
+                                          }]);
+                                          setScopeForm({ title: '', description: '', effort: 3, phase: 'P1', owner: '', executionModel: 'pod_squad' });
+                                          setShowScopeAdd(null);
+                                        }
+                                      }}
+                                      className="px-3 py-1.5 text-[10px] rounded-lg bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors"
+                                    >
+                                      Add
+                                    </button>
+                                    <button
+                                      onClick={() => setShowScopeAdd(null)}
+                                      className="px-3 py-1.5 text-[10px] rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setShowScopeAdd(ws)}
+                                  className="w-full flex items-center gap-1.5 px-4 py-2 text-[10px] text-[#7c3aed] hover:bg-[#7c3aed]/5 transition-colors"
+                                >
+                                  <Plus className="h-3 w-3" /> Add scope item
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Empty state / Add to any workstream */}
+                    {scopeItems.length === 0 && (
+                      <div className="text-center py-8">
+                        <Target className="h-6 w-6 text-muted-foreground opacity-30 mx-auto mb-2" />
+                        <div className="text-xs text-muted-foreground mb-3">No scope items yet</div>
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                          {DEFAULT_WORKSTREAMS.slice(0, 4).map(ws => (
+                            <button
+                              key={ws}
+                              onClick={() => { setExpandedWorkstream(ws); setShowScopeAdd(ws); }}
+                              className="text-[10px] px-2.5 py-1 rounded-full border border-[#7c3aed]/20 text-[#7c3aed] hover:bg-[#7c3aed]/5 transition-colors"
+                            >
+                              + {ws}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Scope Summary */}
+                    {scopeItems.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-3">
+                          {['P1', 'P2', 'P3'].map(phase => {
+                            const phaseItems = scopeItems.filter(i => i.phase === phase);
+                            return phaseItems.length > 0 ? (
+                              <div key={phase} className="flex items-center gap-1.5">
+                                <span className={`text-[10px] font-mono font-bold ${phase === 'P1' ? 'text-[#7c3aed]' : phase === 'P2' ? 'text-[#3b82f6]' : 'text-muted-foreground'}`}>{phase}</span>
+                                <span className="text-[10px] text-muted-foreground">{phaseItems.length} items, {phaseItems.reduce((s, i) => s + i.effort, 0)} pts</span>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {EXECUTION_MODELS.map(m => {
+                            const count = scopeItems.filter(i => i.executionModel === m.id).length;
+                            return count > 0 ? (
+                              <span key={m.id} className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
+                                {m.name}: {count}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 </div>
               )}
             </div>
