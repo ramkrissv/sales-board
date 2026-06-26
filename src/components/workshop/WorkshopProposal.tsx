@@ -231,12 +231,64 @@ Be specific to ${workshop.customerName}. Reference actual assessment findings. I
       {proposal && (
         <div className="space-y-4">
           {/* Header block */}
-          <div className="p-6 rounded-xl bg-[#0B1120] text-white"
-            style={{ backgroundImage: 'radial-gradient(80% 120% at 88% -20%, rgba(15,181,173,0.18), transparent 55%)' }}>
-            <div className="text-[9px] font-mono uppercase tracking-wider text-[#0FB5AD]">Commercial Proposal</div>
-            <h2 className="text-lg font-bold font-display mt-2">{proposal.title}</h2>
-            <p className="text-xs text-white/70 mt-2 max-w-2xl leading-relaxed">{workshop.customerName} · Readiness Index {stats.index}/100 ({stats.stage}) · {rollups.length} workstreams · {stats.scopeItemCount || gaps.length} scope items</p>
+          <div className="rounded-xl overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #0B1120 0%, #1a1a3e 50%, #0B1120 100%)' }}>
+            <div className="p-6" style={{ backgroundImage: 'radial-gradient(80% 120% at 88% -20%, rgba(15,181,173,0.18), transparent 55%), radial-gradient(40% 80% at 10% 120%, rgba(124,58,237,0.1), transparent 50%)' }}>
+              <div className="text-[9px] font-mono uppercase tracking-wider text-[#0FB5AD]">Commercial Proposal</div>
+              <h2 className="text-lg font-bold font-display text-white mt-2">{proposal.title}</h2>
+              <p className="text-xs text-white/50 mt-1">{workshop.customerName} · Readiness Index {stats.index}/100 ({stats.stage})</p>
+
+              {/* Proposal KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4">
+                {[
+                  { label: 'Workstreams', value: (proposal.modules || []).length, color: '#7c3aed' },
+                  { label: 'Scope Items', value: (proposal.modules || []).reduce((s: number, m: any) => s + (m.scopeItems?.length || 0), 0), color: '#3b82f6' },
+                  { label: 'Total Effort', value: `${(proposal.modules || []).reduce((s: number, m: any) => s + (m.effort || 0), 0)} pts`, color: '#0FB5AD' },
+                  { label: 'P1 Items', value: (proposal.modules || []).filter((m: any) => m.phase === 'P1').length, color: '#C8472E' },
+                  { label: 'Pilots', value: pilots.length, color: '#f59e0b' },
+                ].map(kpi => (
+                  <div key={kpi.label} className="rounded-lg bg-white/5 px-3 py-2">
+                    <div className="text-[7px] font-mono uppercase tracking-wider text-white/30">{kpi.label}</div>
+                    <div className="text-sm font-bold text-white font-display" style={{ color: kpi.color }}>{kpi.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
+
+          {/* Investment at a Glance */}
+          {(proposal.modules || []).length > 0 && (
+            <div className="p-5 rounded-xl bg-card border border-border">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-3">Investment at a Glance</div>
+              <div className="flex items-center gap-1 h-8 rounded-lg overflow-hidden">
+                {(proposal.modules || []).map((mod: any, i: number) => {
+                  const totalEffort = (proposal.modules || []).reduce((s: number, m: any) => s + (m.effort || 0), 0);
+                  const pct = totalEffort > 0 ? ((mod.effort || 0) / totalEffort) * 100 : 0;
+                  const colors = ['#7c3aed', '#3b82f6', '#0A867F', '#f59e0b', '#C8472E', '#22c55e', '#6E97C2', '#D97A2B'];
+                  return pct > 0 ? (
+                    <div key={i} className="h-full relative group flex items-center justify-center"
+                      style={{ width: `${pct}%`, backgroundColor: colors[i % colors.length], minWidth: '20px' }}>
+                      <span className="text-[7px] font-bold text-white/80 truncate px-1">{mod.workstreamCode}</span>
+                      <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[#0B1120] text-[9px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        {mod.workstreamName}: {mod.effort} pts ({Math.round(pct)}%)
+                      </div>
+                    </div>
+                  ) : null;
+                })}
+              </div>
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                {(proposal.modules || []).map((mod: any, i: number) => {
+                  const colors = ['#7c3aed', '#3b82f6', '#0A867F', '#f59e0b', '#C8472E', '#22c55e', '#6E97C2', '#D97A2B'];
+                  return (
+                    <div key={i} className="flex items-center gap-1.5 text-[9px]">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
+                      <span className="text-muted-foreground">{mod.workstreamCode}: {mod.effort} pts</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Executive summary */}
           <div className="p-5 rounded-xl bg-card border border-border">
@@ -363,6 +415,63 @@ Be specific to ${workshop.customerName}. Reference actual assessment findings. I
             </div>
           )}
 
+          {/* Delivery Model Summary */}
+          {(proposal.modules || []).length > 0 && (() => {
+            const modelCounts: Record<string, number> = {};
+            const phaseCounts: Record<string, number> = {};
+            (proposal.modules || []).forEach((m: any) => {
+              const model = m.executionModel || 'tbd';
+              modelCounts[model] = (modelCounts[model] || 0) + 1;
+              const phase = m.phase || 'P1';
+              phaseCounts[phase] = (phaseCounts[phase] || 0) + 1;
+            });
+            const modelColors: Record<string, string> = { pod_squad: '#7c3aed', managed_capacity: '#3b82f6', outcome_based: '#22c55e', ai_stream: '#0A867F', hybrid: '#f59e0b' };
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 rounded-xl bg-card border border-border">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+                    <Users className="h-3 w-3" /> Delivery Model Mix
+                  </div>
+                  <div className="space-y-2">
+                    {Object.entries(modelCounts).map(([model, count]) => (
+                      <div key={model} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: modelColors[model] || '#666' }} />
+                        <span className="text-xs text-foreground flex-1">{EXEC_LABELS[model] || model}</span>
+                        <span className="text-xs font-bold font-display" style={{ color: modelColors[model] || '#666' }}>{count}</span>
+                        <span className="text-[9px] text-muted-foreground">workstream{count > 1 ? 's' : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-5 rounded-xl bg-card border border-border">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+                    <BarChart3 className="h-3 w-3" /> Phase Distribution
+                  </div>
+                  <div className="space-y-2">
+                    {['P1', 'P2', 'P3'].map(phase => {
+                      const count = phaseCounts[phase] || 0;
+                      const total = (proposal.modules || []).length;
+                      const pct = total > 0 ? (count / total) * 100 : 0;
+                      const phaseLabels: Record<string, string> = { P1: 'Immediate (0-3 mo)', P2: 'Near-term (3-6 mo)', P3: 'Strategic (6-12 mo)' };
+                      const phaseColors: Record<string, string> = { P1: '#C8472E', P2: '#D97A2B', P3: '#3b82f6' };
+                      return (
+                        <div key={phase}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-foreground">{phase}: {phaseLabels[phase]}</span>
+                            <span className="text-xs font-bold" style={{ color: phaseColors[phase] }}>{count}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: phaseColors[phase] }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Next steps */}
           {proposal.nextSteps?.length > 0 && (
             <div className="p-5 rounded-xl bg-card border border-border">
@@ -377,6 +486,24 @@ Be specific to ${workshop.customerName}. Reference actual assessment findings. I
               </div>
             </div>
           )}
+
+          {/* Proposal Readiness Gate */}
+          <div className="p-4 rounded-xl bg-secondary/20 border border-border">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">Proposal Completeness</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {[
+                { label: 'Exec Summary', done: !!(proposal.execSummary && proposal.execSummary.length > 50) },
+                { label: 'Modules', done: (proposal.modules || []).length >= 2 },
+                { label: 'Investment', done: !!proposal.investmentSummary },
+                { label: 'Next Steps', done: (proposal.nextSteps || []).length > 0 },
+              ].map(g => (
+                <div key={g.label} className="flex items-center gap-1.5 text-xs">
+                  {g.done ? <CheckCircle className="h-3.5 w-3.5 text-emerald-400" /> : <div className="w-3.5 h-3.5 rounded-full border-2 border-border" />}
+                  <span className={g.done ? 'text-foreground' : 'text-muted-foreground'}>{g.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
