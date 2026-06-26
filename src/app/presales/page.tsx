@@ -1903,6 +1903,24 @@ User message: ${text.trim()}`;
                       >
                         <Plus className="h-3 w-3" /> Add Role
                       </button>
+                      {scopeItems.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-muted-foreground">Scope Builder: {scopeItems.length} items across {new Set(scopeItems.map(i => i.workstream)).size} workstreams</span>
+                            <span className="font-medium text-[#7c3aed]">{scopeItems.reduce((s, i) => s + i.effort, 0)} effort pts</span>
+                          </div>
+                          <div className="flex gap-1 mt-1.5 flex-wrap">
+                            {['P1', 'P2', 'P3'].map(p => {
+                              const ct = scopeItems.filter(i => i.phase === p).length;
+                              return ct > 0 ? (
+                                <span key={p} className={`text-[9px] px-1.5 py-0.5 rounded-full ${p === 'P1' ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : p === 'P2' ? 'bg-blue-500/10 text-blue-400' : 'bg-muted text-muted-foreground'}`}>
+                                  {p}: {ct}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -2072,9 +2090,41 @@ User message: ${text.trim()}`;
                     </div>
                     <div className="flex items-center gap-2">
                       {scopeItems.length > 0 && (
+                        <>
                         <span className="text-[10px] font-medium text-[#7c3aed]">
                           Total: {scopeItems.reduce((s, i) => s + i.effort, 0)} pts
                         </span>
+                        <button
+                          onClick={() => {
+                            // Group scope items by workstream and create proposal sections
+                            const grouped: Record<string, PresalesScopeItem[]> = {};
+                            scopeItems.forEach(item => {
+                              if (!grouped[item.workstream]) grouped[item.workstream] = [];
+                              grouped[item.workstream].push(item);
+                            });
+                            const newSections: ProposalSection[] = Object.entries(grouped).map(([ws, items], idx) => {
+                              const model = EXECUTION_MODELS.find(m => m.id === items[0].executionModel);
+                              const totalEffort = items.reduce((s, i) => s + i.effort, 0);
+                              const content = `## ${ws}\n\n**Delivery Model:** ${model?.name || 'TBD'}\n**Total Effort:** ${totalEffort} points\n\n### Scope Items\n${items.map((it, i) => `${i + 1}. **${it.title}** (${it.phase}, ${it.effort} pts)\n   ${it.description}`).join('\n')}`;
+                              return {
+                                id: uid(),
+                                title: ws,
+                                content,
+                                status: 'ai-draft' as SectionStatus,
+                                order: idx,
+                                executionModel: items[0].executionModel,
+                                effort: totalEffort,
+                                phase: items[0].phase,
+                              };
+                            });
+                            setSections(prev => [...prev, ...newSections]);
+                            setActiveTab('studio');
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-[#7c3aed]/30 text-[#7c3aed] hover:bg-[#7c3aed]/10 transition-colors"
+                        >
+                          <ArrowRight className="h-3 w-3" /> Push to Studio
+                        </button>
+                        </>
                       )}
                       <button
                         onClick={async () => {
