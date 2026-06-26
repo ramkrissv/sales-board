@@ -36,6 +36,9 @@ interface ProposalSection {
   content: string;
   status: SectionStatus;
   order: number;
+  executionModel?: string;
+  effort?: number;
+  phase?: string;
 }
 
 interface ChatMessage {
@@ -1359,6 +1362,16 @@ User message: ${text.trim()}`;
                                 <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${statusInfo.bg} ${statusInfo.text}`}>
                                   {statusInfo.label}
                                 </span>
+                                {/* Execution model + effort */}
+                                <select value={section.executionModel || ''} onChange={e => setSections(prev => prev.map(s => s.id === section.id ? { ...s, executionModel: e.target.value } : s))}
+                                  className="px-1.5 py-0.5 text-[9px] bg-transparent border border-border rounded text-muted-foreground">
+                                  <option value="">Delivery model</option>
+                                  <option value="pod_squad">Pod Squad</option>
+                                  <option value="managed_capacity">Managed Capacity</option>
+                                  <option value="outcome_based">Outcome-Based</option>
+                                  <option value="ai_stream">AI-Powered</option>
+                                  <option value="hybrid">Hybrid</option>
+                                </select>
                               </div>
                               <div className="flex items-center gap-1">
                                 {section.content && !isEditing && (
