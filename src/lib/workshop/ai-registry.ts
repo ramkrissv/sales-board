@@ -41,7 +41,7 @@ export function listAssists(): AssistDefinition[] {
 }
 
 // ── Maturity labels ──
-const MATURITY = ['Absent', 'Ad hoc', 'Repeatable', 'Governed', 'Optimized'];
+import { MATURITY_LABELS as MATURITY } from './constants';
 
 // ── Register all assists ──
 

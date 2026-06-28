@@ -1,7 +1,6 @@
 'use client';
 
-const MATURITY_COLORS = ['#C3C9D4', '#9DB0C6', '#6E97C2', '#3A93A0', '#0A867F'];
-const MATURITY_LABELS = ['Absent', 'Ad hoc', 'Repeatable', 'Governed', 'Optimized'];
+import { MATURITY_COLORS, MATURITY_LABELS } from '@/lib/workshop/constants';
 
 interface MaturityChipsProps {
   value: number | null | undefined;

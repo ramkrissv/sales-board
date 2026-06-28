@@ -15,8 +15,7 @@ import {
   Flag, BookOpen, Compass, Radio, Flame,
 } from 'lucide-react';
 
-const MATURITY = ['Absent', 'Ad hoc', 'Repeatable', 'Governed', 'Optimized'];
-const MATURITY_COLORS = ['#C3C9D4', '#9DB0C6', '#6E97C2', '#3A93A0', '#0A867F'];
+import { MATURITY_LABELS as MATURITY, MATURITY_COLORS } from '@/lib/workshop/constants';
 const RISK_LEVELS = [
   { label: 'Critical', color: '#C8472E', bg: 'bg-red-500/10', text: 'text-red-400', threshold: 3 },
   { label: 'High', color: '#D97A2B', bg: 'bg-amber-500/10', text: 'text-amber-400', threshold: 2 },

@@ -9,11 +9,7 @@ import {
   Zap, Users, ArrowRight, CheckCircle,
 } from 'lucide-react';
 
-const MATURITY_LABELS = ['Absent', 'Ad hoc', 'Repeatable', 'Governed', 'Optimized'];
-const EXEC_LABELS: Record<string, string> = {
-  pod_squad: 'FDE Pod Squad', managed_capacity: 'Managed Capacity',
-  outcome_based: 'Outcome-Based', ai_stream: 'AI-Powered', hybrid: 'Hybrid',
-};
+import { MATURITY_LABELS, EXEC_LABELS } from '@/lib/workshop/constants';
 
 interface WorkshopProposalProps {
   workshop: any;

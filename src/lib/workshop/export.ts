@@ -3,9 +3,7 @@
  * Supports: HTML (rich, printable), Markdown (copyable), and browser Print → PDF.
  */
 import { workshopStats, gapsForWorkshop, levelReadiness } from './scoring';
-
-const MATURITY = ['Absent', 'Ad hoc', 'Repeatable', 'Governed', 'Optimized'];
-const MATURITY_COLORS = ['#C3C9D4', '#9DB0C6', '#6E97C2', '#3A93A0', '#0A867F'];
+import { MATURITY_LABELS as MATURITY, MATURITY_COLORS, EXEC_LABELS } from './constants';
 
 export function generateFindingsHTML(workshop: any, options: { recommendations?: string[]; narrative?: string } = {}): string {
   const stats = workshopStats(workshop);
@@ -136,11 +134,6 @@ ${(options.recommendations || []).map((rec, i) => `
 export function generateProposalHTML(workshop: any, proposal: any): string {
   const stats = workshopStats(workshop);
   const gaps = gapsForWorkshop(workshop);
-
-  const EXEC_LABELS: Record<string, string> = {
-    pod_squad: 'FDE Pod Squad', managed_capacity: 'Managed Capacity',
-    outcome_based: 'Outcome-Based', ai_stream: 'AI-Powered', hybrid: 'Hybrid',
-  };
 
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><title>${proposal.title || workshop.customerName + ' — Proposal'}</title>

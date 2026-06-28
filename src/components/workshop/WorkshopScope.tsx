@@ -8,8 +8,8 @@ import {
   Target, Zap, Users, BarChart3, Settings, ArrowRight,
 } from 'lucide-react';
 
+import { MATURITY_LABELS } from '@/lib/workshop/constants';
 const PRIORITY_COLORS = ['#9DB0C6', '#3A93A0', '#D97A2B', '#C8472E'];
-const MATURITY_LABELS = ['Absent', 'Ad hoc', 'Repeatable', 'Governed', 'Optimized'];
 
 // Execution model types
 const EXECUTION_MODELS = [

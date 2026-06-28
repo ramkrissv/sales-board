@@ -12,9 +12,7 @@ import {
 import ReadinessSpine from './exhibits/ReadinessSpine';
 import GapHeatmap from './exhibits/GapHeatmap';
 
-const MATURITY = ['Absent', 'Ad hoc', 'Repeatable', 'Governed', 'Optimized'];
-const MATURITY_COLORS = ['#C3C9D4', '#9DB0C6', '#6E97C2', '#3A93A0', '#0A867F'];
-const MATURITY_BG = ['#C3C9D420', '#9DB0C620', '#6E97C220', '#3A93A020', '#0A867F20'];
+import { MATURITY_LABELS as MATURITY, MATURITY_COLORS } from '@/lib/workshop/constants';
 
 interface WorkshopCockpitProps {
   workshop: any;
