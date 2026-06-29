@@ -440,12 +440,16 @@ export const workshopRouter = router({
         framework: (workshop as any).framework,
       };
 
-      const prompt = assist.buildPrompt(context, input.input);
-      const model = process.env.AI_DEFAULT_MODEL || assist.model;
+      // Support custom prompt override for asset generation
+      const hasCustomPrompt = input.input?._customPrompt;
+      const prompt = hasCustomPrompt || assist.buildPrompt(context, input.input);
+      const model = process.env.AI_DEFAULT_MODEL || (hasCustomPrompt ? 'claude-sonnet-4-6' : assist.model);
 
+      // Heavy assists or custom prompts need more tokens
+      const isHeavy = hasCustomPrompt || assist.model.includes('opus') || ['currentstate.narrative', 'proposal.generate', 'scope.synthesize'].includes(input.assistKey);
       const response = await client.messages.create({
         model,
-        max_tokens: 3000,
+        max_tokens: isHeavy ? 8000 : 4000,
         messages: [{ role: 'user', content: prompt }],
       });
 

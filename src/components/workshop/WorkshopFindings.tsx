@@ -38,6 +38,7 @@ interface WorkshopFindingsProps {
 export default function WorkshopFindings({ workshop, onRefresh }: WorkshopFindingsProps) {
   const [generating, setGenerating] = useState(false);
   const [generatingRecs, setGeneratingRecs] = useState(false);
+  const [generatingAsset, setGeneratingAsset] = useState<string | null>(null);
   const [findings, setFindings] = useState<any>(null);
   const [aiRecs, setAiRecs] = useState<any[]>([]);
   const [customRecs, setCustomRecs] = useState<{ text: string; category: string }[]>([]);
@@ -47,6 +48,7 @@ export default function WorkshopFindings({ workshop, onRefresh }: WorkshopFindin
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>('executive');
   const [activeInsight, setActiveInsight] = useState<string | null>(null);
+  const [assets, setAssets] = useState<Record<string, string>>({});
 
   const runAssist = trpc.workshop.runAssist.useMutation();
   const chatMutation = trpc.ai.chat.useMutation();
@@ -144,59 +146,244 @@ export default function WorkshopFindings({ workshop, onRefresh }: WorkshopFindin
     });
   };
 
-  // Generate deep AI recommendations
+  // Build assessment context string (shared across generators)
+  const assessmentContext = useMemo(() => {
+    const levelInfo = levels.map((l: any) => {
+      const r = levelReadiness(l);
+      const dims = (l.dimensions || []).filter((d: any) => d.currentScore != null);
+      return `${l.name} (${r.currentPct}% readiness, ${r.scored}/${r.total} scored):\n${dims.map((d: any) => `  - ${d.name}: ${MATURITY[d.currentScore]}${d.targetScore != null ? ` → target ${MATURITY[d.targetScore]}` : ''}${d.finding?.body ? ` | Finding: ${d.finding.body.slice(0, 150)}` : ''}`).join('\n')}`;
+    }).join('\n\n');
+    return `Client: ${workshop.customerName}
+Assessment: ${workshop.title}
+Readiness Index: ${stats.index}/100 (${stats.stage})
+Average Maturity: ${avgMaturity}/4
+Dimensions: ${stats.dimensionsScored}/${stats.totalDimensions} scored
+Gaps: ${stats.gapCount} (${stats.priorityGapCount} priority, ${criticalGaps.length} critical)
+Use Cases: ${useCases.length} (${useCases.filter((u: any) => u.isPilot).length} pilots)
+Scope Items: ${scopeItems.length}
+
+LEVEL ANALYSIS:
+${levelInfo}
+
+CRITICAL GAPS:
+${criticalGaps.map(g => `- ${g.dimensionName}: ${MATURITY[g.current]} → ${MATURITY[g.target]} (Δ${g.gap})${g.finding ? ` — ${g.finding.slice(0, 120)}` : ''}`).join('\n')}
+
+STRENGTHS:
+${strengthDims.slice(0, 8).map((d: any) => `- ${d.name} (${d.levelName}): ${MATURITY[d.currentScore]}`).join('\n')}`;
+  }, [workshop, stats, levels, criticalGaps, strengthDims, avgMaturity, useCases, scopeItems]);
+
+  // Generate deep AI recommendations via runAssist
   const handleGenerateRecs = async () => {
     setGeneratingRecs(true);
     try {
-      const result = await chatMutation.mutateAsync({
-        message: `You are a McKinsey senior partner + Google distinguished engineer. Analyze this assessment and generate 12-16 detailed recommendations as a JSON array.
+      const result = await runAssist.mutateAsync({
+        workshopId: workshop.id,
+        assistKey: 'gap.narrative',
+        input: {
+          dimensionName: 'FULL_RECOMMENDATIONS',
+          current: Math.round(Number(avgMaturity)),
+          target: 4,
+          finding: assessmentContext,
+          _customPrompt: `You are a McKinsey senior partner + Google distinguished engineer. Generate 12-16 detailed, deeply specific recommendations as a JSON object.
 
-Assessment: ${workshop.customerName} — ${workshop.title}
-Readiness Index: ${stats.index}/100 (${stats.stage})
-Average Maturity: ${avgMaturity}/4
+${assessmentContext}
 
-Level Analysis:
-${levels.map((l: any) => {
-  const r = levelReadiness(l);
-  return `${l.name}: ${r.currentPct}% readiness, ${r.scored} dims scored`;
-}).join('\n')}
+Return JSON: {"items":[{"text":"detailed recommendation with specific actions","category":"quick_wins|foundation|strategic|governance","priority":"critical|high|medium","impact":"business impact description","effort":"low|medium|high","dependencies":"prerequisites","kpis":"measurable outcomes"}]}
 
-Critical Gaps (${criticalGaps.length}):
-${criticalGaps.map(g => `- ${g.dimensionName}: ${MATURITY[g.current]} → ${MATURITY[g.target]} (gap: ${g.gap})${g.finding ? ` Finding: ${g.finding.slice(0, 100)}` : ''}`).join('\n')}
-
-Strengths (${strengthDims.length}):
-${strengthDims.map((d: any) => `- ${d.name}: ${MATURITY[d.currentScore]}`).join('\n')}
-
-Use Cases: ${useCases.length} identified, ${useCases.filter((u: any) => u.isPilot).length} pilots
-
-Return ONLY a JSON array where each item has:
-{"text":"detailed recommendation with specific actions","category":"quick_wins|foundation|strategic|governance","priority":"critical|high|medium","impact":"Description of business impact","effort":"low|medium|high","dependencies":"what must be in place first","kpis":"measurable outcomes"}
-
-Make recommendations:
-- Deeply specific to the client's gaps and findings
-- Actionable with clear next steps
-- Connected to business value
-- Sequenced logically (quick wins first, then foundation, then strategic)
-- Include governance guardrails throughout`,
-        context: { page: 'workshop-create' },
+Requirements: deeply specific to ${workshop.customerName}'s gaps and findings, actionable with clear next steps, connected to business value, sequenced logically, include governance guardrails throughout.`,
+        },
       });
-      const cleaned = (result.response || '').replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
-      const match = cleaned.match(/\[[\s\S]*\]/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        setAiRecs(parsed.map((r: any) => ({
-          text: r.text || '',
-          category: ['quick_wins', 'foundation', 'strategic', 'governance'].includes(r.category) ? r.category : 'strategic',
-          priority: r.priority || 'medium',
-          impact: r.impact || '',
-          effort: r.effort || 'medium',
-          dependencies: r.dependencies || '',
-          kpis: r.kpis || '',
-          aiGenerated: true,
-        })));
-      }
-    } catch { /* ignore */ }
+      const raw = typeof result.output === 'string' ? result.output : result.raw || '';
+      const cleaned = raw.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+      const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+      const objMatch = cleaned.match(/\{[\s\S]*\}/);
+      const items = arrayMatch ? JSON.parse(arrayMatch[0]) : objMatch ? (JSON.parse(objMatch[0]).items || []) : [];
+      setAiRecs(items.map((r: any) => ({
+        text: r.text || '',
+        category: ['quick_wins', 'foundation', 'strategic', 'governance'].includes(r.category) ? r.category : 'strategic',
+        priority: r.priority || 'medium',
+        impact: r.impact || '',
+        effort: r.effort || 'medium',
+        dependencies: r.dependencies || '',
+        kpis: r.kpis || '',
+        aiGenerated: true,
+      })));
+    } catch (e) { console.error('Rec generation failed:', e); }
     setGeneratingRecs(false);
+  };
+
+  // Generate a deliverable asset (opens in new tab as rich HTML)
+  const generateAsset = async (assetType: string) => {
+    setGeneratingAsset(assetType);
+    const prompts: Record<string, string> = {
+      assessment_report: `Write a comprehensive 8-10 page Assessment Report for ${workshop.customerName}. Use Markdown with ## headers.
+
+${assessmentContext}
+
+Include these sections:
+1. Executive Summary (2 paragraphs)
+2. Methodology & Approach
+3. Current State by Domain (${levels.map((l: any) => l.name).join(', ')}) — for each domain: overview, key findings per dimension, maturity level, implications
+4. Gap Analysis — every gap with current→target, implication, recommended action
+5. Strengths & Assets — what to build on
+6. Risk Assessment — systemic risks, technical debt, organizational gaps
+7. Use Case Portfolio — ${useCases.length} use cases analyzed
+8. Recommendations Summary — prioritized by Quick Wins, Foundation, Strategic, Governance
+
+Write in McKinsey consulting register. Specific to ${workshop.customerName}. Reference actual findings. No filler.`,
+
+      roadmap: `Create a detailed Transformation Roadmap for ${workshop.customerName}. Use Markdown with ## headers.
+
+${assessmentContext}
+
+Include:
+1. Vision Statement — where ${workshop.customerName} should be in 12 months
+2. Phase 1: Foundation (0-3 months) — immediate actions, quick wins, critical gap closure
+3. Phase 2: Build (3-6 months) — platform hardening, capability development, governance setup
+4. Phase 3: Scale (6-12 months) — operating model maturity, advanced use cases, optimization
+5. Workstream Tracks — a dedicated track for each impacted workstream with milestones, owners, dependencies
+6. Resource Requirements — team shape, skill gaps, augmentation needs
+7. Investment Model — effort by phase, delivery model recommendations (Pod Squad, Managed Capacity, Outcome-Based)
+8. Risk Mitigation — what could go wrong and how to prevent it
+9. Success Metrics — KPIs per phase and per workstream
+10. Governance Model — decision rights, review cadence, escalation
+
+Be deeply specific. Reference actual assessment data.`,
+
+      architecture_review: `Write a detailed Architecture Deep Dive document for ${workshop.customerName}. Use Markdown with ## headers.
+
+${assessmentContext}
+
+Include:
+1. Architecture Landscape — current state assessment of technical architecture
+2. Platform & Tooling Analysis — what's in place, what's missing, maturity of each
+3. Integration Architecture — current interoperability, gaps, recommended patterns
+4. Data Architecture — data strategy, knowledge foundation, AI/ML pipeline readiness
+5. Security Architecture — current posture, gaps in agentic security, compliance status
+6. Target Architecture — recommended future state with rationale
+7. Technology Recommendations — specific tools, platforms, frameworks
+8. Architecture Decision Records — key decisions with pros/cons/rationale
+9. Migration Strategy — how to get from current to target state
+10. Architecture Governance — standards, review processes, technology radar
+
+Reference actual dimension scores and findings. Be specific to ${workshop.customerName}'s context.`,
+
+      exec_briefing: `Write a 2-page Executive Briefing for ${workshop.customerName} board/leadership. Use Markdown with ## headers.
+
+${assessmentContext}
+
+Include:
+1. Assessment Summary — one paragraph, readiness index, stage, headline finding
+2. Key Findings (3-5 bullets) — the most critical insights leadership needs to know
+3. Strategic Implications — what this means for the business
+4. Critical Risks — what happens if gaps aren't addressed
+5. Recommended Actions — top 5 prioritized actions with timeline
+6. Investment Ask — high-level effort and resource requirements
+7. Expected Outcomes — what success looks like at 6 and 12 months
+
+Board-ready prose. Implication-first. No jargon unless unavoidable. Every statement backed by assessment data.`,
+
+      gap_analysis: `Write a comprehensive Gap Analysis document for ${workshop.customerName}. Use Markdown with ## headers and tables.
+
+${assessmentContext}
+
+Include:
+1. Gap Summary — total gaps, severity distribution, priority analysis
+2. Per-Domain Gap Tables — for each level, a table with: Dimension | Current | Target | Gap | Severity | Finding | Recommended Action
+3. Cross-Cutting Themes — patterns that span multiple domains
+4. Dependency Map — which gaps must be closed before others
+5. Quick Wins — gaps that can be closed immediately with low effort
+6. Strategic Gaps — gaps that require organizational change
+7. Technical Debt Inventory — gaps related to platform/tooling immaturity
+8. People & Process Gaps — gaps related to skills, operating model, governance
+9. Prioritized Closure Plan — sequenced actions to close top 10 gaps
+10. Measurement Framework — how to track gap closure progress
+
+Use tables extensively. Reference actual scores and findings.`,
+    };
+
+    try {
+      const result = await runAssist.mutateAsync({
+        workshopId: workshop.id,
+        assistKey: 'currentstate.narrative',
+        input: { levels: levels.map((l: any) => ({ name: l.name, readiness: levelReadiness(l).currentPct, dims: [] })), _customPrompt: prompts[assetType] },
+      });
+      const content = typeof result.output === 'string' ? result.output : result.raw || '';
+      const clean = content.replace(/```[a-z]*\n?/gi, '').replace(/```\n?/g, '').trim();
+      setAssets(prev => ({ ...prev, [assetType]: clean }));
+
+      // Open as rich HTML in new tab
+      const html = assetToHTML(assetType, clean);
+      const w = window.open('', '_blank');
+      if (w) { w.document.write(html); w.document.close(); }
+    } catch (e) { console.error(`Asset ${assetType} failed:`, e); }
+    setGeneratingAsset(null);
+  };
+
+  const assetToHTML = (type: string, markdown: string) => {
+    const titles: Record<string, string> = {
+      assessment_report: 'Assessment Report',
+      roadmap: 'Transformation Roadmap',
+      architecture_review: 'Architecture Deep Dive',
+      exec_briefing: 'Executive Briefing',
+      gap_analysis: 'Gap Analysis Document',
+    };
+    // Simple markdown → HTML conversion
+    let html = markdown
+      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+      .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/^- (.*$)/gm, '<li>$1</li>')
+      .replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>')
+      .replace(/(<li>[^]*?<\/li>\n?)+/g, '<ul>$&</ul>')
+      .replace(/\|(.+)\|/g, (match) => {
+        const cells = match.split('|').filter(Boolean).map(c => c.trim());
+        if (cells.every(c => c.match(/^[-:]+$/))) return '';
+        return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
+      })
+      .replace(/(<tr>[^]*?<\/tr>\n?)+/g, '<table>$&</table>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>');
+
+    return `<!DOCTYPE html><html><head>
+<meta charset="UTF-8"><title>${titles[type] || type} — ${workshop.customerName}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;max-width:900px;margin:0 auto;padding:60px 40px;color:#1a1a2e;line-height:1.7;background:#fff}
+h1{font-family:'Space Grotesk',sans-serif;color:#0A867F;font-size:28px;border-bottom:3px solid #0A867F;padding-bottom:12px;margin:40px 0 20px}
+h2{font-family:'Space Grotesk',sans-serif;color:#1a1a2e;font-size:20px;margin:32px 0 12px;border-bottom:1px solid #e4e7ee;padding-bottom:8px}
+h3{font-family:'Space Grotesk',sans-serif;color:#7c3aed;font-size:16px;margin:24px 0 8px}
+p{margin:8px 0}
+ul{padding-left:24px;margin:8px 0}
+li{margin:4px 0}
+strong{color:#0A867F}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
+td{padding:8px 12px;border:1px solid #e4e7ee;vertical-align:top}
+tr:first-child td{background:#f5f3ff;font-weight:600;color:#7c3aed}
+.header{background:linear-gradient(135deg,#0B1120,#1a1a3e);color:#fff;padding:40px;margin:-60px -40px 40px;border-radius:0}
+.header h1{color:#0FB5AD;border:none;margin:0 0 8px}
+.header p{color:rgba(255,255,255,0.6);font-size:14px}
+.meta{display:flex;gap:24px;margin-top:16px;font-size:12px;color:rgba(255,255,255,0.4)}
+.meta span{padding:4px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px}
+.footer{text-align:center;color:#888;font-size:11px;margin-top:60px;padding-top:20px;border-top:1px solid #e4e7ee}
+@media print{body{padding:20px}.header{margin:-20px -20px 20px;padding:20px}h1{font-size:22px}h2{font-size:16px}}
+</style></head><body>
+<div class="header">
+  <h1>${titles[type] || type}</h1>
+  <p>${workshop.customerName} — ${workshop.title}</p>
+  <div class="meta">
+    <span>Readiness: ${stats.index}/100 (${stats.stage})</span>
+    <span>Maturity: ${avgMaturity}/4</span>
+    <span>${stats.gapCount} gaps (${criticalGaps.length} critical)</span>
+    <span>${new Date().toLocaleDateString()}</span>
+  </div>
+</div>
+<p>${html}</p>
+<div class="footer">Generated by Galent SalesPilot · ${workshop.customerName} · Confidential</div>
+</body></html>`;
   };
 
   const handleCopyAll = () => {
@@ -276,6 +463,53 @@ Make recommendations:
             {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
             {findings ? 'Regenerate Analysis' : 'Generate Full Analysis'}
           </button>
+        </div>
+      </div>
+
+      {/* ═══════ DELIVERABLE ASSETS ═══════ */}
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="px-5 py-3 border-b border-border flex items-center gap-2">
+          <FileText className="h-4 w-4 text-[#7c3aed]" />
+          <span className="text-sm font-semibold text-foreground">Deliverable Assets</span>
+          <span className="text-[10px] text-muted-foreground ml-2">Generate comprehensive documents — each opens as a rich HTML report</span>
+        </div>
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+          {[
+            { id: 'assessment_report', label: 'Assessment Report', desc: '8-10 page full assessment with per-domain analysis', icon: BookOpen, color: '#0A867F' },
+            { id: 'roadmap', label: 'Transformation Roadmap', desc: 'Phased roadmap with tracks, milestones, investment', icon: Compass, color: '#7c3aed' },
+            { id: 'architecture_review', label: 'Architecture Deep Dive', desc: 'Technical architecture review with target state', icon: Layers, color: '#3b82f6' },
+            { id: 'exec_briefing', label: 'Executive Briefing', desc: '2-page board-ready summary with investment ask', icon: Award, color: '#D97A2B' },
+            { id: 'gap_analysis', label: 'Gap Analysis', desc: 'Per-dimension gap tables with closure plan', icon: AlertTriangle, color: '#C8472E' },
+          ].map(asset => (
+            <button key={asset.id} onClick={() => generateAsset(asset.id)}
+              disabled={generatingAsset !== null || stats.dimensionsScored < 3}
+              className="p-3 rounded-lg border border-border hover:border-opacity-60 text-left transition-all hover:bg-muted/10 disabled:opacity-40 group"
+              style={{ borderColor: `${asset.color}20` }}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                  style={{ backgroundColor: `${asset.color}15` }}>
+                  {generatingAsset === asset.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: asset.color }} />
+                  ) : (
+                    <asset.icon className="h-3.5 w-3.5" style={{ color: asset.color }} />
+                  )}
+                </div>
+                <span className="text-[10px] font-semibold text-foreground">{asset.label}</span>
+              </div>
+              <p className="text-[9px] text-muted-foreground leading-tight">{asset.desc}</p>
+              {assets[asset.id] && (
+                <div className="mt-1.5 flex items-center gap-1 text-[9px] text-emerald-400">
+                  <CheckCircle className="h-2.5 w-2.5" /> Generated
+                  <button onClick={(e) => {
+                    e.stopPropagation();
+                    const html = assetToHTML(asset.id, assets[asset.id]);
+                    const w = window.open('', '_blank');
+                    if (w) { w.document.write(html); w.document.close(); }
+                  }} className="ml-auto text-[#7c3aed] hover:underline">View</button>
+                </div>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
