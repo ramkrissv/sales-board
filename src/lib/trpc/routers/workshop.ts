@@ -417,6 +417,109 @@ export const workshopRouter = router({
       ).lean();
     }),
 
+  // ── Delete scope item ──
+  deleteScopeItem: protectedProcedure
+    .input(z.object({ workshopId: z.string(), scopeItemId: z.string() }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      return WS.findOneAndUpdate(
+        { id: input.workshopId },
+        { $pull: { scopeItems: { id: input.scopeItemId } } },
+        { new: true }
+      ).lean();
+    }),
+
+  // ── Update level (name, weight, summary) ──
+  updateLevel: protectedProcedure
+    .input(z.object({ workshopId: z.string(), levelId: z.string(), name: z.string().optional(), weight: z.number().optional(), summary: z.string().optional() }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      const update: any = {};
+      if (input.name) update['framework.levels.$.name'] = input.name;
+      if (input.weight !== undefined) update['framework.levels.$.weight'] = input.weight;
+      if (input.summary !== undefined) update['framework.levels.$.summary'] = input.summary;
+      return WS.findOneAndUpdate(
+        { id: input.workshopId, 'framework.levels.id': input.levelId },
+        { $set: update },
+        { new: true }
+      ).lean();
+    }),
+
+  // ── Delete level ──
+  deleteLevel: protectedProcedure
+    .input(z.object({ workshopId: z.string(), levelId: z.string() }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      return WS.findOneAndUpdate(
+        { id: input.workshopId },
+        { $pull: { 'framework.levels': { id: input.levelId } } },
+        { new: true }
+      ).lean();
+    }),
+
+  // ── Update workstream ──
+  updateWorkstream: protectedProcedure
+    .input(z.object({ workshopId: z.string(), code: z.string(), name: z.string().optional(), objective: z.string().optional() }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      const update: any = {};
+      if (input.name) update['framework.workstreams.$.name'] = input.name;
+      if (input.objective !== undefined) update['framework.workstreams.$.objective'] = input.objective;
+      return WS.findOneAndUpdate(
+        { id: input.workshopId, 'framework.workstreams.code': input.code },
+        { $set: update },
+        { new: true }
+      ).lean();
+    }),
+
+  // ── Delete workstream ──
+  deleteWorkstream: protectedProcedure
+    .input(z.object({ workshopId: z.string(), code: z.string() }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      return WS.findOneAndUpdate(
+        { id: input.workshopId },
+        { $pull: { 'framework.workstreams': { code: input.code } } },
+        { new: true }
+      ).lean();
+    }),
+
+  // ── Delete dimension ──
+  deleteDimension: protectedProcedure
+    .input(z.object({ workshopId: z.string(), levelId: z.string(), dimensionId: z.string() }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      return WS.findOneAndUpdate(
+        { id: input.workshopId, 'framework.levels.id': input.levelId },
+        { $pull: { 'framework.levels.$.dimensions': { id: input.dimensionId } } },
+        { new: true }
+      ).lean();
+    }),
+
+  // ── Delete finding (clear finding from dimension) ──
+  deleteFinding: protectedProcedure
+    .input(z.object({ workshopId: z.string(), levelId: z.string(), dimensionId: z.string() }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      const ws = await WS.findOne({ id: input.workshopId });
+      if (!ws) return null;
+      const level = (ws as any).framework?.levels?.find((l: any) => l.id === input.levelId);
+      if (!level) return null;
+      const dim = level.dimensions?.find((d: any) => d.id === input.dimensionId);
+      if (dim) { dim.finding = null; dim.details = []; }
+      await ws.save();
+      return ws.toObject();
+    }),
+
+  // (updateMeta already defined above)
+
   // ── Run AI Assist (through registry) ──
   runAssist: protectedProcedure
     .input(z.object({

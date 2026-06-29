@@ -261,7 +261,30 @@ export default function WorkshopUseCases({ workshop, onRefresh }: WorkshopUseCas
                   const qInfo = QUADRANT_LABELS[q];
                   const rank = ranked.findIndex(r => r.id === uc.id) + 1;
                   return (
-                    <div key={uc.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-card border border-border hover:border-[#0A867F]/20 transition-all group">
+                    <div key={uc.id} className="rounded-lg bg-card border border-border hover:border-[#0A867F]/20 transition-all group">
+                      {editingId === uc.id ? (
+                        <div className="px-3 py-2.5 space-y-2">
+                          <input defaultValue={uc.name} id={`uc-name-${uc.id}`}
+                            className="w-full px-2 py-1 text-xs bg-secondary/30 border border-border rounded text-foreground" placeholder="Use case name" />
+                          <div className="grid grid-cols-2 gap-2">
+                            <input defaultValue={uc.sponsor || ''} id={`uc-sponsor-${uc.id}`}
+                              className="px-2 py-1 text-xs bg-secondary/30 border border-border rounded text-foreground" placeholder="Sponsor" />
+                            <input defaultValue={uc.problem || ''} id={`uc-problem-${uc.id}`}
+                              className="px-2 py-1 text-xs bg-secondary/30 border border-border rounded text-foreground" placeholder="Problem statement" />
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <button onClick={() => setEditingId(null)} className="text-[10px] text-muted-foreground px-2 py-1">Cancel</button>
+                            <button onClick={() => {
+                              const name = (document.getElementById(`uc-name-${uc.id}`) as HTMLInputElement)?.value;
+                              const sponsor = (document.getElementById(`uc-sponsor-${uc.id}`) as HTMLInputElement)?.value;
+                              const problem = (document.getElementById(`uc-problem-${uc.id}`) as HTMLInputElement)?.value;
+                              updateMutation.mutate({ workshopId: workshop.id, useCaseId: uc.id, name, sponsor, problem });
+                              setEditingId(null);
+                            }} className="px-2 py-1 text-[10px] rounded bg-[#0A867F] text-white">Save</button>
+                          </div>
+                        </div>
+                      ) : (
+                      <div className="flex items-center gap-3 px-3 py-2.5">
                       <span className="text-[10px] font-mono text-muted-foreground w-5">#{rank}</span>
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-medium text-foreground">{uc.name}</div>
@@ -282,11 +305,18 @@ export default function WorkshopUseCases({ workshop, onRefresh }: WorkshopUseCas
                         title={uc.isPilot ? 'Remove pilot' : 'Mark as pilot'}>
                         <Star className="h-3 w-3" />
                       </button>
+                      {/* Edit */}
+                      <button onClick={() => setEditingId(uc.id)}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Edit2 className="h-3 w-3" />
+                      </button>
                       {/* Delete */}
                       <button onClick={() => deleteMutation.mutate({ workshopId: workshop.id, useCaseId: uc.id })}
                         className="p-1 rounded text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Trash2 className="h-3 w-3" />
                       </button>
+                    </div>
+                      )}
                     </div>
                   );
                 })}

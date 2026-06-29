@@ -56,8 +56,17 @@ export default function FrameworkBuilder({ workshop, onRefresh }: FrameworkBuild
   const workstreams = workshop.framework?.workstreams || [];
   const wsId = workshop.id;
 
-  // Direct MongoDB update via a generic mutation
+  const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
+  const [editLevelForm, setEditLevelForm] = useState({ name: '', weight: 0.33, summary: '' });
+  const [editingWsCode, setEditingWsCode] = useState<string | null>(null);
+  const [editWsForm, setEditWsForm] = useState({ name: '', objective: '' });
+
   const updateMutation = trpc.workshop.updateMeta.useMutation({ onSuccess: onRefresh });
+  const updateLevelMutation = trpc.workshop.updateLevel.useMutation({ onSuccess: onRefresh });
+  const deleteLevelMutation = trpc.workshop.deleteLevel.useMutation({ onSuccess: onRefresh });
+  const updateWsMutation = trpc.workshop.updateWorkstream.useMutation({ onSuccess: onRefresh });
+  const deleteWsMutation = trpc.workshop.deleteWorkstream.useMutation({ onSuccess: onRefresh });
+  const deleteDimMutation = trpc.workshop.deleteDimension.useMutation({ onSuccess: onRefresh });
 
   // For now, use the workshop document directly — framework editing adds/removes embedded arrays
   // We'll use a custom mutation for this
@@ -187,22 +196,48 @@ export default function FrameworkBuilder({ workshop, onRefresh }: FrameworkBuild
           return (
             <div key={level.id} className="rounded-xl bg-card border border-border overflow-hidden">
               {/* Level header */}
-              <button onClick={() => setExpandedLevel(isExpanded ? null : level.id)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/30 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-[#0B1120] flex items-center justify-center text-sm font-bold font-display text-[#0FB5AD] shrink-0">
-                  {level.id}
+              {editingLevelId === level.id ? (
+                <div className="px-4 py-3 space-y-2 bg-[#0A867F]/5">
+                  <div className="text-[9px] font-semibold text-[#0A867F] uppercase tracking-wider">Edit Level</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input value={editLevelForm.name} onChange={e => setEditLevelForm(p => ({ ...p, name: e.target.value }))}
+                      className="col-span-2 px-3 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground" />
+                    <input type="number" step="0.05" value={editLevelForm.weight} onChange={e => setEditLevelForm(p => ({ ...p, weight: Number(e.target.value) }))}
+                      className="px-3 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground" />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button onClick={() => setEditingLevelId(null)} className="text-[10px] text-muted-foreground px-2 py-1">Cancel</button>
+                    <button onClick={() => { updateLevelMutation.mutate({ workshopId: wsId, levelId: level.id, name: editLevelForm.name, weight: editLevelForm.weight }); setEditingLevelId(null); }}
+                      className="px-2 py-1 text-[10px] rounded-lg bg-[#0A867F] text-white font-medium">Save</button>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-foreground">{level.name}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{level.summary}</div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0 text-[10px] text-muted-foreground">
-                  <span>{dims.length} dims</span>
-                  <span>{scored} scored</span>
-                  <span className="font-mono font-semibold text-[#0A867F]">{normalizedPct}%</span>
-                </div>
-                {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-              </button>
+              ) : (
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 transition-colors group/level">
+                <button onClick={() => setExpandedLevel(isExpanded ? null : level.id)} className="flex items-center gap-3 flex-1 text-left">
+                  <div className="w-10 h-10 rounded-lg bg-[#0B1120] flex items-center justify-center text-sm font-bold font-display text-[#0FB5AD] shrink-0">
+                    {level.id}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-foreground">{level.name}</div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{level.summary}</div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 text-[10px] text-muted-foreground">
+                    <span>{dims.length} dims</span>
+                    <span>{scored} scored</span>
+                    <span className="font-mono font-semibold text-[#0A867F]">{normalizedPct}%</span>
+                  </div>
+                  {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); setEditingLevelId(level.id); setEditLevelForm({ name: level.name, weight: level.weight || 0.33, summary: level.summary || '' }); }}
+                  className="p-1.5 rounded text-muted-foreground hover:text-foreground opacity-0 group-hover/level:opacity-100 transition-opacity" title="Edit level">
+                  <Pencil className="h-3 w-3" />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); if (confirm(`Delete level "${level.name}" and all its dimensions?`)) deleteLevelMutation.mutate({ workshopId: wsId, levelId: level.id }); }}
+                  className="p-1.5 rounded text-muted-foreground hover:text-red-400 opacity-0 group-hover/level:opacity-100 transition-opacity" title="Delete level">
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+              )}
 
               {/* Expanded: dimension list + add button */}
               {isExpanded && (
@@ -245,7 +280,7 @@ export default function FrameworkBuilder({ workshop, onRefresh }: FrameworkBuild
                               className="p-1 rounded text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity" title="Edit dimension">
                               <Pencil className="h-3 w-3" />
                             </button>
-                            <button onClick={() => { if (confirm(`Delete dimension "${dim.name}"?`)) onRefresh(); }}
+                            <button onClick={() => { if (confirm(`Delete dimension "${dim.name}"?`)) deleteDimMutation.mutate({ workshopId: wsId, levelId: level.id, dimensionId: dim.id }); }}
                               className="p-1 rounded text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">
                               <Trash2 className="h-3 w-3" />
                             </button>
@@ -304,11 +339,31 @@ export default function FrameworkBuilder({ workshop, onRefresh }: FrameworkBuild
           {workstreams.map((ws: any) => {
             const dimCount = levels.reduce((s: number, l: any) =>
               s + (l.dimensions || []).filter((d: any) => d.workstreamCode === ws.code).length, 0);
-            return (
-              <div key={ws.code} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/20 text-xs">
+            return editingWsCode === ws.code ? (
+              <div key={ws.code} className="p-3 rounded-lg bg-[#7c3aed]/5 border border-[#7c3aed]/20 space-y-2">
+                <input value={editWsForm.name} onChange={e => setEditWsForm(p => ({ ...p, name: e.target.value }))}
+                  className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground" />
+                <input value={editWsForm.objective} onChange={e => setEditWsForm(p => ({ ...p, objective: e.target.value }))}
+                  placeholder="Objective" className="w-full px-2 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground" />
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setEditingWsCode(null)} className="text-[10px] text-muted-foreground px-2 py-1">Cancel</button>
+                  <button onClick={() => { updateWsMutation.mutate({ workshopId: wsId, code: ws.code, name: editWsForm.name, objective: editWsForm.objective }); setEditingWsCode(null); }}
+                    className="px-2 py-1 text-[10px] rounded-lg bg-[#7c3aed] text-white font-medium">Save</button>
+                </div>
+              </div>
+            ) : (
+              <div key={ws.code} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/20 text-xs group/ws">
                 <span className="font-mono font-semibold text-[#7c3aed] w-8">{ws.code}</span>
                 <span className="flex-1 text-foreground truncate">{ws.name}</span>
                 <span className="text-[10px] text-muted-foreground">{dimCount} dims</span>
+                <button onClick={() => { setEditingWsCode(ws.code); setEditWsForm({ name: ws.name, objective: ws.objective || '' }); }}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground opacity-0 group-hover/ws:opacity-100 transition-opacity">
+                  <Pencil className="h-2.5 w-2.5" />
+                </button>
+                <button onClick={() => { if (confirm(`Delete workstream "${ws.name}"?`)) deleteWsMutation.mutate({ workshopId: wsId, code: ws.code }); }}
+                  className="p-1 rounded text-muted-foreground hover:text-red-400 opacity-0 group-hover/ws:opacity-100 transition-opacity">
+                  <Trash2 className="h-2.5 w-2.5" />
+                </button>
               </div>
             );
           })}

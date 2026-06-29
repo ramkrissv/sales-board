@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { gapsForWorkshop, rollupByWorkstream, priorityRank, defaultEffort } from '@/lib/workshop/scoring';
 import {
-  FileText, Sparkles, Loader2, ChevronDown, ChevronUp, Plus,
+  FileText, Sparkles, Loader2, ChevronDown, ChevronUp, Plus, Trash2,
   Target, Zap, Users, BarChart3, Settings, ArrowRight,
 } from 'lucide-react';
 
@@ -36,6 +36,7 @@ export default function WorkshopScope({ workshop, onRefresh }: WorkshopScopeProp
   const runAssistMutation = trpc.workshop.runAssist.useMutation();
   const addScopeMutation = trpc.workshop.addScopeItem.useMutation({ onSuccess: onRefresh });
   const updateScopeMutation = trpc.workshop.updateScopeItem.useMutation({ onSuccess: onRefresh });
+  const deleteScopeMutation = trpc.workshop.deleteScopeItem.useMutation({ onSuccess: onRefresh });
 
   const gaps = useMemo(() => gapsForWorkshop(workshop), [workshop]);
   const workstreams = workshop.framework?.workstreams || [];
@@ -184,7 +185,7 @@ export default function WorkshopScope({ workshop, onRefresh }: WorkshopScopeProp
                     {displayItems.map((item: any) => {
                       const rank = item._isGap ? priorityRank(ws.gaps.find((g: any) => g.dimensionId === item.sourceDimensionId) || { gap: 1, priority: false } as any) : 1;
                       return (
-                        <div key={item.id} className="flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0">
+                        <div key={item.id} className="flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0 group">
                           {/* Priority bar */}
                           <div className="w-1.5 self-stretch rounded-full" style={{ backgroundColor: PRIORITY_COLORS[rank] }} />
                           {/* Content */}
@@ -211,6 +212,13 @@ export default function WorkshopScope({ workshop, onRefresh }: WorkshopScopeProp
                             <input type="number" value={item.effort || 0}
                               onChange={e => !item._isGap && updateScopeMutation.mutate({ workshopId: workshop.id, scopeItemId: item.id, effort: Number(e.target.value) })}
                               className="w-14 px-2 py-1 text-[10px] font-mono bg-card border border-border rounded-md text-foreground text-center" />
+                            {!item._isGap && (
+                              <button onClick={() => { if (confirm(`Delete "${item.title}"?`)) deleteScopeMutation.mutate({ workshopId: workshop.id, scopeItemId: item.id }); }}
+                                className="p-1 rounded text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                                title="Delete scope item">
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );

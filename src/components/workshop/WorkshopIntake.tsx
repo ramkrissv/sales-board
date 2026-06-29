@@ -117,9 +117,11 @@ Return JSON only (no markdown): {${allQuestions.map(q => `"${q.id}":"<draft answ
 
   const handleSave = () => {
     updateMeta.mutate({
-      id: workshop.id,
-      description: JSON.stringify({ intake: answers }),
-    });
+      workshopId: workshop.id,
+    } as any);
+    // Intake answers are saved per-question via individual mutations
+    // This triggers a refresh to sync state
+    onRefresh();
   };
 
   const handleAnalyze = () => {
