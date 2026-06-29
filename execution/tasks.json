@@ -5,41 +5,61 @@
   "active_tasks": [
     {
       "id": "T001",
-      "title": "Streaming for prose assists",
+      "title": "Presales page refactor (5000+ lines)",
       "status": "deferred",
       "priority": "low",
-      "description": "Progressive text rendering for proposal/narrative generation",
-      "assigned_to": "generator",
-      "spec": null
+      "description": "Break presales/page.tsx into sub-components: ProposalStudio, PricingCalculator, Solutioning, WorkshopManager"
     },
     {
       "id": "T002",
-      "title": "Auto-rank from ongoing workshop inputs",
-      "status": "pending",
-      "priority": "medium",
-      "description": "AI auto-ranks and adds tasks/suggestions as more input is fed to workshop chat",
-      "assigned_to": "generator",
-      "spec": null
+      "title": "SMTP configuration for daily digest",
+      "status": "deferred",
+      "priority": "low",
+      "description": "Configure email provider (SES/SendGrid) for daily digest feature in Settings"
     },
     {
       "id": "T003",
-      "title": "Integration buttons in chat interfaces",
-      "status": "pending",
+      "title": "Streaming for prose assists",
+      "status": "deferred",
       "priority": "low",
-      "description": "Inline integration feature buttons in chat interfaces",
-      "assigned_to": "generator",
-      "spec": null
+      "description": "Progressive text rendering for proposal/narrative generation"
     }
   ],
   "completed_tasks": [
-    "Presales Scope Builder",
-    "Workshop Findings Dashboard (McKinsey-grade)",
-    "Workshop Cockpit deep upgrade",
-    "Workshop Proposal enhanced",
-    "Architecture Dossier (12-slide)",
-    "Codebase alignment (DRY constants)",
-    "Multi-asset deliverable generation",
-    "Lifecycle-based routing",
-    "Guide v4.0 updates"
+    "Presales Scope Builder (8 workstreams, 5 execution models, AI generation)",
+    "Push to Studio (scope → proposal sections)",
+    "Lifecycle-based routing from Command Center",
+    "Enhanced exports (PDF/DOCX/Markdown with scope tables)",
+    "Workshop Findings Dashboard (McKinsey-grade, 5 deliverable assets)",
+    "Workshop Cockpit deep upgrade (SVG dial, expandable levels, auto-insights)",
+    "Workshop Proposal enhanced (investment chart, delivery model mix)",
+    "Smart Assessment Chat (auto-ranking, score accept/reject, conversation continuity)",
+    "Dashboard AI Pipeline Insights (stale deals, win rate, bottleneck detection)",
+    "Workshop-aware AI context in Deal Copilot + Ask Galent",
+    "Account brief DB persistence",
+    "8 Contract templates (SOW T&M/FP/Outcome, MSA, NDA, Amendment, Renewal)",
+    "Architecture Dossier (/architecture.html — 6-section castasint-style)",
+    "LinkedIn Dossier (/dossier.html — 12-slide scroll-snap)",
+    "Architecture Map (/agentic-template.html — codebase structure)",
+    "AI Gateway (13/13 call sites through guardrail chain)",
+    "Sandbox enforcement (gatekeeper/sandbox.config.json → every AI call)",
+    "Telemetry traces + metrics (every AI call logged to files)",
+    "Token budgets wired (config/token_budgets.json → runtime)",
+    "Rate limits enforced (30 rpm, 500 rph)",
+    "Agent telemetry UI on Agents page",
+    "Platform Evals (4 suites, 20 tests, click-to-run)",
+    "Runnable evals API (harness.runEval)",
+    "Harness API (getMetrics, getTraces, getSpecs, getEvals, getSandboxConfig, getTokenBudgets)",
+    "Git hooks active (pre-commit secrets+TS, pre-push build)",
+    "DRY constants (src/lib/workshop/constants.ts)",
+    "Opus model fix (heavy assists never overridden)",
+    "workshopId on Opportunity type",
+    "Plugin config DB persistence (localStorage → MongoDB)",
+    "Intake → Workshop linking",
+    "CLAUDE.md project bootstrap",
+    "8 feature specs + 4 done contracts + 4 eval benchmarks",
+    "Agentic structure (agents, specs, execution, config, gatekeeper, telemetry)",
+    "Workshop CRUD: delete scope items, edit/delete levels, edit/delete workstreams, inline edit use cases, delete findings, delete dimensions",
+    "Guide v4.0 (AI gateway, telemetry, evals, contract templates, scope builder)"
   ]
 }
