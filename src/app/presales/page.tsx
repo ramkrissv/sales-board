@@ -972,8 +972,8 @@ User message: ${text.trim()}`;
                               )}
                             </td>
                             <td className="px-3 py-3 text-center">
-                              {(deal as any).workshopId ? (
-                                <a href={`/workshop/${(deal as any).workshopId}`} onClick={e => e.stopPropagation()}
+                              {deal.workshopId ? (
+                                <a href={`/workshop/${deal.workshopId}`} onClick={e => e.stopPropagation()}
                                   className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-[#0A867F]/10 text-[#0A867F] hover:bg-[#0A867F]/20 transition-colors">
                                   <Sparkles className="h-2.5 w-2.5" /> Open
                                 </a>
