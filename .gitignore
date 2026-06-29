@@ -42,3 +42,9 @@ next-env.d.ts
 node_modules
 .env.local
 .env.local
+
+# Telemetry data files (generated at runtime)
+telemetry/traces/*.jsonl
+telemetry/metrics/*.json
+!telemetry/traces/README.md
+!telemetry/metrics/README.md

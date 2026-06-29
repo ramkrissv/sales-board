@@ -2,6 +2,9 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { connectDB } from '@/lib/db/connection';
 import { getMaxTokens, getModelForUseCase, checkRateLimit } from '@/lib/ai/budgets';
+import { validatePrompt, getSandboxMaxTokens } from '@/lib/ai/sandbox';
+import { logTrace, updateMetrics } from '@/lib/ai/telemetry';
+import { getTaskSummary } from '@/lib/ai/execution';
 import mongoose from 'mongoose';
 
 function getWorkshopModel() {
@@ -441,35 +444,81 @@ export const workshopRouter = router({
         framework: (workshop as any).framework,
       };
 
-      // Rate limit check (reads from config/rate_limits.json)
+      // ── GUARDRAIL CHAIN: rate limit → sandbox → model route → call → telemetry ──
+
+      // 1. Rate limit (config/token_budgets.json)
       const rateCheck = checkRateLimit();
       if (!rateCheck.allowed) {
         throw new Error(`Rate limit exceeded. Retry after ${rateCheck.retryAfter}s.`);
       }
 
-      // Support custom prompt override for asset generation
+      // 2. Build prompt
       const hasCustomPrompt = input.input?._customPrompt;
       const prompt = hasCustomPrompt || assist.buildPrompt(context, input.input);
 
-      // Model routing: config/token_budgets.json → assist registry → env default
+      // 3. Sandbox validation (gatekeeper/sandbox.config.json)
+      const validation = validatePrompt(prompt);
+      if (!validation.valid) {
+        throw new Error(`Sandbox violation: ${validation.violation}`);
+      }
+
+      // 4. Model routing (config/token_budgets.json → registry → env)
       const configModel = getModelForUseCase(input.assistKey);
       const model = assist.model.includes('opus')
-        ? assist.model  // Never override opus assists — they need the capability
+        ? assist.model
         : (configModel || process.env.AI_DEFAULT_MODEL || assist.model);
 
-      // Token limits from config/token_budgets.json
+      // 5. Token limits (config/token_budgets.json + gatekeeper cap)
       const isHeavy = hasCustomPrompt || assist.model.includes('opus') || ['currentstate.narrative', 'proposal.generate', 'scope.synthesize'].includes(input.assistKey);
-      const maxTokens = isHeavy ? getMaxTokens('opus') : getMaxTokens(model);
+      const maxTokens = Math.min(
+        isHeavy ? getMaxTokens('opus') : getMaxTokens(model),
+        getSandboxMaxTokens()
+      );
 
-      const response = await client.messages.create({
+      // 6. Execute AI call with timing
+      const startMs = Date.now();
+      let text = '';
+      let callSuccess = true;
+      try {
+        const response = await client.messages.create({
+          model,
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content: prompt }],
+        });
+        text = response.content[0].type === 'text' ? response.content[0].text : '';
+      } catch (err: any) {
+        callSuccess = false;
+        // 7a. Log error to telemetry
+        logTrace({
+          id: `ai-${Date.now().toString(36)}`,
+          timestamp: new Date().toISOString(),
+          assist: input.assistKey,
+          model,
+          latencyMs: Date.now() - startMs,
+          status: 'error',
+          workshopId: input.workshopId,
+          userId: ctx.userName || ctx.userId,
+          error: err.message,
+        });
+        updateMetrics(input.assistKey, model, Date.now() - startMs, false);
+        throw err;
+      }
+      const latencyMs = Date.now() - startMs;
+
+      // 7b. Log success to telemetry (telemetry/traces/ + telemetry/metrics/)
+      logTrace({
+        id: `ai-${Date.now().toString(36)}`,
+        timestamp: new Date().toISOString(),
+        assist: input.assistKey,
         model,
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }],
+        latencyMs,
+        status: 'success',
+        workshopId: input.workshopId,
+        userId: ctx.userName || ctx.userId,
       });
+      updateMetrics(input.assistKey, model, latencyMs, true);
 
-      const text = response.content[0].type === 'text' ? response.content[0].text : '';
-
-      // Log AI interaction
+      // 8. Log AI interaction to MongoDB
       const interactionId = `ai-${Date.now().toString(36)}`;
       await WS.findOneAndUpdate(
         { id: input.workshopId },

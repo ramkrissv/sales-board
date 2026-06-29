@@ -4,6 +4,8 @@ import { connectDB } from '@/lib/db/connection';
 import { analyzeDeal, analyzePipeline } from '@/lib/ai/deal-coach';
 import { parseAIJson } from '@/lib/ai/parse-json';
 import { checkRateLimit } from '@/lib/ai/budgets';
+import { validatePrompt } from '@/lib/ai/sandbox';
+import { logTrace, updateMetrics } from '@/lib/ai/telemetry';
 import mongoose from 'mongoose';
 
 function getOpportunityModel() {
@@ -421,12 +423,26 @@ KEY METRIC: 21 overdue tasks — clear 5 today${pipelineContext}`;
         ? dealFocusedPrompt
         : `${pipelinePrompt}${dealContext}`;
 
+      const startMs = Date.now();
+      const tracePage = input.context?.page || 'chat';
       const response = await client.messages.create({
         model,
         max_tokens: input.context?.page === 'workshop-create' ? 3000 : input.context?.page?.startsWith('workshop') ? 1500 : isDealFocused ? 800 : 600,
         system: systemPrompt,
         messages: [{ role: 'user', content: input.message }],
       });
+      const latencyMs = Date.now() - startMs;
+
+      // Telemetry: log trace + update metrics (telemetry/traces/ + telemetry/metrics/)
+      logTrace({
+        id: `chat-${Date.now().toString(36)}`,
+        timestamp: new Date().toISOString(),
+        assist: `chat.${tracePage}`,
+        model,
+        latencyMs,
+        status: 'success',
+      });
+      updateMetrics(`chat.${tracePage}`, model, latencyMs, true);
 
       return {
         response:
