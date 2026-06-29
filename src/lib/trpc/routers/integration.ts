@@ -111,11 +111,9 @@ export const integrationRouter = router({
   discover: protectedProcedure
     .input(z.object({ serviceName: z.string().min(1) }))
     .mutation(async ({ input }) => {
-      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
-      const client = getAnthropicClient();
-
-      const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
+      const { aiGateway } = await import('@/lib/ai/gateway');
+      const gw = await aiGateway({
+        source: 'integration.discover',
         max_tokens: 1024,
         messages: [{
           role: 'user',
@@ -136,8 +134,7 @@ export const integrationRouter = router({
 }`
         }],
       });
-
-      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      const text = gw.text;
 
       try {
         return parseAIJson(text);

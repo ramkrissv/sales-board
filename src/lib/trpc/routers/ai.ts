@@ -77,12 +77,11 @@ export const aiRouter = router({
 
       const stakeholders = await Stakeholder.find({ opportunityId: input.opportunityId }).lean();
 
-      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
-      const client = getAnthropicClient();
-
-      const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
+      const { aiGateway } = await import('@/lib/ai/gateway');
+      const gwResponse = await aiGateway({
+        source: 'ai.generateSOW',
         max_tokens: 2048,
+        entityId: input.opportunityId,
         messages: [{ role: 'user', content: `Generate a professional Statement of Work (SOW) document for this engagement:
 
 Customer: ${(opp as any).customerName}
@@ -111,7 +110,7 @@ Generate a complete SOW with these sections:
 Format as clean markdown. Be specific to the project, not generic.` }],
       });
 
-      const content = response.content[0].type === 'text' ? response.content[0].text : '';
+      const content = gwResponse.text;
       return { content, generatedAt: new Date().toISOString(), opportunityId: input.opportunityId };
     }),
 
@@ -126,13 +125,11 @@ Format as clean markdown. Be specific to the project, not generic.` }],
       participants: z.array(z.string()).optional(),
     }))
     .mutation(async ({ input }) => {
-      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
-      const client = getAnthropicClient();
-      const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6';
-
-      const response = await client.messages.create({
-        model,
+      const { aiGateway } = await import('@/lib/ai/gateway');
+      const gwTranscript = await aiGateway({
+        source: 'ai.processTranscript',
         max_tokens: 1500,
+        entityId: input.opportunityId,
         messages: [{ role: 'user', content: `Analyze this sales meeting transcript/notes and extract structured intelligence.
 
 Source: ${input.source}
@@ -169,7 +166,7 @@ Return ONLY valid JSON:
 }` }],
       });
 
-      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      const text = gwTranscript.text;
 
       try {
         const result = parseAIJson(text);
@@ -205,17 +202,14 @@ Return ONLY valid JSON:
       draftId: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
-      const client = getAnthropicClient();
-      const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6';
-
       await connectDB();
       const Opportunity = getOpportunityModel();
       const existingOpps = await Opportunity.find().select('id customerName opportunityName status').lean();
       const dealList = existingOpps.map((o: any) => `${o.id}: ${o.customerName} — ${o.opportunityName} (${o.status})`).join('\n');
 
-      const response = await client.messages.create({
-        model,
+      const { aiGateway } = await import('@/lib/ai/gateway');
+      const gwIntake = await aiGateway({
+        source: 'ai.processIntake',
         max_tokens: 1024,
         messages: [{ role: 'user', content: `You are an AI intake processor for a sales intelligence platform. Analyze this ${input.channel.replace('_', ' ')} input and extract structured deal intelligence.
 
@@ -257,7 +251,7 @@ Return ONLY valid JSON:
 }` }],
       });
 
-      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      const text = gwIntake.text;
 
       try {
         const result = parseAIJson(text);

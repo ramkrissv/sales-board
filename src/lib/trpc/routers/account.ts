@@ -141,12 +141,11 @@ export const accountRouter = router({
         ]
       }).lean();
 
-      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
-      const client = getAnthropicClient();
-
-      const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
+      const { aiGateway } = await import('@/lib/ai/gateway');
+      const gw = await aiGateway({
+        source: 'account.intentScore',
         max_tokens: 512,
+        entityId: input.id,
         messages: [{ role: 'user', content: `Score this account's buying intent for an IT services company. Return ONLY JSON:
 Account: ${(account as any).companyName}
 Industry: ${(account as any).industry || 'Unknown'}
@@ -157,7 +156,7 @@ Health: ${(account as any).accountHealth || 'N/A'}
 {"intentScore": <0-100>, "buyingStage": "<awareness|consideration|evaluation|decision|closed>", "signals": [{"signal": "<what>", "strength": "<strong|moderate|weak>"}], "recommendation": "<one sentence>"}` }],
       });
 
-      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      const text = gw.text;
       try {
         const result = parseAIJson(text);
         // Save score to account

@@ -1,5 +1,7 @@
 import { getAnthropicClient } from '@/lib/ai/anthropic';
 import { connectDB } from '@/lib/db/connection';
+import { checkRateLimit } from '@/lib/ai/budgets';
+import { logTrace, updateMetrics } from '@/lib/ai/telemetry';
 import mongoose from 'mongoose';
 
 /**
@@ -174,6 +176,14 @@ export async function runAgent(
   const messages: any[] = [{ role: 'user', content: goal }];
 
   for (let step = 0; step < maxSteps; step++) {
+    // Rate limit + telemetry on every agent step
+    const rateCheck = checkRateLimit();
+    if (!rateCheck.allowed) {
+      run.reasoning.push(`Rate limit hit at step ${step + 1}. Stopping.`);
+      break;
+    }
+
+    const stepStart = Date.now();
     const response = await client.messages.create({
       model,
       max_tokens: 1024,
@@ -181,6 +191,17 @@ export async function runAgent(
       tools: claudeTools,
       messages,
     });
+    const stepLatency = Date.now() - stepStart;
+
+    logTrace({
+      id: `agent-${Date.now().toString(36)}-s${step}`,
+      timestamp: new Date().toISOString(),
+      assist: `agent.${agentId}.step${step + 1}`,
+      model,
+      latencyMs: stepLatency,
+      status: 'success',
+    });
+    updateMetrics(`agent.${agentId}`, model, stepLatency, true);
 
     // Process response — collect all tool uses, then execute and push results together
     let hasToolUse = false;

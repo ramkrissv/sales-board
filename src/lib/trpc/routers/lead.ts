@@ -137,16 +137,14 @@ export const leadRouter = router({
       const lead = await Lead.findById(input.id);
       if (!lead) throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
 
-      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
-      const client = getAnthropicClient();
-
-      const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
+      const { aiGateway } = await import('@/lib/ai/gateway');
+      const gw = await aiGateway({
+        source: 'lead.qualify',
         max_tokens: 512,
+        entityId: input.id,
         messages: [{ role: 'user', content: `Score this sales lead for qualification. Company: ${lead.company}, Contact: ${lead.contactName} (${lead.contactTitle}), Industry: ${lead.industry || 'Unknown'}, Product Interest: ${lead.productInterest.join(', ') || 'None'}, Service Interest: ${lead.serviceInterest.join(', ') || 'None'}, Source: ${lead.source}, Type: ${lead.type}. Respond with ONLY JSON: {"icpFit": <0-100>, "budgetSignal": <0-100>, "timing": <0-100>, "overallScore": <0-100>, "reasoning": "<2 sentences>"}` }],
       });
-
-      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      const text = gw.text;
       const qual = parseAIJson(text);
 
       lead.aiQualification = qual;
@@ -173,16 +171,14 @@ export const leadRouter = router({
       const lead = await Lead.findById(input.id);
       if (!lead) throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
 
-      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
-      const client = getAnthropicClient();
-
-      const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
+      const { aiGateway } = await import('@/lib/ai/gateway');
+      const gw = await aiGateway({
+        source: 'lead.enrich',
         max_tokens: 512,
+        entityId: input.id,
         messages: [{ role: 'user', content: `Enrich this company profile for sales purposes. Company: ${lead.company}, Contact: ${lead.contactName} (${lead.contactTitle}), Industry: ${lead.industry || 'Unknown'}, Website: ${lead.website || 'Unknown'}. Generate realistic enrichment data. Respond with ONLY JSON: {"industry": "<industry>", "employeeCount": <number>, "annualRevenue": <number in USD>, "techStack": ["<tech1>", "<tech2>", "<tech3>"]}` }],
       });
-
-      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      const text = gw.text;
       const enrichment = parseAIJson(text);
 
       lead.industry = enrichment.industry;
@@ -203,16 +199,14 @@ export const leadRouter = router({
       const lead = await Lead.findById(input.id);
       if (!lead) throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
 
-      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
-      const client = getAnthropicClient();
-
-      const response = await client.messages.create({
-        model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
+      const { aiGateway } = await import('@/lib/ai/gateway');
+      const gw = await aiGateway({
+        source: 'lead.outreach',
         max_tokens: 512,
+        entityId: input.id,
         messages: [{ role: 'user', content: `Draft a personalized sales outreach email for: Company: ${lead.company}, Contact: ${lead.contactName} (${lead.contactTitle}), Email: ${lead.contactEmail}, Interest: ${[...lead.productInterest, ...lead.serviceInterest].join(', ')}, Industry: ${lead.industry || 'their industry'}. The email should be from Galent, a sales intelligence and IT services company. Be professional, concise (under 150 words), and include a specific value proposition. Don't use generic templates. Return ONLY the email body text, no subject line.` }],
       });
-
-      const draft = response.content[0].type === 'text' ? response.content[0].text : '';
+      const draft = gw.text;
       lead.outreachDraft = draft;
       lead.outreachStatus = 'draft_ready';
       if (lead.stage === 'qualify' || lead.stage === 'enrich') lead.stage = 'engage';
@@ -293,8 +287,7 @@ export const leadRouter = router({
     .mutation(async ({ input }) => {
       await connectDB();
       const Lead = getModel();
-      const { getAnthropicClient } = await import('@/lib/ai/anthropic');
-      const client = getAnthropicClient();
+      const { aiGateway } = await import('@/lib/ai/gateway');
 
       const results = [];
       for (const id of input.ids) {
@@ -302,13 +295,13 @@ export const leadRouter = router({
         if (!lead) continue;
 
         try {
-          const response = await client.messages.create({
-            model: process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6',
+          const gw = await aiGateway({
+            source: 'lead.batchQualify',
             max_tokens: 512,
+            entityId: id,
             messages: [{ role: 'user', content: `Score this sales lead for qualification. Company: ${lead.company}, Contact: ${lead.contactName} (${lead.contactTitle}), Industry: ${lead.industry || 'Unknown'}, Product Interest: ${lead.productInterest.join(', ') || 'None'}, Service Interest: ${lead.serviceInterest.join(', ') || 'None'}, Source: ${lead.source}, Type: ${lead.type}. Respond with ONLY JSON: {"icpFit": <0-100>, "budgetSignal": <0-100>, "timing": <0-100>, "overallScore": <0-100>, "reasoning": "<2 sentences>"}` }],
           });
-
-          const text = response.content[0].type === 'text' ? response.content[0].text : '';
+          const text = gw.text;
           const qual = parseAIJson(text);
 
           lead.aiQualification = qual;
