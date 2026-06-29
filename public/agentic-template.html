@@ -3,202 +3,528 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agentic Project Structure Template | Claude Code</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>SalesPilot — Agentic Architecture Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#0B1120;color:#E2E8F0;padding:40px;min-height:100vh}
-h1{font-family:'Space Grotesk',sans-serif;font-size:2rem;margin-bottom:4px;background:linear-gradient(135deg,#0FB5AD,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-h2{font-family:'Space Grotesk',sans-serif;font-size:1rem;color:#94A3B8;font-weight:400;margin-bottom:32px}
-.grid{display:grid;grid-template-columns:360px 1fr;gap:40px;max-width:1200px;margin:0 auto}
-.tree{font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:2}
-.folder{color:#f59e0b}
-.file{color:#94A3B8}
-.yml{color:#0FB5AD}
-.json{color:#7c3aed}
-.md{color:#E2E8F0}
-.indent{padding-left:20px}
-.indent2{padding-left:40px}
-.indent3{padding-left:60px}
-.cards{display:flex;flex-direction:column;gap:16px}
-.card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;position:relative}
-.card::before{content:'';position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:2px}
-.card-teal::before{background:#0FB5AD}
-.card-purple::before{background:#7c3aed}
-.card-amber::before{background:#f59e0b}
-.card-red::before{background:#C8472E}
-.card-blue::before{background:#3b82f6}
-.card-green::before{background:#22c55e}
-.card h3{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;margin-bottom:4px;padding-left:12px}
-.card-teal h3{color:#0FB5AD}
-.card-purple h3{color:#7c3aed}
-.card-amber h3{color:#f59e0b}
-.card-red h3{color:#C8472E}
-.card-blue h3{color:#3b82f6}
-.card-green h3{color:#22c55e}
-.card ul{list-style:none;padding-left:12px}
-.card li{font-size:12px;color:#94A3B8;padding:2px 0}
-.card li::before{content:'✓';color:#0FB5AD;margin-right:8px;font-size:11px}
-.tag{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;margin-left:8px}
-.tag-ro{background:rgba(15,181,173,0.1);color:#0FB5AD}
-.tag-rw{background:rgba(124,58,237,0.1);color:#7c3aed}
-.tag-wo{background:rgba(245,158,11,0.1);color:#f59e0b}
-.footer{text-align:center;margin-top:40px;color:#64748B;font-size:12px}
-@media(max-width:800px){.grid{grid-template-columns:1fr}}
-@media print{body{background:#fff;color:#1a1a2e}.card{border-color:#e4e7ee}}
+body{font-family:'Inter',sans-serif;background:#0B1120;color:#E2E8F0;padding:32px 24px;min-height:100vh;line-height:1.5}
+h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(1.6rem,3vw,2.2rem);background:linear-gradient(135deg,#0FB5AD,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+h2{font-family:'Space Grotesk',sans-serif;font-size:1rem;color:#94A3B8;font-weight:400;margin-bottom:24px}
+.container{max-width:1400px;margin:0 auto}
+.hero-stats{display:flex;gap:16px;margin:16px 0 28px;flex-wrap:wrap}
+.hero-stat{padding:8px 16px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);font-size:12px}
+.hero-stat strong{font-family:'Space Grotesk',sans-serif;font-size:16px;display:block}
+.hero-stat.teal strong{color:#0FB5AD}
+.hero-stat.purple strong{color:#7c3aed}
+.hero-stat.amber strong{color:#f59e0b}
+.hero-stat.blue strong{color:#3b82f6}
+
+/* Architecture diagram */
+.arch-section{margin:32px 0}
+.arch-section h3{font-family:'Space Grotesk',sans-serif;font-size:15px;color:#E2E8F0;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.arch-section h3 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* Main grid */
+.layers{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.layer{border-radius:12px;padding:20px;position:relative;overflow:hidden}
+.layer::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0}
+.layer-teal{background:rgba(15,181,173,0.04);border:1px solid rgba(15,181,173,0.15)}
+.layer-teal::before{background:#0FB5AD}
+.layer-purple{background:rgba(124,58,237,0.04);border:1px solid rgba(124,58,237,0.15)}
+.layer-purple::before{background:#7c3aed}
+.layer-amber{background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.15)}
+.layer-amber::before{background:#f59e0b}
+.layer-red{background:rgba(200,71,46,0.04);border:1px solid rgba(200,71,46,0.15)}
+.layer-red::before{background:#C8472E}
+.layer-blue{background:rgba(59,130,246,0.04);border:1px solid rgba(59,130,246,0.15)}
+.layer-blue::before{background:#3b82f6}
+.layer-green{background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.15)}
+.layer-green::before{background:#22c55e}
+.layer-copper{background:rgba(217,122,43,0.04);border:1px solid rgba(217,122,43,0.15)}
+.layer-copper::before{background:#D97A2B}
+.layer-ink{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.1)}
+.layer-ink::before{background:#64748B}
+
+.layer-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;margin-bottom:2px;padding-left:12px}
+.layer-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;padding-left:12px;margin-bottom:10px;opacity:0.5}
+.layer-teal .layer-title{color:#0FB5AD}
+.layer-purple .layer-title{color:#7c3aed}
+.layer-amber .layer-title{color:#f59e0b}
+.layer-red .layer-title{color:#C8472E}
+.layer-blue .layer-title{color:#3b82f6}
+.layer-green .layer-title{color:#22c55e}
+.layer-copper .layer-title{color:#D97A2B}
+.layer-ink .layer-title{color:#94A3B8}
+
+.files{padding-left:12px;display:flex;flex-wrap:wrap;gap:4px}
+.f{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:#94A3B8;white-space:nowrap}
+.f.hi{color:#0FB5AD;border-color:rgba(15,181,173,0.2);background:rgba(15,181,173,0.06)}
+.f.purple{color:#7c3aed;border-color:rgba(124,58,237,0.2);background:rgba(124,58,237,0.06)}
+.f.amber{color:#f59e0b;border-color:rgba(245,158,11,0.2);background:rgba(245,158,11,0.06)}
+
+.layer-desc{padding-left:12px;margin-top:8px}
+.layer-desc li{font-size:11px;color:#94A3B8;padding:1px 0;list-style:none}
+.layer-desc li::before{content:'→';color:#0FB5AD;margin-right:6px;font-size:10px}
+
+/* SVG diagram */
+.diagram{width:100%;max-width:1100px;margin:0 auto 24px}
+.diagram svg{width:100%;height:auto}
+
+.tag{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;margin-left:6px;vertical-align:middle}
+.tag-pages{background:rgba(59,130,246,0.1);color:#3b82f6}
+.tag-count{background:rgba(15,181,173,0.1);color:#0FB5AD}
+.tag-ai{background:rgba(124,58,237,0.1);color:#7c3aed}
+.tag-db{background:rgba(245,158,11,0.1);color:#f59e0b}
+.tag-safe{background:rgba(200,71,46,0.1);color:#C8472E}
+
+.divider{border:none;height:1px;background:rgba(255,255,255,0.06);margin:32px 0}
+.footer{text-align:center;margin-top:32px;color:#64748B;font-size:11px}
+.footer a{color:#0FB5AD;text-decoration:none}
+@media(max-width:700px){.layers{grid-template-columns:1fr}.hero-stats{flex-direction:column}}
+@media print{body{background:#fff;color:#1a1a2e;padding:12px}.layer{border-color:#ddd}.f{border-color:#ddd;background:#f8f8f8}}
 </style>
 </head>
 <body>
+<div class="container">
 
-<div style="max-width:1200px;margin:0 auto 32px">
-<h1>Claude Code Agentic Project Structure</h1>
-<h2>Template for enterprise-grade AI-native projects</h2>
+<!-- HERO -->
+<h1>SalesPilot — Agentic Architecture Map</h1>
+<h2>Galent AI · Enterprise sales intelligence platform · Next.js 14 + Claude AI + MongoDB</h2>
+
+<div class="hero-stats">
+  <div class="hero-stat teal"><strong>32</strong> Routes / Pages</div>
+  <div class="hero-stat purple"><strong>20</strong> AI Components</div>
+  <div class="hero-stat amber"><strong>22</strong> Mongoose Models</div>
+  <div class="hero-stat blue"><strong>24</strong> tRPC Routers</div>
+  <div class="hero-stat teal"><strong>12</strong> AI Assists</div>
+  <div class="hero-stat purple"><strong>9</strong> Workshop Tabs</div>
 </div>
 
-<div class="grid">
-<!-- LEFT: Directory Tree -->
-<div>
-<div class="tree">
-<div><span class="folder">📁</span> my-project/</div>
+<!-- ═══════ SVG ARCHITECTURE DIAGRAM ═══════ -->
+<div class="diagram">
+<svg viewBox="0 0 1100 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gt" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0FB5AD" stop-opacity="0.15"/><stop offset="100%" stop-color="#0FB5AD" stop-opacity="0.03"/></linearGradient>
+    <linearGradient id="gp" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7c3aed" stop-opacity="0.15"/><stop offset="100%" stop-color="#7c3aed" stop-opacity="0.03"/></linearGradient>
+    <linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.15"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.03"/></linearGradient>
+    <linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.15"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.03"/></linearGradient>
+    <linearGradient id="gr" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#C8472E" stop-opacity="0.15"/><stop offset="100%" stop-color="#C8472E" stop-opacity="0.03"/></linearGradient>
+  </defs>
 
-<div class="indent"><span class="folder">📁</span> .claude/</div>
-<div class="indent2"><span class="folder">📁</span> agents/</div>
-<div class="indent3"><span class="yml">📄</span> planner.yml</div>
-<div class="indent3"><span class="yml">📄</span> generator.yml</div>
-<div class="indent3"><span class="yml">📄</span> evaluator.yml</div>
-<div class="indent2"><span class="folder">📁</span> commands/</div>
-<div class="indent3"><span class="md">📄</span> deploy.md</div>
-<div class="indent3"><span class="md">📄</span> audit.md</div>
-<div class="indent2"><span class="folder">📁</span> skills/</div>
-<div class="indent3"><span class="md">📄</span> patterns.md</div>
+  <!-- Row 1: App Layer -->
+  <rect x="20" y="10" width="520" height="80" rx="10" fill="url(#gt)" stroke="#0FB5AD" stroke-opacity="0.3"/>
+  <text x="40" y="32" fill="#0FB5AD" font-family="IBM Plex Mono" font-size="9" font-weight="500">APP LAYER — src/app/ (32 routes)</text>
+  <text x="40" y="52" fill="#E2E8F0" font-family="Space Grotesk" font-size="12" font-weight="600">Next.js 14 App Router + TypeScript (strict)</text>
+  <text x="40" y="72" fill="#94A3B8" font-family="IBM Plex Mono" font-size="9">pipeline · presales · workshop · dashboard · forecasting · agents · accounts · contracts · deal-room · 23 more</text>
 
-<div class="indent"><span class="folder">📁</span> specs/</div>
-<div class="indent2"><span class="md">📄</span> ARCHITECTURE.md</div>
-<div class="indent2"><span class="folder">📁</span> features/</div>
-<div class="indent3"><span class="md">📄</span> feature-name.md</div>
-<div class="indent2"><span class="folder">📁</span> done_contracts/</div>
-<div class="indent3"><span class="json">📄</span> feature-v1.json</div>
+  <!-- Row 1: Component Layer -->
+  <rect x="560" y="10" width="520" height="80" rx="10" fill="url(#gp)" stroke="#7c3aed" stroke-opacity="0.3"/>
+  <text x="580" y="32" fill="#7c3aed" font-family="IBM Plex Mono" font-size="9" font-weight="500">COMPONENT LAYER — src/components/ (60+ components)</text>
+  <text x="580" y="52" fill="#E2E8F0" font-family="Space Grotesk" font-size="12" font-weight="600">React + Tailwind + shadcn/ui + Recharts + D3</text>
+  <text x="580" y="72" fill="#94A3B8" font-family="IBM Plex Mono" font-size="9">workshop/ (13) · ai/ (20) · kanban/ · modals/ · pipeline/ · intelligence/ · layout/ · voice/</text>
 
-<div class="indent"><span class="folder">📁</span> execution/</div>
-<div class="indent2"><span class="folder">📁</span> workflows/</div>
-<div class="indent3"><span class="yml">📄</span> deploy.yml</div>
-<div class="indent2"><span class="json">📄</span> tasks.json</div>
+  <!-- Arrow down -->
+  <line x1="280" y1="90" x2="280" y2="110" stroke="#0FB5AD" stroke-opacity="0.4" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="820" y1="90" x2="820" y2="110" stroke="#7c3aed" stroke-opacity="0.4" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="280" y1="110" x2="820" y2="110" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
 
-<div class="indent"><span class="folder">📁</span> tests/</div>
-<div class="indent2"><span class="folder">📁</span> agent_evals/</div>
-<div class="indent3"><span class="md">📄</span> quality-bench.md</div>
-<div class="indent2"><span class="folder">📁</span> integration/</div>
+  <!-- Row 2: AI Layer + tRPC Layer -->
+  <rect x="20" y="120" width="350" height="80" rx="10" fill="url(#gp)" stroke="#7c3aed" stroke-opacity="0.3"/>
+  <text x="40" y="142" fill="#7c3aed" font-family="IBM Plex Mono" font-size="9" font-weight="500">AI LAYER — src/lib/ai/ + src/lib/workshop/</text>
+  <text x="40" y="160" fill="#E2E8F0" font-family="Space Grotesk" font-size="12" font-weight="600">Claude AI · Assist Registry · Model Router</text>
+  <text x="40" y="178" fill="#94A3B8" font-family="IBM Plex Mono" font-size="9">ai-registry.ts (12 assists) · anthropic.ts · deal-coach.ts · parse-json.ts</text>
 
-<div class="indent"><span class="folder">📁</span> telemetry/</div>
-<div class="indent2"><span class="folder">📁</span> traces/</div>
-<div class="indent2"><span class="folder">📁</span> metrics/</div>
+  <rect x="390" y="120" width="350" height="80" rx="10" fill="url(#gb)" stroke="#3b82f6" stroke-opacity="0.3"/>
+  <text x="410" y="142" fill="#3b82f6" font-family="IBM Plex Mono" font-size="9" font-weight="500">API LAYER — src/lib/trpc/routers/ (24 routers)</text>
+  <text x="410" y="160" fill="#E2E8F0" font-family="Space Grotesk" font-size="12" font-weight="600">tRPC + Zod · Server Actions · Route Handlers</text>
+  <text x="410" y="178" fill="#94A3B8" font-family="IBM Plex Mono" font-size="9">workshop.ts · ai.ts · opportunity.ts · forecast.ts · graph.ts · 19 more</text>
 
-<div class="indent"><span class="folder">📁</span> config/</div>
-<div class="indent2"><span class="json">📄</span> token_budgets.json</div>
-<div class="indent2"><span class="json">📄</span> rate_limits.json</div>
+  <rect x="760" y="120" width="320" height="80" rx="10" fill="url(#ga)" stroke="#f59e0b" stroke-opacity="0.3"/>
+  <text x="780" y="142" fill="#f59e0b" font-family="IBM Plex Mono" font-size="9" font-weight="500">DATA LAYER — src/lib/db/models/ (22 models)</text>
+  <text x="780" y="160" fill="#E2E8F0" font-family="Space Grotesk" font-size="12" font-weight="600">MongoDB 7 (Mongoose) + Redis 7</text>
+  <text x="780" y="178" fill="#94A3B8" font-family="IBM Plex Mono" font-size="9">workshop.ts · opportunity.ts · user.ts · contract.ts · lead.ts · 17 more</text>
 
-<div class="indent"><span class="folder">📁</span> gatekeeper/</div>
-<div class="indent2"><span class="folder">📁</span> approvals/</div>
-<div class="indent2"><span class="json">📄</span> sandbox.config.json</div>
+  <!-- Arrow down -->
+  <line x1="550" y1="200" x2="550" y2="220" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" stroke-dasharray="4 4"/>
 
-<div class="indent"><span class="folder">📁</span> .githooks/</div>
-<div class="indent2"><span class="file">📄</span> pre-commit</div>
-<div class="indent2"><span class="file">📄</span> pre-push</div>
+  <!-- Row 3: Middleware + Auth + Agents -->
+  <rect x="20" y="230" width="260" height="70" rx="10" fill="url(#gr)" stroke="#C8472E" stroke-opacity="0.3"/>
+  <text x="40" y="252" fill="#C8472E" font-family="IBM Plex Mono" font-size="9" font-weight="500">AUTH &amp; SECURITY</text>
+  <text x="40" y="268" fill="#E2E8F0" font-family="Space Grotesk" font-size="11" font-weight="600">NextAuth · Middleware · RBAC</text>
+  <text x="40" y="284" fill="#94A3B8" font-family="IBM Plex Mono" font-size="9">middleware.ts · auth/ · SSO · 2FA</text>
 
-<div class="indent"><span class="json">📄</span> .mcp.json</div>
-<div class="indent"><span class="md">📄</span> CLAUDE.md</div>
-<div class="indent"><span class="md">📄</span> CLAUDE.local.md</div>
+  <rect x="300" y="230" width="260" height="70" rx="10" fill="url(#gp)" stroke="#7c3aed" stroke-opacity="0.3"/>
+  <text x="320" y="252" fill="#7c3aed" font-family="IBM Plex Mono" font-size="9" font-weight="500">AGENT FLEET — src/lib/agents/</text>
+  <text x="320" y="268" fill="#E2E8F0" font-family="Space Grotesk" font-size="11" font-weight="600">13 AI Agents + 6 Workflows</text>
+  <text x="320" y="284" fill="#94A3B8" font-family="IBM Plex Mono" font-size="9">coordinator.ts · harness.ts · AutonomousMode</text>
+
+  <rect x="580" y="230" width="260" height="70" rx="10" fill="url(#gt)" stroke="#0FB5AD" stroke-opacity="0.3"/>
+  <text x="600" y="252" fill="#0FB5AD" font-family="IBM Plex Mono" font-size="9" font-weight="500">WORKSHOP ENGINE — 9 tabs</text>
+  <text x="600" y="268" fill="#E2E8F0" font-family="Space Grotesk" font-size="11" font-weight="600">Assessment · Scope · Findings · Proposal</text>
+  <text x="600" y="284" fill="#94A3B8" font-family="IBM Plex Mono" font-size="9">13 components · 2 exhibits · scoring.ts</text>
+
+  <rect x="860" y="230" width="220" height="70" rx="10" fill="url(#ga)" stroke="#f59e0b" stroke-opacity="0.3"/>
+  <text x="880" y="252" fill="#f59e0b" font-family="IBM Plex Mono" font-size="9" font-weight="500">DEPLOY — Docker + EC2</text>
+  <text x="880" y="268" fill="#E2E8F0" font-family="Space Grotesk" font-size="11" font-weight="600">Docker Compose · SSM · nginx</text>
+  <text x="880" y="284" fill="#94A3B8" font-family="IBM Plex Mono" font-size="9">Dockerfile · docker-compose.yml</text>
+
+  <!-- Bottom bar: Agentic control plane -->
+  <rect x="20" y="320" width="1060" height="30" rx="8" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)"/>
+  <text x="550" y="340" text-anchor="middle" fill="#64748B" font-family="IBM Plex Mono" font-size="10">.claude/agents/ · specs/ · execution/ · config/ · gatekeeper/ · telemetry/ · tests/agent_evals/ · .githooks/ · .mcp.json</text>
+</svg>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════ LAYER 1: APP ROUTES ═══════ -->
+<div class="arch-section">
+<h3><span class="dot" style="background:#0FB5AD"></span> APP ROUTES <span class="tag tag-pages">32 pages</span></h3>
+<div class="layers">
+  <div class="layer layer-teal">
+    <div class="layer-title">Pipeline & Deals</div>
+    <div class="layer-sub">src/app/</div>
+    <div class="files">
+      <span class="f hi">page.tsx (Home)</span>
+      <span class="f hi">pipeline/</span>
+      <span class="f">table/</span>
+      <span class="f">timeline/</span>
+      <span class="f">waterfall/</span>
+      <span class="f">funnel/</span>
+      <span class="f">graph/</span>
+      <span class="f">dashboard/</span>
+    </div>
+  </div>
+  <div class="layer layer-teal">
+    <div class="layer-title">Presales & Workshops</div>
+    <div class="files">
+      <span class="f hi">presales/</span>
+      <span class="f hi">workshop/[id]/</span>
+      <span class="f">pricing/</span>
+      <span class="f">contracts/</span>
+      <span class="f">deal-room/</span>
+    </div>
+  </div>
+  <div class="layer layer-teal">
+    <div class="layer-title">Intelligence & CRM</div>
+    <div class="files">
+      <span class="f">accounts/</span>
+      <span class="f">forecasting/</span>
+      <span class="f">agents/</span>
+      <span class="f">leads/</span>
+      <span class="f">campaigns/</span>
+      <span class="f">tasks/</span>
+      <span class="f">stakeholders/</span>
+      <span class="f">insights/</span>
+      <span class="f">growth/</span>
+      <span class="f">calendar/</span>
+      <span class="f">ask/</span>
+      <span class="f">enablement/</span>
+      <span class="f">integrations/</span>
+      <span class="f">workflows/</span>
+      <span class="f">schedule/</span>
+      <span class="f">guide/</span>
+      <span class="f">settings/</span>
+    </div>
+  </div>
 </div>
 </div>
 
-<!-- RIGHT: Explanation Cards -->
-<div class="cards">
+<hr class="divider">
 
-<div class="card card-teal">
-<h3>ENGINE CONFIGURATION <span class="tag tag-ro">Agent Read-Only</span></h3>
-<ul>
-<li>Isolated sub-agent personas with constraints</li>
-<li>Planner: specs → execution plans</li>
-<li>Generator: independent code-writing with guardrails</li>
-<li>Evaluator: strict grading rubric (7 criteria)</li>
-<li>Slash commands mapped to .md files</li>
-<li>Reusable skills & technical pattern snippets</li>
-</ul>
+<!-- ═══════ LAYER 2: COMPONENTS ═══════ -->
+<div class="arch-section">
+<h3><span class="dot" style="background:#7c3aed"></span> COMPONENT ARCHITECTURE <span class="tag tag-ai">60+ components</span></h3>
+<div class="layers">
+  <div class="layer layer-purple">
+    <div class="layer-title">Workshop Engine (13 + 2 exhibits)</div>
+    <div class="layer-sub">src/components/workshop/</div>
+    <div class="files">
+      <span class="f purple">WorkshopCockpit</span>
+      <span class="f purple">WorkshopFindings</span>
+      <span class="f purple">WorkshopProposal</span>
+      <span class="f purple">WorkshopScope</span>
+      <span class="f purple">WorkshopUseCases</span>
+      <span class="f purple">WorkshopIntake</span>
+      <span class="f">WorkshopsTab</span>
+      <span class="f">DimensionCard</span>
+      <span class="f">FrameworkBuilder</span>
+      <span class="f">DeepDiscovery</span>
+      <span class="f">MaturityChips</span>
+      <span class="f">StageGate</span>
+      <span class="f hi">ReadinessSpine</span>
+      <span class="f hi">GapHeatmap</span>
+    </div>
+  </div>
+  <div class="layer layer-purple">
+    <div class="layer-title">AI Components (20)</div>
+    <div class="layer-sub">src/components/ai/</div>
+    <div class="files">
+      <span class="f purple">DealCopilot</span>
+      <span class="f purple">AutonomousMode</span>
+      <span class="f purple">MeetingIntelligence</span>
+      <span class="f purple">WinLossAutopsy</span>
+      <span class="f purple">AIEmailComposer</span>
+      <span class="f">CompetitiveBattleStation</span>
+      <span class="f">ClientHealthScore</span>
+      <span class="f">SmartForecast</span>
+      <span class="f">SalesPlaybook</span>
+      <span class="f">AIDealRoom</span>
+      <span class="f">GenUI</span>
+      <span class="f">PilotNudges</span>
+      <span class="f">SignalCards</span>
+      <span class="f">CopilotPanel</span>
+      <span class="f">WorkflowRunner</span>
+    </div>
+  </div>
+  <div class="layer layer-purple">
+    <div class="layer-title">Platform UI</div>
+    <div class="layer-sub">src/components/</div>
+    <div class="files">
+      <span class="f">kanban/KanbanCard</span>
+      <span class="f">modals/DealDetail</span>
+      <span class="f">pipeline/PipelineViews</span>
+      <span class="f">intelligence/Mindmap</span>
+      <span class="f">layout/AppShell</span>
+      <span class="f">voice/Recorder</span>
+      <span class="f">shared/</span>
+      <span class="f">ui/ (shadcn)</span>
+    </div>
+  </div>
+</div>
 </div>
 
-<div class="card card-purple">
-<h3>SPEC ENGINEERING <span class="tag tag-ro">Immutable</span></h3>
-<ul>
-<li>ARCHITECTURE.md — core technical boundaries</li>
-<li>Feature specs with acceptance criteria</li>
-<li>Done contracts: JSON schemas defining "success"</li>
-<li>Agents read but never modify specs</li>
-</ul>
+<hr class="divider">
+
+<!-- ═══════ LAYER 3: AI + API + DATA ═══════ -->
+<div class="arch-section">
+<h3><span class="dot" style="background:#3b82f6"></span> SERVICE LAYERS</h3>
+<div class="layers">
+  <div class="layer layer-blue">
+    <div class="layer-title">AI Service <span class="tag tag-ai">server-only</span></div>
+    <div class="layer-sub">src/lib/ai/ + src/lib/workshop/</div>
+    <div class="files">
+      <span class="f purple">ai-registry.ts (12 assists)</span>
+      <span class="f purple">anthropic.ts</span>
+      <span class="f">deal-coach.ts</span>
+      <span class="f">parse-json.ts</span>
+      <span class="f hi">constants.ts</span>
+      <span class="f hi">scoring.ts</span>
+      <span class="f">types.ts</span>
+      <span class="f">export.ts</span>
+    </div>
+    <ul class="layer-desc">
+      <li>Assist Registry: typed, model-routed (sonnet/opus/haiku), zod-validated</li>
+      <li>Every AI call logged as AIInteraction (input, output, accept/edit/reject)</li>
+      <li>Custom prompt override via _customPrompt for asset generation</li>
+      <li>max_tokens: 8000 opus, 4000 sonnet, 2000 haiku</li>
+    </ul>
+  </div>
+  <div class="layer layer-blue">
+    <div class="layer-title">tRPC API <span class="tag tag-count">24 routers</span></div>
+    <div class="layer-sub">src/lib/trpc/routers/</div>
+    <div class="files">
+      <span class="f hi">workshop.ts</span>
+      <span class="f hi">ai.ts</span>
+      <span class="f hi">opportunity.ts</span>
+      <span class="f">forecast.ts</span>
+      <span class="f">graph.ts</span>
+      <span class="f">account.ts</span>
+      <span class="f">contract.ts</span>
+      <span class="f">stakeholder.ts</span>
+      <span class="f">task.ts</span>
+      <span class="f">user.ts</span>
+      <span class="f">workflow.ts</span>
+      <span class="f">notification.ts</span>
+      <span class="f">integration.ts</span>
+      <span class="f">harness.ts</span>
+      <span class="f">+10 more</span>
+    </div>
+  </div>
+  <div class="layer layer-amber">
+    <div class="layer-title">Data Models <span class="tag tag-db">22 schemas</span></div>
+    <div class="layer-sub">src/lib/db/models/</div>
+    <div class="files">
+      <span class="f amber">workshop.ts</span>
+      <span class="f amber">workshop-template.ts</span>
+      <span class="f amber">opportunity.ts</span>
+      <span class="f">user.ts</span>
+      <span class="f">contract.ts</span>
+      <span class="f">lead.ts</span>
+      <span class="f">account.ts</span>
+      <span class="f">task.ts</span>
+      <span class="f">stakeholder.ts</span>
+      <span class="f">notification.ts</span>
+      <span class="f">knowledge-graph.ts</span>
+      <span class="f">workflow.ts</span>
+      <span class="f">+10 more</span>
+    </div>
+    <ul class="layer-desc">
+      <li>Workshop = single embedded document (framework → levels → dims → scores)</li>
+      <li>Clone-on-create from templates — edits never cross workshops</li>
+      <li>6 seed scripts for templates + ontology + demo data</li>
+    </ul>
+  </div>
+</div>
 </div>
 
-<div class="card card-amber">
-<h3>ORCHESTRATION ENGINE <span class="tag tag-rw">Agent Read-Write</span></h3>
-<ul>
-<li>Reusable workflow YAML (deploy, build, test)</li>
-<li>tasks.json — single-source-of-truth state machine</li>
-<li>Planner writes workflows, Generator reads them</li>
-</ul>
+<hr class="divider">
+
+<!-- ═══════ LAYER 4: AGENTIC CONTROL PLANE ═══════ -->
+<div class="arch-section">
+<h3><span class="dot" style="background:#C8472E"></span> AGENTIC CONTROL PLANE</h3>
+<div class="layers">
+  <div class="layer layer-green">
+    <div class="layer-title">Engine Configuration <span class="tag tag-safe">read-only</span></div>
+    <div class="layer-sub">.claude/</div>
+    <div class="files">
+      <span class="f hi">agents/planner.yml</span>
+      <span class="f hi">agents/generator.yml</span>
+      <span class="f hi">agents/evaluator.yml</span>
+      <span class="f">commands/workshop.md</span>
+      <span class="f">commands/audit.md</span>
+      <span class="f">skills/workshop-assist.md</span>
+    </div>
+    <ul class="layer-desc">
+      <li>Planner: reads specs → writes execution plans (opus)</li>
+      <li>Generator: reads plans → writes code with forbidden patterns (sonnet)</li>
+      <li>Evaluator: 7-criteria grading rubric against spec (opus)</li>
+    </ul>
+  </div>
+  <div class="layer layer-copper">
+    <div class="layer-title">Spec Engineering <span class="tag tag-safe">immutable</span></div>
+    <div class="layer-sub">specs/</div>
+    <div class="files">
+      <span class="f amber">ARCHITECTURE.md</span>
+      <span class="f">features/workshop-findings.md</span>
+      <span class="f">features/presales-scope-builder.md</span>
+      <span class="f">done_contracts/workshop-v1.json</span>
+    </div>
+    <ul class="layer-desc">
+      <li>Architecture boundaries agents cannot violate</li>
+      <li>Feature specs with acceptance criteria + done contracts (JSON)</li>
+    </ul>
+  </div>
+  <div class="layer layer-ink">
+    <div class="layer-title">Orchestration Engine <span class="tag tag-count">read-write</span></div>
+    <div class="layer-sub">execution/</div>
+    <div class="files">
+      <span class="f">workflows/deploy.yml</span>
+      <span class="f">tasks.json</span>
+    </div>
+    <ul class="layer-desc">
+      <li>Deploy pipeline: build → push → SSM → verify → health check</li>
+      <li>Task state machine: active/completed/deferred</li>
+    </ul>
+  </div>
+  <div class="layer layer-red">
+    <div class="layer-title">Quality Gate <span class="tag tag-safe">validation</span></div>
+    <div class="layer-sub">tests/</div>
+    <div class="files">
+      <span class="f">agent_evals/findings-quality.md</span>
+      <span class="f">integration/</span>
+      <span class="f">workshop-scoring.test.ts</span>
+    </div>
+    <ul class="layer-desc">
+      <li>AI output regression benchmarks (4 scenarios)</li>
+      <li>Scoring math unit tests (vitest)</li>
+    </ul>
+  </div>
+</div>
 </div>
 
-<div class="card card-red">
-<h3>QUALITY GATE <span class="tag tag-wo">Validation Loop</span></h3>
-<ul>
-<li>Agent evals — regression benchmarks for prompt drift</li>
-<li>Quality gates per AI assist (accept rate, output length)</li>
-<li>Integration tests for critical flows</li>
-</ul>
+<hr class="divider">
+
+<!-- ═══════ LAYER 5: GUARDRAILS ═══════ -->
+<div class="arch-section">
+<h3><span class="dot" style="background:#f59e0b"></span> GUARDRAILS & OBSERVABILITY</h3>
+<div class="layers">
+  <div class="layer layer-amber">
+    <div class="layer-title">Economics & Safety</div>
+    <div class="layer-sub">config/</div>
+    <div class="files">
+      <span class="f amber">token_budgets.json</span>
+      <span class="f amber">rate_limits.json</span>
+    </div>
+    <ul class="layer-desc">
+      <li>$50/day, $500/month hard caps</li>
+      <li>Model tier routing: haiku (cheap) → sonnet (standard) → opus (heavy)</li>
+      <li>30 AI rpm, 500 AI rph, 5 concurrent max</li>
+    </ul>
+  </div>
+  <div class="layer layer-red">
+    <div class="layer-title">Secure Access Layer</div>
+    <div class="layer-sub">gatekeeper/</div>
+    <div class="files">
+      <span class="f">sandbox.config.json</span>
+      <span class="f">approvals/</span>
+    </div>
+    <ul class="layer-desc">
+      <li>File write allowlist/denylist per agent</li>
+      <li>Git guardrails: no force push, no push to main</li>
+      <li>Network allowlist: anthropic, github, aws only</li>
+      <li>High-risk mutations queued for human approval</li>
+    </ul>
+  </div>
+  <div class="layer layer-blue">
+    <div class="layer-title">Observability</div>
+    <div class="layer-sub">telemetry/</div>
+    <div class="files">
+      <span class="f">traces/</span>
+      <span class="f">metrics/</span>
+    </div>
+    <ul class="layer-desc">
+      <li>AI interaction traces in MongoDB (per workshop)</li>
+      <li>Accept rate target: &gt; 70% per assist type</li>
+      <li>Reject spikes = prompt drift signal</li>
+    </ul>
+  </div>
+  <div class="layer layer-ink">
+    <div class="layer-title">Root Config</div>
+    <div class="files">
+      <span class="f">.githooks/pre-commit</span>
+      <span class="f">.githooks/pre-push</span>
+      <span class="f hi">.mcp.json</span>
+      <span class="f hi">CLAUDE.md</span>
+      <span class="f">docker-compose.yml</span>
+      <span class="f">Dockerfile</span>
+      <span class="f">server.ts</span>
+    </div>
+    <ul class="layer-desc">
+      <li>Pre-commit: secrets scan + TypeScript check</li>
+      <li>Pre-push: full build verification</li>
+      <li>MCP: 5 tool schemas for external integrations</li>
+      <li>Docker Compose: app + mongo:7 + redis:7-alpine</li>
+    </ul>
+  </div>
+</div>
 </div>
 
-<div class="card card-blue">
-<h3>OBSERVABILITY LAYER <span class="tag tag-wo">Append-Only</span></h3>
-<ul>
-<li>AI interaction traces (input, output, status, model, cost)</li>
-<li>Latency metrics per assist type</li>
-<li>Accept/reject rates for prompt tuning signals</li>
-</ul>
-</div>
+<hr class="divider">
 
-<div class="card card-green">
-<h3>ECONOMICS & SAFETY <span class="tag tag-ro">System Caps</span></h3>
-<ul>
-<li>Token budgets: daily/monthly dollar caps</li>
-<li>Model tier routing (haiku → sonnet → opus)</li>
-<li>Rate limits per endpoint category</li>
-</ul>
-</div>
-
-<div class="card card-red">
-<h3>SECURE ACCESS LAYER <span class="tag tag-ro">Sandbox</span></h3>
-<ul>
-<li>File write allowlist/denylist per agent</li>
-<li>Git operation guardrails (no force push)</li>
-<li>Network allowlist (API endpoints only)</li>
-<li>High-risk changes queued for human approval</li>
-</ul>
-</div>
-
-<div class="card card-teal">
-<h3>ROOT CONFIG FILES</h3>
-<ul>
-<li>.githooks/ — pre-commit (secrets scan, TypeScript check) + pre-push (build verify)</li>
-<li>.mcp.json — Model Context Protocol tool schemas</li>
-<li>CLAUDE.md — global routing + bootstrap rules</li>
-<li>CLAUDE.local.md — user-specific overrides (gitignored)</li>
-</ul>
-</div>
-
+<!-- ═══════ DEPLOY ═══════ -->
+<div class="arch-section">
+<h3><span class="dot" style="background:#22c55e"></span> DEPLOYMENT</h3>
+<div class="layers">
+  <div class="layer layer-green" style="grid-column:1/-1">
+    <div class="layer-title">EC2 + Docker Compose → salespilot.galent.ai</div>
+    <div style="padding-left:12px;font-size:11px;color:#94A3B8;font-family:'IBM Plex Mono',monospace;margin-top:8px;display:flex;gap:24px;flex-wrap:wrap">
+      <span>Instance: <strong style="color:#22c55e">i-085cae314b9dda866</strong></span>
+      <span>IP: <strong style="color:#E2E8F0">52.20.222.188</strong></span>
+      <span>Containers: <strong style="color:#E2E8F0">app + mongo:7 + redis:7-alpine</strong></span>
+      <span>Build: <strong style="color:#f59e0b">~7 min</strong></span>
+      <span>Deploy via: <strong style="color:#3b82f6">AWS SSM</strong></span>
+    </div>
+    <div style="padding-left:12px;margin-top:10px;font-size:11px;color:#64748B;font-family:'IBM Plex Mono',monospace">
+      git push origin main:feature/&lt;name&gt; → SSM: git fetch + checkout + docker compose build + up -d → verify health
+    </div>
+  </div>
 </div>
 </div>
 
 <div class="footer">
-  Galent AI · Agentic Project Template · Works with Claude Code, Cursor, Windsurf<br>
-  Based on SalesPilot architecture · <a href="https://salespilot.galent.ai" style="color:#0FB5AD">salespilot.galent.ai</a>
+  <strong style="color:#0FB5AD">Galent AI</strong> · SalesPilot Architecture Map · <a href="https://salespilot.galent.ai">salespilot.galent.ai</a> · <a href="/dossier.html">Full Dossier</a>
 </div>
 
+</div>
 </body>
 </html>
