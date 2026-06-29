@@ -361,6 +361,22 @@ function IntakeContent() {
               </div>
             )}
 
+            {/* Workshop link — if matched deal has an active workshop */}
+            {result.matchedDealId && (() => {
+              const matchedOpp = opportunities.find((o: any) => o.id === result.matchedDealId);
+              return (matchedOpp as any)?.workshopId ? (
+                <Link href={`/workshop/${(matchedOpp as any).workshopId}`}
+                  className="flex items-center gap-2 p-3 rounded-lg bg-[#0A867F]/10 border border-[#0A867F]/20 text-xs text-[#0A867F] hover:bg-[#0A867F]/15 transition-colors">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <div className="flex-1">
+                    <div className="font-medium">Active Workshop Assessment</div>
+                    <div className="text-[10px] opacity-70">Log this signal to the {result.matchedDealName} workshop for assessment context</div>
+                  </div>
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              ) : null;
+            })()}
+
             {/* Auto-logged confirmation */}
             {result.confidence >= 80 && result.matchedDealId && (
               <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-400">

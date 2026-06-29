@@ -15,6 +15,7 @@ export interface ISettings extends Document {
     contractExpiry: boolean;
     dealAssignments: boolean;
   };
+  pluginConfigs?: Record<string, Record<string, string>>;
 }
 
 const SettingsSchema = new Schema<ISettings>({
@@ -32,6 +33,7 @@ const SettingsSchema = new Schema<ISettings>({
     contractExpiry: { type: Boolean, default: true },
     dealAssignments: { type: Boolean, default: true },
   },
+  pluginConfigs: { type: Schema.Types.Mixed, default: {} },
 }, { timestamps: true });
 
 export default mongoose.models.Settings || mongoose.model<ISettings>('Settings', SettingsSchema);

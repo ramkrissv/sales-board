@@ -165,17 +165,12 @@ export default function SettingsPage() {
     },
   });
 
-  // Load plugin configs from localStorage
+  // Load plugin configs from DB (persisted via settings.update)
   useEffect(() => {
-    const saved: Record<string, Record<string, string>> = {};
-    PLUGINS.forEach(plugin => {
-      const raw = localStorage.getItem(`plugin_config_${plugin.id}`);
-      if (raw) {
-        try { saved[plugin.id] = JSON.parse(raw); } catch { /* ignore */ }
-      }
-    });
-    if (Object.keys(saved).length > 0) setPluginConfigs(saved);
-  }, []);
+    if (settings?.pluginConfigs && typeof settings.pluginConfigs === 'object') {
+      setPluginConfigs(settings.pluginConfigs as Record<string, Record<string, string>>);
+    }
+  }, [settings]);
 
   const tabs: { id: TabId; label: string; icon: any }[] = [
     { id: 'ai', label: 'AI & Agents', icon: Bot },
@@ -203,8 +198,8 @@ export default function SettingsPage() {
     updateMutation.mutate({ notifications: { ...notifications, [key]: value } });
   };
   const handlePluginSave = (pluginId: string, pluginName: string) => {
-    const config = pluginConfigs[pluginId] || {};
-    localStorage.setItem(`plugin_config_${pluginId}`, JSON.stringify(config));
+    // Persist to DB instead of localStorage — survives logout/browser clear
+    updateMutation.mutate({ pluginConfigs } as any);
     setToast(`${pluginName} configuration saved`);
     setTimeout(() => setToast(null), 3000);
   };
