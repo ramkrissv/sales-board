@@ -10,24 +10,26 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
---bg:#0F172A;--surface:#1E293B;--surface2:#273548;--border:#334155;
---text:#F8FAFC;--text2:#94A3B8;--text3:#64748B;
---teal:#0FB5AD;--teal-dim:rgba(15,181,173,.15);
+/* SalesPilot design tokens from CLAUDE.md §10 */
+--bg:#0B1120;--surface:#131B2E;--surface2:#1A2540;--border:rgba(255,255,255,0.08);
+--text:#E2E8F0;--text2:#94A3B8;--text3:#64748B;
+--teal:#0FB5AD;--teal-deep:#0A867F;--teal-dim:rgba(15,181,173,.15);
 --purple:#7c3aed;--purple-dim:rgba(124,58,237,.15);
---amber:#f59e0b;--amber-dim:rgba(245,158,11,.15);
+--amber:#D97A2B;--amber-dim:rgba(217,122,43,.15);
 --red:#C8472E;--red-dim:rgba(200,71,46,.15);
 --blue:#3b82f6;--blue-dim:rgba(59,130,246,.15);
 --green:#22c55e;--green-dim:rgba(34,197,94,.15);
+--copper:#D97A2B;--flag:#C8472E;
 --radius:12px;--sidebar:272px;--topbar:56px;
 --font-body:'Inter',system-ui,sans-serif;
 --font-head:'Space Grotesk',sans-serif;
 --font-mono:'IBM Plex Mono',monospace;
 }
 [data-theme="light"]{
---bg:#F8FAFC;--surface:#FFFFFF;--surface2:#F1F5F9;--border:#E2E8F0;
---text:#0F172A;--text2:#475569;--text3:#94A3B8;
+--bg:#F5F6F9;--surface:#FFFFFF;--surface2:#F1F5F9;--border:#E4E7EE;
+--text:#0B1120;--text2:#475569;--text3:#94A3B8;
 --teal-dim:rgba(15,181,173,.1);--purple-dim:rgba(124,58,237,.1);
---amber-dim:rgba(245,158,11,.1);--red-dim:rgba(200,71,46,.1);
+--amber-dim:rgba(217,122,43,.1);--red-dim:rgba(200,71,46,.1);
 --blue-dim:rgba(59,130,246,.1);--green-dim:rgba(34,197,94,.1);
 }
 html{scroll-behavior:smooth;scroll-padding-top:calc(var(--topbar) + 24px)}
@@ -38,8 +40,8 @@ a{color:var(--teal);text-decoration:none}
 a:hover{text-decoration:underline}
 
 /* TOPBAR */
-.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;gap:16px;backdrop-filter:blur(12px);background:rgba(30,41,59,.85)}
-[data-theme="light"] .topbar{background:rgba(255,255,255,.85)}
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;gap:16px;backdrop-filter:blur(12px);background:rgba(11,17,32,.88)}
+[data-theme="light"] .topbar{background:rgba(245,246,249,.88)}
 .topbar-brand{font-family:var(--font-head);font-weight:700;font-size:18px;color:var(--teal);white-space:nowrap;display:flex;align-items:center;gap:8px}
 .topbar-brand svg{width:22px;height:22px}
 .topbar-search{flex:1;max-width:420px;margin:0 auto}
