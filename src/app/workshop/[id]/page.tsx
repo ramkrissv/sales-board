@@ -457,9 +457,10 @@ function AssessmentChat({ workshopId, levelName, dimensions, customerName, onSco
   workshopId: string; levelName: string; dimensions: any[]; customerName: string;
   onScore: (dimId: string, field: string, value: any) => void; levelId: string;
 }) {
-  const [messages, setMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
+  const [messages, setMessages] = useState<{ role: 'user' | 'ai'; text: string; scores?: { dimId: string; dimName: string; current: number; target: number }[] }[]>([]);
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
+  const [pendingScores, setPendingScores] = useState<{ dimId: string; dimName: string; current: number; target: number }[]>([]);
   const chatMutation = trpc.ai.chat.useMutation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -470,6 +471,7 @@ function AssessmentChat({ workshopId, levelName, dimensions, customerName, onSco
   const MATURITY = ['Absent', 'Ad hoc', 'Repeatable', 'Governed', 'Optimized'];
   const scored = dimensions.filter((d: any) => d.currentScore != null);
   const unscored = dimensions.filter((d: any) => d.currentScore == null);
+  const completionPct = Math.round((scored.length / Math.max(1, dimensions.length)) * 100);
 
   const handleSend = (text?: string) => {
     const msg = (text || input).trim();
@@ -483,33 +485,65 @@ function AssessmentChat({ workshopId, levelName, dimensions, customerName, onSco
       `${d.id} ${d.name}: ${d.currentScore != null ? MATURITY[d.currentScore] + (d.targetScore != null ? ' → ' + MATURITY[d.targetScore] : '') : 'not scored'}${d.finding?.body ? ' | Finding: ' + d.finding.body.slice(0, 80) : ''}`
     ).join('\n');
 
+    // Build conversation history for continuity
+    const history = messages.slice(-6).map(m => `${m.role === 'user' ? 'Human' : 'Assistant'}: ${m.text}`).join('\n');
+
     chatMutation.mutate({
-      message: `You are an expert consultant running an assessment workshop for ${customerName}. Current level: "${levelName}".
+      message: `You are a McKinsey senior consultant + Google architect running an assessment workshop for ${customerName}. Current level: "${levelName}". ${scored.length}/${dimensions.length} dimensions scored (${completionPct}%).
 
 DIMENSIONS:
 ${dimContext}
 
+CONVERSATION HISTORY:
+${history || '(start of conversation)'}
+
 USER: ${msg}
 
-Respond concisely (2-4 sentences). If the user describes observations, suggest scores. If they ask strategic questions, give McKinsey-quality insights. If they want to score a dimension, confirm and provide rationale.
+INSTRUCTIONS:
+1. Respond in 2-5 sentences with McKinsey-quality insights
+2. If the user describes observations, ALWAYS suggest scores with rationale
+3. After each response, recommend the NEXT dimension to assess (most logical next step)
+4. Identify patterns across scored dimensions — flag contradictions or themes
+5. Reference best practices and industry benchmarks where relevant
+6. If most dims are scored, synthesize emerging findings and strategic implications
 
-If suggesting scores, include at the end: [SCORE: dimId=X.X current=N target=N] for each suggestion.`,
+SCORE FORMAT (include for EVERY relevant dimension):
+[SCORE: dimId=<id> dimName=<name> current=<0-4> target=<0-4>]
+
+NEXT RECOMMENDATION FORMAT (always include):
+[NEXT: dimId=<id> dimName=<name> reason=<why this dimension next>]`,
       context: { page: 'workshop-assess-chat' },
     }, {
       onSuccess: (data) => {
         const response = data.response;
 
-        // Extract and apply any score suggestions
-        const scoreMatches = response.matchAll(/\[SCORE:\s*dimId=(\S+)\s+current=(\d)\s+target=(\d)\]/g);
+        // Extract score suggestions
+        const extractedScores: { dimId: string; dimName: string; current: number; target: number }[] = [];
+        const scoreMatches = response.matchAll(/\[SCORE:\s*dimId=(\S+)\s+dimName=([^\]]*?)\s+current=(\d)\s+target=(\d)\]/g);
         for (const match of scoreMatches) {
+          const [, dimId, dimName, cur, tgt] = match;
+          extractedScores.push({ dimId, dimName: dimName.trim(), current: parseInt(cur), target: parseInt(tgt) });
+        }
+        // Also support old format
+        const oldMatches = response.matchAll(/\[SCORE:\s*dimId=(\S+)\s+current=(\d)\s+target=(\d)\]/g);
+        for (const match of oldMatches) {
           const [, dimId, cur, tgt] = match;
-          onScore(dimId, 'currentScore', parseInt(cur));
-          onScore(dimId, 'targetScore', parseInt(tgt));
+          const dim = dimensions.find((d: any) => d.id === dimId);
+          if (dim) extractedScores.push({ dimId, dimName: dim.name, current: parseInt(cur), target: parseInt(tgt) });
         }
 
-        // Clean response (remove score tags for display)
-        const cleanResponse = response.replace(/\[SCORE:[^\]]+\]/g, '').trim();
-        setMessages(prev => [...prev, { role: 'ai', text: cleanResponse }]);
+        // Set pending scores (user must accept)
+        if (extractedScores.length > 0) {
+          setPendingScores(extractedScores);
+        }
+
+        // Clean response
+        const cleanResponse = response
+          .replace(/\[SCORE:[^\]]+\]/g, '')
+          .replace(/\[NEXT:[^\]]+\]/g, '')
+          .trim();
+
+        setMessages(prev => [...prev, { role: 'ai', text: cleanResponse, scores: extractedScores.length > 0 ? extractedScores : undefined }]);
         setThinking(false);
       },
       onError: () => {
@@ -519,26 +553,70 @@ If suggesting scores, include at the end: [SCORE: dimId=X.X current=N target=N] 
     });
   };
 
+  const acceptScore = (score: { dimId: string; current: number; target: number }) => {
+    onScore(score.dimId, 'currentScore', score.current);
+    onScore(score.dimId, 'targetScore', score.target);
+    setPendingScores(prev => prev.filter(s => s.dimId !== score.dimId));
+  };
+
+  const acceptAllScores = () => {
+    pendingScores.forEach(s => {
+      onScore(s.dimId, 'currentScore', s.current);
+      onScore(s.dimId, 'targetScore', s.target);
+    });
+    setPendingScores([]);
+  };
+
   const quickPrompts = [
     unscored.length > 0 ? `Walk me through scoring "${unscored[0].name}"` : null,
-    scored.length > 0 ? `What are the key gaps in ${levelName}?` : null,
+    unscored.length >= 3 ? `Auto-assess the next 3 unscored dimensions based on what we know so far` : null,
+    scored.length > 0 ? `What patterns and gaps do you see across the ${scored.length} scored dimensions?` : null,
+    scored.length >= dimensions.length * 0.7 ? `Synthesize the key findings for ${levelName} — what's the headline?` : null,
     `What best practices should ${customerName} adopt for ${levelName}?`,
-    `Suggest strategic priorities for this level`,
   ].filter(Boolean) as string[];
 
   return (
     <div className="rounded-xl bg-card border border-border overflow-hidden">
-      <div className="px-4 py-3 bg-[#0B1120] text-white flex items-center gap-2">
-        <Sparkles className="h-3.5 w-3.5 text-[#0FB5AD]" />
-        <span className="text-xs font-semibold">Assessment AI</span>
-        <span className="text-[9px] text-white/50 ml-auto">{scored.length}/{dimensions.length} scored</span>
+      <div className="px-4 py-3 bg-[#0B1120] text-white">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-[#0FB5AD]" />
+          <span className="text-xs font-semibold">Assessment AI</span>
+          <span className="text-[9px] text-white/50 ml-auto">{scored.length}/{dimensions.length} scored</span>
+        </div>
+        {/* Progress bar */}
+        <div className="mt-2 h-1 rounded-full bg-white/10 overflow-hidden">
+          <div className="h-full rounded-full bg-[#0FB5AD] transition-all duration-500" style={{ width: `${completionPct}%` }} />
+        </div>
       </div>
 
+      {/* Pending Scores Banner */}
+      {pendingScores.length > 0 && (
+        <div className="px-3 py-2 bg-[#0A867F]/10 border-b border-[#0A867F]/20">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[9px] font-mono uppercase tracking-wider text-[#0A867F]">AI Suggested Scores</span>
+            <button onClick={acceptAllScores}
+              className="text-[9px] px-2 py-0.5 rounded bg-[#0A867F] text-white hover:bg-[#0A867F]/80 transition-colors">
+              Accept All ({pendingScores.length})
+            </button>
+          </div>
+          {pendingScores.map(s => (
+            <div key={s.dimId} className="flex items-center gap-2 py-1">
+              <span className="text-[10px] text-foreground flex-1 truncate">{s.dimName}</span>
+              <span className="text-[9px] font-mono text-muted-foreground">{MATURITY[s.current]} → {MATURITY[s.target]}</span>
+              <button onClick={() => acceptScore(s)}
+                className="text-[9px] px-1.5 py-0.5 rounded bg-[#0A867F]/20 text-[#0A867F] hover:bg-[#0A867F]/30">✓</button>
+              <button onClick={() => setPendingScores(prev => prev.filter(p => p.dimId !== s.dimId))}
+                className="text-[9px] px-1.5 py-0.5 rounded text-muted-foreground hover:text-red-400">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Messages */}
-      <div className="max-h-[350px] overflow-y-auto p-3 space-y-2">
+      <div className="max-h-[320px] overflow-y-auto p-3 space-y-2">
         {messages.length === 0 && (
           <div className="space-y-2 py-2">
-            <p className="text-[10px] text-muted-foreground text-center">Ask about scoring, strategy, or best practices</p>
+            <p className="text-[10px] text-muted-foreground text-center">Describe observations, upload docs, or ask to auto-score</p>
             {quickPrompts.map((q, i) => (
               <button key={i} onClick={() => handleSend(q)}
                 className="w-full text-left px-3 py-2 rounded-lg bg-secondary/30 text-[10px] text-foreground hover:bg-secondary/50 transition-colors">
@@ -549,12 +627,24 @@ If suggesting scores, include at the end: [SCORE: dimId=X.X current=N target=N] 
         )}
 
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[90%] px-3 py-2 rounded-xl text-xs leading-relaxed ${
-              msg.role === 'user' ? 'bg-[#0A867F] text-white rounded-tr-sm' : 'bg-secondary/50 text-foreground rounded-tl-sm'
-            }`}>
-              {msg.text}
+          <div key={i}>
+            <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[90%] px-3 py-2 rounded-xl text-xs leading-relaxed ${
+                msg.role === 'user' ? 'bg-[#0A867F] text-white rounded-tr-sm' : 'bg-secondary/50 text-foreground rounded-tl-sm'
+              }`}>
+                {msg.text}
+              </div>
             </div>
+            {/* Inline score suggestions */}
+            {msg.scores && msg.scores.length > 0 && (
+              <div className="ml-2 mt-1 mb-1 flex flex-wrap gap-1">
+                {msg.scores.map(s => (
+                  <span key={s.dimId} className="text-[8px] px-1.5 py-0.5 rounded bg-[#0A867F]/10 text-[#0A867F] font-mono">
+                    {s.dimName.slice(0, 20)}: {s.current}→{s.target}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         ))}
 
