@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SalesPilot v4.0 — Architecture Dossier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#0F172A;--surface:#1E293B;--surface2:#273548;--border:#334155;
+--text:#F8FAFC;--text2:#94A3B8;--text3:#64748B;
+--teal:#0FB5AD;--teal-dim:rgba(15,181,173,.15);
+--purple:#7c3aed;--purple-dim:rgba(124,58,237,.15);
+--amber:#f59e0b;--amber-dim:rgba(245,158,11,.15);
+--red:#C8472E;--red-dim:rgba(200,71,46,.15);
+--blue:#3b82f6;--blue-dim:rgba(59,130,246,.15);
+--green:#22c55e;--green-dim:rgba(34,197,94,.15);
+--radius:12px;--sidebar:272px;--topbar:56px;
+--font-body:'Inter',system-ui,sans-serif;
+--font-head:'Space Grotesk',sans-serif;
+--font-mono:'IBM Plex Mono',monospace;
+}
+[data-theme="light"]{
+--bg:#F8FAFC;--surface:#FFFFFF;--surface2:#F1F5F9;--border:#E2E8F0;
+--text:#0F172A;--text2:#475569;--text3:#94A3B8;
+--teal-dim:rgba(15,181,173,.1);--purple-dim:rgba(124,58,237,.1);
+--amber-dim:rgba(245,158,11,.1);--red-dim:rgba(200,71,46,.1);
+--blue-dim:rgba(59,130,246,.1);--green-dim:rgba(34,197,94,.1);
+}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--topbar) + 24px)}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--font-head);font-weight:600;letter-spacing:-.02em}
+code,.mono{font-family:var(--font-mono)}
+a{color:var(--teal);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;gap:16px;backdrop-filter:blur(12px);background:rgba(30,41,59,.85)}
+[data-theme="light"] .topbar{background:rgba(255,255,255,.85)}
+.topbar-brand{font-family:var(--font-head);font-weight:700;font-size:18px;color:var(--teal);white-space:nowrap;display:flex;align-items:center;gap:8px}
+.topbar-brand svg{width:22px;height:22px}
+.topbar-search{flex:1;max-width:420px;margin:0 auto}
+.topbar-search input{width:100%;padding:7px 14px 7px 36px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;font-family:var(--font-body)}
+.topbar-search input:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+.topbar-search-wrap{position:relative}
+.topbar-search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text3)}
+.topbar-search-wrap kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-family:var(--font-mono);font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--text3)}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.theme-toggle{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.theme-toggle:hover{border-color:var(--teal);color:var(--teal)}
+
+/* SIDEBAR */
+.sidebar{position:fixed;top:var(--topbar);left:0;width:var(--sidebar);height:calc(100vh - var(--topbar));background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:20px 0;z-index:90;transition:transform .3s}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.sidebar-section{padding:0 20px;margin-bottom:24px}
+.sidebar-label{font-family:var(--font-mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:8px}
+.sidebar-link{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;color:var(--text2);font-size:13px;font-weight:500;transition:all .2s;cursor:pointer;text-decoration:none}
+.sidebar-link:hover{background:var(--surface2);color:var(--text);text-decoration:none}
+.sidebar-link.active{background:var(--teal-dim);color:var(--teal)}
+.sidebar-dot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .2s}
+.sidebar-link.active .sidebar-dot{background:var(--teal);box-shadow:0 0 6px var(--teal)}
+.sidebar-sub{padding-left:28px}
+.sidebar-sub .sidebar-link{font-size:12px;padding:5px 12px}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);padding:calc(var(--topbar) + 32px) 40px 80px;max-width:calc(var(--sidebar) + 1180px + 80px)}
+.main-inner{max-width:1180px}
+
+/* SECTION */
+.section{margin-bottom:64px}
+.section-eyebrow{font-family:var(--font-mono);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--teal);margin-bottom:6px}
+.section-title{font-size:28px;margin-bottom:8px}
+.section-desc{color:var(--text2);font-size:15px;max-width:720px;margin-bottom:32px}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;transition:all .2s}
+.card:hover{border-color:var(--teal);box-shadow:0 4px 24px rgba(0,0,0,.15);transform:translateY(-1px)}
+.card-title{font-family:var(--font-head);font-size:16px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.card-desc{color:var(--text2);font-size:13px;line-height:1.6}
+.card-grid{display:grid;gap:16px}
+.card-grid-2{grid-template-columns:repeat(2,1fr)}
+.card-grid-3{grid-template-columns:repeat(3,1fr)}
+.card-grid-4{grid-template-columns:repeat(4,1fr)}
+
+/* BADGES */
+.badge{font-family:var(--font-mono);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:3px 10px;border-radius:99px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.badge-teal{background:var(--teal-dim);color:var(--teal)}
+.badge-purple{background:var(--purple-dim);color:var(--purple)}
+.badge-amber{background:var(--amber-dim);color:var(--amber)}
+.badge-red{background:var(--red-dim);color:var(--red)}
+.badge-blue{background:var(--blue-dim);color:var(--blue)}
+.badge-green{background:var(--green-dim);color:var(--green)}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:32px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;text-align:center;transition:all .2s}
+.stat-card:hover{border-color:var(--teal);transform:translateY(-2px)}
+.stat-num{font-family:var(--font-head);font-size:32px;font-weight:700;color:var(--teal);line-height:1}
+.stat-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-top:6px}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--surface2)}
+th{font-family:var(--font-mono);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:10px 16px;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:10px 16px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+/* SVG DIAGRAMS */
+.diagram-wrap{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:24px;overflow-x:auto;margin-bottom:24px}
+.diagram-wrap svg{display:block;margin:0 auto}
+.diagram-wrap svg text{font-family:var(--font-mono);fill:var(--text2)}
+.diagram-wrap svg .node-rect{rx:8;ry:8;stroke-width:1.5;transition:all .2s;cursor:pointer}
+.diagram-wrap svg .node-rect:hover{filter:brightness(1.3);stroke-width:2}
+.diagram-wrap svg .edge{stroke-dasharray:6 4;stroke-width:1.5;fill:none}
+.diagram-wrap svg .edge-animated{animation:dash 20s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-1000}}
+
+/* EXPANDABLE */
+.expandable{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px}
+.expandable-header{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--surface);cursor:pointer;user-select:none;transition:background .2s}
+.expandable-header:hover{background:var(--surface2)}
+.expandable-chevron{width:16px;height:16px;color:var(--text3);transition:transform .2s;flex-shrink:0}
+.expandable.open .expandable-chevron{transform:rotate(90deg)}
+.expandable-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s}
+.expandable.open .expandable-body{grid-template-rows:1fr}
+.expandable-inner{overflow:hidden;padding:0 20px}
+.expandable.open .expandable-inner{padding:0 20px 20px}
+
+/* STEP SEQUENCE */
+.steps{display:flex;flex-direction:column;gap:0;position:relative;padding-left:24px}
+.steps::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:var(--border)}
+.step{position:relative;padding:12px 0 12px 20px}
+.step-dot{position:absolute;left:-24px;top:16px;width:16px;height:16px;border-radius:50%;border:2px solid var(--teal);background:var(--bg);z-index:1}
+.step-dot.active{background:var(--teal);box-shadow:0 0 8px var(--teal)}
+.step-title{font-weight:600;font-size:14px;margin-bottom:2px}
+.step-desc{font-size:12px;color:var(--text2)}
+
+/* TREE */
+.tree{font-family:var(--font-mono);font-size:12.5px;line-height:2;color:var(--text2);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;overflow-x:auto}
+.tree .dir{color:var(--teal);font-weight:600}
+.tree .file{color:var(--text2)}
+.tree .comment{color:var(--text3)}
+
+/* AGENT CARD */
+.agent-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:all .2s}
+.agent-card:hover{border-color:var(--purple);box-shadow:0 4px 20px rgba(124,58,237,.1);transform:translateY(-1px)}
+.agent-name{font-family:var(--font-head);font-size:15px;font-weight:600;margin-bottom:4px}
+.agent-desc{font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5}
+.agent-meta{display:flex;flex-wrap:wrap;gap:6px}
+
+/* PULSE DOT */
+.pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse-anim 2s infinite}
+@keyframes pulse-anim{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+
+/* FEATURE GRID */
+.feature-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:11.5px;color:var(--text2);transition:all .15s}
+.feature-pill:hover{border-color:var(--teal);color:var(--text)}
+
+/* SEARCH PALETTE */
+.search-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:flex-start;justify-content:center;padding-top:20vh;backdrop-filter:blur(4px)}
+.search-overlay.open{display:flex}
+.search-palette{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:560px;max-height:420px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.search-palette input{width:100%;padding:16px 20px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:15px;outline:none;font-family:var(--font-body)}
+.search-results{overflow-y:auto;max-height:360px;padding:8px}
+.search-result{padding:10px 16px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .15s}
+.search-result:hover,.search-result.highlighted{background:var(--surface2)}
+.search-result-title{font-weight:500;font-size:14px}
+.search-result-section{font-family:var(--font-mono);font-size:10px;color:var(--text3);text-transform:uppercase}
+
+/* MOBILE */
+.sidebar-toggle{display:none;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;align-items:center;justify-content:center}
+@media(max-width:920px){
+.sidebar{transform:translateX(-100%)}
+.sidebar.open{transform:translateX(0);box-shadow:8px 0 32px rgba(0,0,0,.3)}
+.main{margin-left:0;padding:calc(var(--topbar) + 20px) 16px 60px}
+.sidebar-toggle{display:flex}
+.stats-grid{grid-template-columns:repeat(3,1fr)}
+.card-grid-2,.card-grid-3,.card-grid-4{grid-template-columns:1fr}
+.topbar-search{display:none}
+}
+@media(max-width:600px){
+.stats-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* PRINT */
+@media print{
+.topbar,.sidebar,.theme-toggle,.sidebar-toggle,.topbar-actions{display:none!important}
+.main{margin-left:0!important;padding:20px!important}
+body{background:#fff!important;color:#000!important}
+.card,.stat-card,.expandable,.diagram-wrap,.table-wrap,.tree,.agent-card{break-inside:avoid;border-color:#ddd!important;background:#fff!important}
+.card:hover,.stat-card:hover,.agent-card:hover{transform:none!important;box-shadow:none!important}
+.section{page-break-before:auto}
+}
+
+/* REDUCED MOTION */
+@media(prefers-reduced-motion:reduce){
+*{animation:none!important;transition-duration:.01ms!important}
+}
+
+/* Maturity scale */
+.maturity-0{background:#C3C9D4;color:#0F172A}
+.maturity-1{background:#9DB0C6;color:#0F172A}
+.maturity-2{background:#6E97C2;color:#fff}
+.maturity-3{background:#3A93A0;color:#fff}
+.maturity-4{background:#0A867F;color:#fff}
+.maturity-chip{display:inline-flex;align-items:center;padding:2px 10px;border-radius:6px;font-family:var(--font-mono);font-size:11px;font-weight:600}
+</style>
+</head>
+<body>
+<!-- TOPBAR -->
+<header class="topbar">
+<button class="sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Toggle menu">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+</button>
+<div class="topbar-brand">
+<svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity=".3"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+SalesPilot
+</div>
+<div class="topbar-search">
+<div class="topbar-search-wrap">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+<input type="text" placeholder="Search architecture..." id="searchInput" readonly onclick="openSearch()">
+<kbd>&#8984;K</kbd>
+</div>
+</div>
+<div class="topbar-actions">
+<button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" id="themeBtn">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+</button>
+</div>
+</header>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+<div class="sidebar-section">
+<div class="sidebar-label">Architecture</div>
+<a class="sidebar-link active" href="#overview" data-section="overview"><span class="sidebar-dot"></span>Overview</a>
+<a class="sidebar-link" href="#ai-architecture" data-section="ai-architecture"><span class="sidebar-dot"></span>AI Architecture</a>
+<a class="sidebar-link" href="#workshop-engine" data-section="workshop-engine"><span class="sidebar-dot"></span>Workshop Engine</a>
+<a class="sidebar-link" href="#guardrails" data-section="guardrails"><span class="sidebar-dot"></span>Guardrails & Observability</a>
+<a class="sidebar-link" href="#agentic" data-section="agentic"><span class="sidebar-dot"></span>Agentic Control Plane</a>
+<a class="sidebar-link" href="#deployment" data-section="deployment"><span class="sidebar-dot"></span>Deployment & Operations</a>
+</div>
+<div class="sidebar-section">
+<div class="sidebar-label">Quick links</div>
+<div class="sidebar-sub">
+<a class="sidebar-link" href="#system-shape">System Shape</a>
+<a class="sidebar-link" href="#ai-call-flow">AI Call Flow</a>
+<a class="sidebar-link" href="#assist-registry">Assist Registry</a>
+<a class="sidebar-link" href="#agent-fleet">Agent Fleet</a>
+<a class="sidebar-link" href="#workshop-flow">Workshop Flow</a>
+<a class="sidebar-link" href="#guardrail-chain">Guardrail Chain</a>
+<a class="sidebar-link" href="#deploy-pipeline">Deploy Pipeline</a>
+<a class="sidebar-link" href="#feature-map">Feature Map</a>
+</div>
+</div>
+<div class="sidebar-section" style="margin-top:auto;padding-top:20px;border-top:1px solid var(--border)">
+<div style="padding:0 20px;font-size:11px;color:var(--text3)">
+<div style="font-family:var(--font-mono);margin-bottom:4px">SALESPILOT v4.0</div>
+<div>Built with Next.js 14, Claude AI, MongoDB</div>
+<div style="margin-top:4px"><span class="pulse"></span> <span style="margin-left:4px">Production — galent.ai</span></div>
+</div>
+</div>
+</nav>
+
+<!-- SEARCH OVERLAY -->
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+<div class="search-palette">
+<input type="text" placeholder="Search sections, components, agents..." id="searchPaletteInput" oninput="filterSearch(this.value)">
+<div class="search-results" id="searchResults"></div>
+</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+<div class="main-inner">
+
+<!-- ============ 01 OVERVIEW ============ -->
+<section class="section" id="overview">
+<div class="section-eyebrow">01 — Overview</div>
+<h1 class="section-title" style="font-size:36px;margin-bottom:4px">SalesPilot v4.0 — Architecture Dossier</h1>
+<p class="section-desc" style="font-size:17px;margin-bottom:40px">AI-native enterprise sales intelligence platform. 276 source files, 13 autonomous agents, 12 workshop assists, end-to-end from signal capture to board-ready proposal.</p>
+
+<div class="stats-grid">
+<div class="stat-card"><div class="stat-num">39</div><div class="stat-label">Routes</div></div>
+<div class="stat-card"><div class="stat-num">127</div><div class="stat-label">Components</div></div>
+<div class="stat-card"><div class="stat-num">24</div><div class="stat-label">tRPC Routers</div></div>
+<div class="stat-card"><div class="stat-num">21</div><div class="stat-label">Mongoose Models</div></div>
+<div class="stat-card"><div class="stat-num">13</div><div class="stat-label">AI Agents</div></div>
+<div class="stat-card"><div class="stat-num">12</div><div class="stat-label">Workshop Assists</div></div>
+</div>
+
+<!-- SYSTEM SHAPE DIAGRAM -->
+<div id="system-shape">
+<h3 style="margin-bottom:16px">System Shape</h3>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1020 560" width="100%" style="max-width:1020px">
+<!-- CLIENT PLANE -->
+<rect class="node-rect" x="20" y="20" width="980" height="80" fill="var(--teal-dim)" stroke="var(--teal)"/>
+<text x="36" y="44" font-size="10" fill="var(--teal)" font-weight="600" text-transform="uppercase" style="text-transform:uppercase">CLIENT PLANE</text>
+<text x="36" y="64" font-size="12" fill="var(--text)">Next.js 14 App Router</text>
+<text x="200" y="64" font-size="12" fill="var(--text2)">39 pages</text>
+<text x="280" y="64" font-size="12" fill="var(--text2)">127 React components</text>
+<rect x="480" y="32" width="100" height="28" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="494" y="50" font-size="10" fill="var(--text2)">workshop/13</text>
+<rect x="590" y="32" width="70" height="28" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="604" y="50" font-size="10" fill="var(--text2)">ai/20</text>
+<rect x="670" y="32" width="74" height="28" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="684" y="50" font-size="10" fill="var(--text2)">kanban</text>
+<rect x="754" y="32" width="80" height="28" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="768" y="50" font-size="10" fill="var(--text2)">pipeline</text>
+<rect x="844" y="32" width="70" height="28" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="858" y="50" font-size="10" fill="var(--text2)">modals</text>
+<rect x="480" y="64" width="100" height="28" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="494" y="82" font-size="10" fill="var(--text2)">exhibits</text>
+<rect x="590" y="64" width="70" height="28" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="604" y="82" font-size="10" fill="var(--text2)">views</text>
+<rect x="670" y="64" width="74" height="28" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="684" y="82" font-size="10" fill="var(--text2)">voice</text>
+<rect x="754" y="64" width="80" height="28" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="768" y="82" font-size="10" fill="var(--text2)">shared</text>
+
+<!-- AI PLANE -->
+<rect class="node-rect" x="20" y="120" width="980" height="80" fill="var(--purple-dim)" stroke="var(--purple)"/>
+<text x="36" y="144" font-size="10" fill="var(--purple)" font-weight="600" style="text-transform:uppercase">AI PLANE</text>
+<text x="36" y="164" font-size="12" fill="var(--text)">AI Gateway</text>
+<text x="160" y="164" font-size="11" fill="var(--text3)">&#8594;</text>
+<text x="180" y="164" font-size="12" fill="var(--text)">Assist Registry (12)</text>
+<text x="340" y="164" font-size="11" fill="var(--text3)">&#8594;</text>
+<text x="360" y="164" font-size="12" fill="var(--text)">Model Router</text>
+<text x="490" y="164" font-size="11" fill="var(--text3)">&#8594;</text>
+<text x="510" y="164" font-size="12" fill="var(--text)">Anthropic SDK</text>
+<rect x="670" y="132" width="120" height="26" rx="6" fill="var(--purple-dim)" stroke="var(--purple)" stroke-dasharray="4"/>
+<text x="684" y="150" font-size="10" fill="var(--purple)">sonnet 4.6</text>
+<rect x="800" y="132" width="90" height="26" rx="6" fill="var(--purple-dim)" stroke="var(--purple)" stroke-dasharray="4"/>
+<text x="814" y="150" font-size="10" fill="var(--purple)">opus 4.6</text>
+<rect x="900" y="132" width="90" height="26" rx="6" fill="var(--purple-dim)" stroke="var(--purple)" stroke-dasharray="4"/>
+<text x="914" y="150" font-size="10" fill="var(--purple)">haiku 4.5</text>
+<rect x="670" y="164" width="120" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="684" y="182" font-size="10" fill="var(--text2)">13 agents</text>
+<rect x="800" y="164" width="190" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="814" y="182" font-size="10" fill="var(--text2)">coordinator workflows</text>
+
+<!-- API PLANE -->
+<rect class="node-rect" x="20" y="220" width="980" height="80" fill="var(--blue-dim)" stroke="var(--blue)"/>
+<text x="36" y="244" font-size="10" fill="var(--blue)" font-weight="600" style="text-transform:uppercase">API PLANE</text>
+<text x="36" y="264" font-size="12" fill="var(--text)">tRPC (24 routers, zod-validated)</text>
+<text x="300" y="264" font-size="11" fill="var(--text3)">&#8594;</text>
+<text x="320" y="264" font-size="12" fill="var(--text)">Server Actions</text>
+<text x="450" y="264" font-size="11" fill="var(--text3)">&#8594;</text>
+<text x="470" y="264" font-size="12" fill="var(--text)">Route Handlers</text>
+<rect x="640" y="236" width="110" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="654" y="254" font-size="10" fill="var(--text2)">auth routes</text>
+<rect x="760" y="236" width="100" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="774" y="254" font-size="10" fill="var(--text2)">webhooks</text>
+<rect x="870" y="236" width="120" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="884" y="254" font-size="10" fill="var(--text2)">MCP endpoint</text>
+<rect x="640" y="268" width="110" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="654" y="286" font-size="10" fill="var(--text2)">socket.io</text>
+<rect x="760" y="268" width="100" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="774" y="286" font-size="10" fill="var(--text2)">digest</text>
+<rect x="870" y="268" width="120" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="884" y="286" font-size="10" fill="var(--text2)">Teams alerts</text>
+
+<!-- DATA PLANE -->
+<rect class="node-rect" x="20" y="320" width="980" height="80" fill="var(--amber-dim)" stroke="var(--amber)"/>
+<text x="36" y="344" font-size="10" fill="var(--amber)" font-weight="600" style="text-transform:uppercase">DATA PLANE</text>
+<text x="36" y="364" font-size="12" fill="var(--text)">MongoDB 7 (21 models)</text>
+<text x="240" y="364" font-size="11" fill="var(--text3)">&#8594;</text>
+<text x="260" y="364" font-size="12" fill="var(--text)">Redis 7</text>
+<text x="340" y="364" font-size="11" fill="var(--text3)">&#8594;</text>
+<text x="360" y="364" font-size="12" fill="var(--text)">Workshop embedded docs</text>
+<rect x="590" y="336" width="130" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="604" y="354" font-size="10" fill="var(--text2)">opportunity</text>
+<rect x="730" y="336" width="90" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="744" y="354" font-size="10" fill="var(--text2)">account</text>
+<rect x="830" y="336" width="80" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="844" y="354" font-size="10" fill="var(--text2)">lead</text>
+<rect x="920" y="336" width="70" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="934" y="354" font-size="10" fill="var(--text2)">task</text>
+<rect x="590" y="368" width="130" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="604" y="386" font-size="10" fill="var(--text2)">workshop</text>
+<rect x="730" y="368" width="90" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="744" y="386" font-size="10" fill="var(--text2)">contract</text>
+<rect x="830" y="368" width="80" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="844" y="386" font-size="10" fill="var(--text2)">user</text>
+<rect x="920" y="368" width="70" height="26" rx="6" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="934" y="386" font-size="10" fill="var(--text2)">+13</text>
+
+<!-- CONTROL PLANE -->
+<rect class="node-rect" x="20" y="420" width="480" height="80" fill="var(--red-dim)" stroke="var(--red)"/>
+<text x="36" y="444" font-size="10" fill="var(--red)" font-weight="600" style="text-transform:uppercase">CONTROL PLANE</text>
+<text x="36" y="464" font-size="12" fill="var(--text)">Auth (NextAuth / SSO / 2FA)</text>
+<text x="270" y="464" font-size="12" fill="var(--text)">RBAC</text>
+<text x="320" y="464" font-size="12" fill="var(--text)">Middleware</text>
+<text x="420" y="464" font-size="12" fill="var(--text)">Rate Limits</text>
+<text x="36" y="486" font-size="11" fill="var(--text3)">Zod validation on every boundary &middot; org-scoped queries &middot; sandbox enforcement</text>
+
+<!-- DEPLOY PLANE -->
+<rect class="node-rect" x="520" y="420" width="480" height="80" fill="var(--green-dim)" stroke="var(--green)"/>
+<text x="536" y="444" font-size="10" fill="var(--green)" font-weight="600" style="text-transform:uppercase">DEPLOY PLANE</text>
+<text x="536" y="464" font-size="12" fill="var(--text)">Docker Compose</text>
+<text x="670" y="464" font-size="11" fill="var(--text3)">&#8594;</text>
+<text x="690" y="464" font-size="12" fill="var(--text)">EC2</text>
+<text x="730" y="464" font-size="11" fill="var(--text3)">&#8594;</text>
+<text x="750" y="464" font-size="12" fill="var(--text)">SSM</text>
+<text x="790" y="464" font-size="11" fill="var(--text3)">&#8594;</text>
+<text x="810" y="464" font-size="12" fill="var(--text)">nginx</text>
+<text x="536" y="486" font-size="11" fill="var(--text3)">3 containers: app + mongo:7 + redis:7-alpine &middot; ~7 min build</text>
+
+<!-- ANIMATED CONNECTING LINES -->
+<line class="edge edge-animated" x1="510" y1="100" x2="510" y2="120" stroke="var(--teal)"/>
+<line class="edge edge-animated" x1="510" y1="200" x2="510" y2="220" stroke="var(--purple)"/>
+<line class="edge edge-animated" x1="510" y1="300" x2="510" y2="320" stroke="var(--blue)"/>
+<line class="edge edge-animated" x1="260" y1="400" x2="260" y2="420" stroke="var(--amber)"/>
+<line class="edge edge-animated" x1="760" y1="400" x2="760" y2="420" stroke="var(--amber)"/>
+</svg>
+</div>
+</div>
+</section>
+<!-- ============ 02 AI ARCHITECTURE ============ -->
+<section class="section" id="ai-architecture">
+<div class="section-eyebrow">02 — AI Architecture</div>
+<h2 class="section-title">AI-Native Intelligence Layer</h2>
+<p class="section-desc">Every AI call flows through a single gateway with rate limiting, sandbox validation, token budgets, and telemetry. 13 autonomous agents and 12 workshop assists, all server-side, all logged.</p>
+
+<!-- AI CALL FLOW -->
+<div id="ai-call-flow">
+<h3 style="margin-bottom:16px">AI Call Flow</h3>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1020 120" width="100%" style="max-width:1020px">
+<defs>
+<marker id="arrow" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,0 L10,3 L0,6z" fill="var(--teal)"/></marker>
+</defs>
+<!-- Nodes -->
+<rect class="node-rect" x="4" y="30" width="80" height="44" fill="var(--teal-dim)" stroke="var(--teal)"/>
+<text x="44" y="48" font-size="8" fill="var(--teal)" text-anchor="middle" font-weight="600">USER</text>
+<text x="44" y="62" font-size="7" fill="var(--text2)" text-anchor="middle">ACTION</text>
+
+<rect class="node-rect" x="104" y="30" width="80" height="44" fill="var(--teal-dim)" stroke="var(--teal)"/>
+<text x="144" y="48" font-size="8" fill="var(--teal)" text-anchor="middle" font-weight="600">COMPONENT</text>
+<text x="144" y="62" font-size="7" fill="var(--text2)" text-anchor="middle">React UI</text>
+
+<rect class="node-rect" x="204" y="30" width="80" height="44" fill="var(--blue-dim)" stroke="var(--blue)"/>
+<text x="244" y="48" font-size="8" fill="var(--blue)" text-anchor="middle" font-weight="600">tRPC</text>
+<text x="244" y="62" font-size="7" fill="var(--text2)" text-anchor="middle">Router</text>
+
+<rect class="node-rect" x="304" y="30" width="80" height="44" fill="var(--purple-dim)" stroke="var(--purple)"/>
+<text x="344" y="48" font-size="8" fill="var(--purple)" text-anchor="middle" font-weight="600">AI</text>
+<text x="344" y="62" font-size="7" fill="var(--text2)" text-anchor="middle">Gateway</text>
+
+<rect class="node-rect" x="404" y="30" width="80" height="44" fill="var(--red-dim)" stroke="var(--red)"/>
+<text x="444" y="48" font-size="8" fill="var(--red)" text-anchor="middle" font-weight="600">RATE</text>
+<text x="444" y="62" font-size="7" fill="var(--text2)" text-anchor="middle">Limit</text>
+
+<rect class="node-rect" x="504" y="30" width="80" height="44" fill="var(--red-dim)" stroke="var(--red)"/>
+<text x="544" y="48" font-size="8" fill="var(--red)" text-anchor="middle" font-weight="600">SANDBOX</text>
+<text x="544" y="62" font-size="7" fill="var(--text2)" text-anchor="middle">Validate</text>
+
+<rect class="node-rect" x="604" y="30" width="80" height="44" fill="var(--amber-dim)" stroke="var(--amber)"/>
+<text x="644" y="48" font-size="8" fill="var(--amber)" text-anchor="middle" font-weight="600">TOKEN</text>
+<text x="644" y="62" font-size="7" fill="var(--text2)" text-anchor="middle">Budget</text>
+
+<rect class="node-rect" x="704" y="30" width="80" height="44" fill="var(--purple-dim)" stroke="var(--purple)"/>
+<text x="744" y="48" font-size="8" fill="var(--purple)" text-anchor="middle" font-weight="600">ANTHROPIC</text>
+<text x="744" y="62" font-size="7" fill="var(--text2)" text-anchor="middle">API</text>
+
+<rect class="node-rect" x="804" y="30" width="80" height="44" fill="var(--green-dim)" stroke="var(--green)"/>
+<text x="844" y="48" font-size="8" fill="var(--green)" text-anchor="middle" font-weight="600">TELEMETRY</text>
+<text x="844" y="62" font-size="7" fill="var(--text2)" text-anchor="middle">Trace</text>
+
+<rect class="node-rect" x="904" y="30" width="80" height="44" fill="var(--green-dim)" stroke="var(--green)"/>
+<text x="944" y="48" font-size="8" fill="var(--green)" text-anchor="middle" font-weight="600">METRICS</text>
+<text x="944" y="62" font-size="7" fill="var(--text2)" text-anchor="middle">Update</text>
+
+<!-- Arrows -->
+<line x1="84" y1="52" x2="104" y2="52" stroke="var(--teal)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="184" y1="52" x2="204" y2="52" stroke="var(--teal)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="284" y1="52" x2="304" y2="52" stroke="var(--blue)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="384" y1="52" x2="404" y2="52" stroke="var(--purple)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="484" y1="52" x2="504" y2="52" stroke="var(--red)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="584" y1="52" x2="604" y2="52" stroke="var(--red)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="684" y1="52" x2="704" y2="52" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="784" y1="52" x2="804" y2="52" stroke="var(--purple)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="884" y1="52" x2="904" y2="52" stroke="var(--green)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- Labels below -->
+<text x="44" y="96" font-size="7" fill="var(--text3)" text-anchor="middle">Click / cmd</text>
+<text x="244" y="96" font-size="7" fill="var(--text3)" text-anchor="middle">zod-validated</text>
+<text x="344" y="96" font-size="7" fill="var(--text3)" text-anchor="middle">guardrail chain</text>
+<text x="444" y="96" font-size="7" fill="var(--text3)" text-anchor="middle">30 rpm</text>
+<text x="544" y="96" font-size="7" fill="var(--text3)" text-anchor="middle">forbidden patterns</text>
+<text x="644" y="96" font-size="7" fill="var(--text3)" text-anchor="middle">$50/day cap</text>
+<text x="744" y="96" font-size="7" fill="var(--text3)" text-anchor="middle">claude-sonnet-4-6</text>
+<text x="844" y="96" font-size="7" fill="var(--text3)" text-anchor="middle">JSONL traces</text>
+<text x="944" y="96" font-size="7" fill="var(--text3)" text-anchor="middle">daily agg</text>
+</svg>
+</div>
+</div>
+
+<!-- AI GATEWAY CARD -->
+<div class="card-grid card-grid-2" style="margin-bottom:24px">
+<div class="card">
+<div class="card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> AI Gateway</div>
+<div class="card-desc" style="margin-bottom:12px"><code class="mono" style="color:var(--purple);font-size:12px">src/lib/ai/gateway.ts</code></div>
+<div class="card-desc">
+Single entry point for ALL AI calls. Every request passes through the guardrail chain before reaching the Anthropic API:<br><br>
+<span style="color:var(--text)">1.</span> Rate limit check (config/token_budgets.json)<br>
+<span style="color:var(--text)">2.</span> Prompt validation (gatekeeper/sandbox.config.json)<br>
+<span style="color:var(--text)">3.</span> Token cap enforcement per model tier<br>
+<span style="color:var(--text)">4.</span> Anthropic API call with latency timing<br>
+<span style="color:var(--text)">5.</span> Telemetry trace logging<br>
+<span style="color:var(--text)">6.</span> Metrics aggregation update
+</div>
+</div>
+<div class="card">
+<div class="card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg> Model Router</div>
+<div class="card-desc" style="margin-bottom:12px"><code class="mono" style="color:var(--purple);font-size:12px">config/token_budgets.json</code></div>
+<div class="card-desc" style="margin-bottom:12px">Tier-based routing. Never hardcoded at the call site:</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px"><span class="badge badge-purple">SONNET 4.6</span><span style="font-size:12px;color:var(--text2)">Standard assists: finding.synthesize, dimension.detail, gap.narrative, usecase.enrich, scope.detail</span></div>
+<div style="display:flex;align-items:center;gap:8px"><span class="badge badge-purple">OPUS 4.6</span><span style="font-size:12px;color:var(--text2)">Heavy synthesis: proposal.generate, scope.synthesize, currentstate.narrative, exec.summary</span></div>
+<div style="display:flex;align-items:center;gap:8px"><span class="badge badge-purple">HAIKU 4.5</span><span style="font-size:12px;color:var(--text2)">High-volume: autocomplete, tag suggestions, quick classify</span></div>
+</div>
+</div>
+</div>
+
+<!-- ASSIST REGISTRY TABLE -->
+<div id="assist-registry" style="margin-bottom:24px">
+<h3 style="margin-bottom:16px">Assist Registry <span class="badge badge-purple" style="margin-left:8px">12 ASSISTS</span></h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Key</th><th>Model</th><th>Description</th><th>Output</th></tr></thead>
+<tbody>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">finding.synthesize</code></td><td><span class="badge badge-purple">sonnet</span></td><td>Room notes + dimension &#8594; crisp finding + implication</td><td>Finding + suggested scores</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">dimension.detail</code></td><td><span class="badge badge-purple">sonnet</span></td><td>Expand dimension into sub-rubric / evidence checklist</td><td>DimensionDetail[]</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">dimension.suggest</code></td><td><span class="badge badge-purple">sonnet</span></td><td>Propose additional dimensions for a level</td><td>Dimension proposals</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">gap.narrative</code></td><td><span class="badge badge-purple">sonnet</span></td><td>Score + finding &#8594; implication-first gap story</td><td>Markdown narrative</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">usecase.enrich</code></td><td><span class="badge badge-purple">sonnet</span></td><td>One-line use case &#8594; full problem, value & feasibility</td><td>Enriched UseCase</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">pilot.recommend</code></td><td><span class="badge badge-purple">opus</span></td><td>Full use-case set &#8594; recommended 2-3 pilots</td><td>Ranked pilots + rationale</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">scope.synthesize</code></td><td><span class="badge badge-purple">opus</span></td><td>All gaps + workstreams &#8594; scope items with effort</td><td>ScopeItem[] by workstream</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">scope.detail</code></td><td><span class="badge badge-purple">sonnet</span></td><td>Scope item &#8594; work breakdown tasks + estimates</td><td>ScopeDetail[]</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">currentstate.narrative</code></td><td><span class="badge badge-purple">opus</span></td><td>All findings + scores &#8594; MECE current-state section</td><td>Markdown doc</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">proposal.generate</code></td><td><span class="badge badge-purple">opus</span></td><td>Scope + workstreams &#8594; full proposal with modules</td><td>Proposal JSON</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">exec.summary</code></td><td><span class="badge badge-purple">opus</span></td><td>Proposal + index + top gaps &#8594; board-ready 1-pager</td><td>Executive narrative</td></tr>
+<tr><td><code class="mono" style="color:var(--teal);font-size:11px">consistency.check</code></td><td><span class="badge badge-purple">sonnet</span></td><td>Scores vs findings contradiction detection</td><td>Flagged inconsistencies</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- AGENT FLEET -->
+<div id="agent-fleet">
+<h3 style="margin-bottom:16px">Agent Fleet <span class="badge badge-purple" style="margin-left:8px">13 AGENTS</span></h3>
+<div class="card-grid card-grid-3">
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Deal Coach</div>
+<div class="agent-desc">Strategy & tactics. Analyzes deal health, flags risks, suggests next actions.</div>
+<div class="agent-meta"><span class="badge badge-purple">sonnet</span><span class="badge badge-red">approval: stage changes</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Research Agent</div>
+<div class="agent-desc">Intel & compliance. Enriches accounts and stakeholders with external data.</div>
+<div class="agent-meta"><span class="badge badge-purple">sonnet</span><span class="badge badge-blue">tools: web search</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Outreach Drafter</div>
+<div class="agent-desc">Context-aware follow-up emails and outreach sequences.</div>
+<div class="agent-meta"><span class="badge badge-purple">sonnet</span><span class="badge badge-teal">auto-invoke</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Pipeline Hygiene</div>
+<div class="agent-desc">Nightly scan: stale deals, missing fields, data quality issues.</div>
+<div class="agent-meta"><span class="badge badge-purple">haiku</span><span class="badge badge-amber">schedule: nightly</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Forecast Agent</div>
+<div class="agent-desc">Weighted pipeline forecasts and scenario models.</div>
+<div class="agent-meta"><span class="badge badge-purple">sonnet</span><span class="badge badge-amber">schedule: daily</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Intake Processor</div>
+<div class="agent-desc">Omni-channel: voice notes, emails, Teams transcripts &#8594; structured data.</div>
+<div class="agent-meta"><span class="badge badge-purple">sonnet</span><span class="badge badge-teal">auto-invoke</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Proposal Drafter</div>
+<div class="agent-desc">Generates SOW, proposal sections, and executive presentations.</div>
+<div class="agent-meta"><span class="badge badge-purple">opus</span><span class="badge badge-red">approval: send</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Account Intelligence</div>
+<div class="agent-desc">Deep research: company data, news signals, stakeholder maps, expansion opps.</div>
+<div class="agent-meta"><span class="badge badge-purple">sonnet</span><span class="badge badge-blue">tools: web, graph</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Competitive Intel</div>
+<div class="agent-desc">Monitors landscape, detects competitor mentions, builds battle cards.</div>
+<div class="agent-meta"><span class="badge badge-purple">sonnet</span><span class="badge badge-amber">schedule: weekly</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Growth & Expansion</div>
+<div class="agent-desc">Whitespace in existing accounts. Cross-sell and upsell plays by service line.</div>
+<div class="agent-meta"><span class="badge badge-purple">sonnet</span><span class="badge badge-green">tools: ontology</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Enablement Coach</div>
+<div class="agent-desc">Objection handling, deal strategy, pricing guidance, competitive positioning.</div>
+<div class="agent-meta"><span class="badge badge-purple">sonnet</span><span class="badge badge-teal">on-demand</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Signal Processor</div>
+<div class="agent-desc">Processes signals from Teams, Outlook, voice. Extracts entities, routes to deals.</div>
+<div class="agent-meta"><span class="badge badge-purple">haiku</span><span class="badge badge-teal">auto-invoke</span></div>
+</div>
+<div class="agent-card">
+<div class="agent-name"><span class="pulse" style="margin-right:6px"></span>Campaign Manager</div>
+<div class="agent-desc">Manages sequences, tracks responses, optimizes send times, measures ROI.</div>
+<div class="agent-meta"><span class="badge badge-purple">sonnet</span><span class="badge badge-amber">schedule: hourly</span></div>
+</div>
+</div>
+</div>
+</section>
+<!-- ============ 03 WORKSHOP ENGINE ============ -->
+<section class="section" id="workshop-engine">
+<div class="section-eyebrow">03 — Workshop Engine</div>
+<h2 class="section-title">Assessment & Proposal Engine</h2>
+<p class="section-desc">McKinsey-grade assessment workflow: score, surface gaps, aggregate scope, write proposals. 9-tab flow, 12 AI assists, clone-on-create templates. Single MongoDB document with embedded framework graph.</p>
+
+<!-- 9-TAB FLOW -->
+<div id="workshop-flow">
+<h3 style="margin-bottom:16px">9-Tab Workshop Flow</h3>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1020 180" width="100%" style="max-width:1020px">
+<defs><marker id="arrow2" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,0 L10,3 L0,6z" fill="var(--teal)"/></marker></defs>
+
+<!-- Tab nodes -->
+<g>
+<rect class="node-rect" x="10" y="30" width="100" height="60" fill="var(--teal-dim)" stroke="var(--teal)"/>
+<text x="60" y="52" font-size="9" fill="var(--teal)" text-anchor="middle" font-weight="600">OVERVIEW</text>
+<text x="60" y="68" font-size="7" fill="var(--text2)" text-anchor="middle">Cockpit &amp; KPIs</text>
+<text x="60" y="78" font-size="7" fill="var(--text3)" text-anchor="middle">Readiness index</text>
+</g>
+<g>
+<rect class="node-rect" x="122" y="30" width="100" height="60" fill="var(--amber-dim)" stroke="var(--amber)"/>
+<text x="172" y="52" font-size="9" fill="var(--amber)" text-anchor="middle" font-weight="600">INTAKE</text>
+<text x="172" y="68" font-size="7" fill="var(--text2)" text-anchor="middle">Client meta</text>
+<text x="172" y="78" font-size="7" fill="var(--text3)" text-anchor="middle">AI deep discovery</text>
+</g>
+<g>
+<rect class="node-rect" x="234" y="30" width="100" height="60" fill="var(--purple-dim)" stroke="var(--purple)"/>
+<text x="284" y="52" font-size="9" fill="var(--purple)" text-anchor="middle" font-weight="600">ASSESS</text>
+<text x="284" y="68" font-size="7" fill="var(--text2)" text-anchor="middle">Score dimensions</text>
+<text x="284" y="78" font-size="7" fill="var(--text3)" text-anchor="middle">Current vs target</text>
+</g>
+<g>
+<rect class="node-rect" x="346" y="30" width="100" height="60" fill="var(--blue-dim)" stroke="var(--blue)"/>
+<text x="396" y="52" font-size="9" fill="var(--blue)" text-anchor="middle" font-weight="600">USE CASES</text>
+<text x="396" y="68" font-size="7" fill="var(--text2)" text-anchor="middle">Prioritization</text>
+<text x="396" y="78" font-size="7" fill="var(--text3)" text-anchor="middle">Value/feasibility</text>
+</g>
+<g>
+<rect class="node-rect" x="458" y="30" width="100" height="60" fill="var(--green-dim)" stroke="var(--green)"/>
+<text x="508" y="52" font-size="9" fill="var(--green)" text-anchor="middle" font-weight="600">SCOPE</text>
+<text x="508" y="68" font-size="7" fill="var(--text2)" text-anchor="middle">Gap &#8594; work items</text>
+<text x="508" y="78" font-size="7" fill="var(--text3)" text-anchor="middle">Effort &amp; phasing</text>
+</g>
+<g>
+<rect class="node-rect" x="570" y="30" width="100" height="60" fill="var(--amber-dim)" stroke="var(--amber)"/>
+<text x="620" y="52" font-size="9" fill="var(--amber)" text-anchor="middle" font-weight="600">FINDINGS</text>
+<text x="620" y="68" font-size="7" fill="var(--text2)" text-anchor="middle">Evidence trail</text>
+<text x="620" y="78" font-size="7" fill="var(--text3)" text-anchor="middle">AI synthesis</text>
+</g>
+<g>
+<rect class="node-rect" x="682" y="30" width="100" height="60" fill="var(--purple-dim)" stroke="var(--purple)"/>
+<text x="732" y="52" font-size="9" fill="var(--purple)" text-anchor="middle" font-weight="600">PROPOSAL</text>
+<text x="732" y="68" font-size="7" fill="var(--text2)" text-anchor="middle">Module assembly</text>
+<text x="732" y="78" font-size="7" fill="var(--text3)" text-anchor="middle">AI-generated</text>
+</g>
+<g>
+<rect class="node-rect" x="794" y="30" width="100" height="60" fill="var(--teal-dim)" stroke="var(--teal)"/>
+<text x="844" y="52" font-size="9" fill="var(--teal)" text-anchor="middle" font-weight="600">BUILDER</text>
+<text x="844" y="68" font-size="7" fill="var(--text2)" text-anchor="middle">Framework edit</text>
+<text x="844" y="78" font-size="7" fill="var(--text3)" text-anchor="middle">Levels &amp; dims</text>
+</g>
+<g>
+<rect class="node-rect" x="906" y="30" width="100" height="60" fill="var(--surface2)" stroke="var(--border)"/>
+<text x="956" y="52" font-size="9" fill="var(--text)" text-anchor="middle" font-weight="600">SETTINGS</text>
+<text x="956" y="68" font-size="7" fill="var(--text2)" text-anchor="middle">Meta &amp; export</text>
+<text x="956" y="78" font-size="7" fill="var(--text3)" text-anchor="middle">JSON / PDF</text>
+</g>
+
+<!-- Connecting arrows -->
+<line x1="110" y1="60" x2="122" y2="60" stroke="var(--teal)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+<line x1="222" y1="60" x2="234" y2="60" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+<line x1="334" y1="60" x2="346" y2="60" stroke="var(--purple)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+<line x1="446" y1="60" x2="458" y2="60" stroke="var(--blue)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+<line x1="558" y1="60" x2="570" y2="60" stroke="var(--green)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+<line x1="670" y1="60" x2="682" y2="60" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+<line x1="782" y1="60" x2="794" y2="60" stroke="var(--purple)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+<line x1="894" y1="60" x2="906" y2="60" stroke="var(--teal)" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+<!-- Data flow labels -->
+<text x="510" y="120" font-size="10" fill="var(--text3)" text-anchor="middle">Data flows left to right: intake &#8594; assess &#8594; prioritize &#8594; scope &#8594; propose</text>
+<text x="510" y="138" font-size="10" fill="var(--text3)" text-anchor="middle">Every score, finding, and AI interaction persists with author + timestamp</text>
+
+<!-- Feedback arc -->
+<path d="M 732 30 Q 732 10, 284 10 Q 284 10, 284 30" stroke="var(--purple)" stroke-width="1" stroke-dasharray="4 3" fill="none" opacity=".5"/>
+<text x="500" y="18" font-size="7" fill="var(--purple)" text-anchor="middle">AI detailing recurse</text>
+</svg>
+</div>
+</div>
+
+<!-- Workshop cards -->
+<div class="card-grid card-grid-2" style="margin-bottom:24px">
+<div class="card">
+<div class="card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Workshop Data Model</div>
+<div class="card-desc" style="margin-bottom:12px">Single MongoDB document with embedded graph:</div>
+<div class="card-desc">
+<code class="mono" style="font-size:11px;color:var(--teal)">workshop</code> &#8594; <code class="mono" style="font-size:11px;color:var(--teal)">framework</code> &#8594; <code class="mono" style="font-size:11px;color:var(--teal)">levels[]</code> &#8594; <code class="mono" style="font-size:11px;color:var(--teal)">dimensions[]</code><br>
+&emsp;&#8594; <code class="mono" style="font-size:11px;color:var(--amber)">scores[]</code> &#8594; <code class="mono" style="font-size:11px;color:var(--amber)">findings[]</code> &#8594; <code class="mono" style="font-size:11px;color:var(--green)">scopeItems[]</code><br>
+&emsp;&#8594; <code class="mono" style="font-size:11px;color:var(--blue)">useCases[]</code> &#8594; <code class="mono" style="font-size:11px;color:var(--purple)">aiInteractions[]</code><br><br>
+<span style="color:var(--text)">Clone-on-create:</span> engagement inherits full framework copy. Edits never mutate the template.<br>
+<span style="color:var(--text)">12 AI assists wired in:</span> each tab surfaces relevant assists contextually.<br>
+<span style="color:var(--text)">10+ templates:</span> AI Transformation, Cloud Migration, Data Strategy, Security Assessment, and more.
+</div>
+</div>
+
+<div class="card">
+<div class="card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Assessment Scoring</div>
+<div class="card-desc" style="margin-bottom:12px">Maturity scale 0 - 4:</div>
+<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+<span class="maturity-chip maturity-0">0 Absent</span>
+<span class="maturity-chip maturity-1">1 Ad hoc</span>
+<span class="maturity-chip maturity-2">2 Repeatable</span>
+<span class="maturity-chip maturity-3">3 Governed</span>
+<span class="maturity-chip maturity-4">4 Optimized</span>
+</div>
+<div class="card-desc">
+<span style="color:var(--text)">Weighted readiness index:</span> level weights normalize to 1.0. Default: L1=0.30, L2=0.40, L3=0.30.<br><br>
+<span style="color:var(--text)">Gap computation:</span> target - current > 0 triggers scope item generation.<br><br>
+<span style="color:var(--text)">Priority rank:</span> min(3, gap + priority_flag). Drives workstream ordering and proposal emphasis.<br><br>
+<span style="color:var(--text)">Readiness stage:</span> Not Started &#8594; Emerging &#8594; Developing &#8594; Governed &#8594; Scaling &#8594; Optimized
+</div>
+</div>
+</div>
+
+<div class="card" style="margin-bottom:24px">
+<div class="card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Deliverable Assets</div>
+<div style="display:flex;gap:12px;flex-wrap:wrap">
+<div style="flex:1;min-width:180px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;color:var(--teal);margin-bottom:4px">Assessment Report</div>
+<div style="font-size:12px;color:var(--text2)">Current-state narrative, readiness spine, dimension scores, gap heatmap</div>
+</div>
+<div style="flex:1;min-width:180px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;color:var(--purple);margin-bottom:4px">Transformation Roadmap</div>
+<div style="font-size:12px;color:var(--text2)">Phased scope, workstream rollup, effort model, dependency map</div>
+</div>
+<div style="flex:1;min-width:180px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;color:var(--blue);margin-bottom:4px">Architecture Deep Dive</div>
+<div style="font-size:12px;color:var(--text2)">L2 platform assessment, toolkit gaps, integration audit</div>
+</div>
+<div style="flex:1;min-width:180px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;color:var(--amber);margin-bottom:4px">Executive Briefing</div>
+<div style="font-size:12px;color:var(--text2)">Board-ready 1-pager: index, top gaps, recommended pilots, investment ask</div>
+</div>
+<div style="flex:1;min-width:180px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;color:var(--red);margin-bottom:4px">Gap Analysis</div>
+<div style="font-size:12px;color:var(--text2)">Dimension-level gaps with findings, implications, and remediation scope</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ============ 04 GUARDRAILS & OBSERVABILITY ============ -->
+<section class="section" id="guardrails">
+<div class="section-eyebrow">04 — Guardrails & Observability</div>
+<h2 class="section-title">Guardrails & Observability</h2>
+<p class="section-desc">Eight-layer guardrail chain from rate limit to human review. Every AI call traced, metered, and auditable. Budget-capped at $50/day, $500/month.</p>
+
+<!-- GUARDRAIL CHAIN -->
+<div id="guardrail-chain">
+<h3 style="margin-bottom:16px">Guardrail Chain</h3>
+
+<div class="expandable open" data-expand>
+<div class="expandable-header" onclick="this.parentElement.classList.toggle('open')">
+<svg class="expandable-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+<span class="badge badge-red">1</span>
+<span style="font-weight:600;font-size:14px">Rate Limit</span>
+<span style="font-size:12px;color:var(--text3);margin-left:auto">config/rate_limits.json</span>
+</div>
+<div class="expandable-body"><div class="expandable-inner">
+<div style="font-size:13px;color:var(--text2);line-height:1.8">
+AI endpoints: <code class="mono" style="color:var(--teal)">30 rpm</code>, <code class="mono" style="color:var(--teal)">500 rph</code>, max <code class="mono" style="color:var(--teal)">5 concurrent</code><br>
+Global API: <code class="mono" style="color:var(--text)">60 rpm</code>, <code class="mono" style="color:var(--text)">1000 rph</code><br>
+tRPC mutations: <code class="mono" style="color:var(--text)">120 rpm</code>, <code class="mono" style="color:var(--text)">3000 rph</code><br>
+Export endpoints: <code class="mono" style="color:var(--text)">10 rpm</code>, <code class="mono" style="color:var(--text)">50 rph</code><br>
+WebSocket: <code class="mono" style="color:var(--text)">3 connections/user</code>, <code class="mono" style="color:var(--text)">100 msg/min</code>
+</div>
+</div></div>
+</div>
+
+<div class="expandable" data-expand>
+<div class="expandable-header" onclick="this.parentElement.classList.toggle('open')">
+<svg class="expandable-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+<span class="badge badge-red">2</span>
+<span style="font-weight:600;font-size:14px">Sandbox Validation</span>
+<span style="font-size:12px;color:var(--text3);margin-left:auto">gatekeeper/sandbox.config.json</span>
+</div>
+<div class="expandable-body"><div class="expandable-inner">
+<div style="font-size:13px;color:var(--text2);line-height:1.8">
+Forbidden in prompts: <code class="mono" style="color:var(--red)">password</code>, <code class="mono" style="color:var(--red)">secret</code>, <code class="mono" style="color:var(--red)">api_key</code>, <code class="mono" style="color:var(--red)">token</code><br>
+File ops allowlist: <code class="mono" style="color:var(--teal)">src/</code>, <code class="mono" style="color:var(--teal)">tests/</code>, <code class="mono" style="color:var(--teal)">public/</code>, <code class="mono" style="color:var(--teal)">specs/</code>, <code class="mono" style="color:var(--teal)">execution/</code><br>
+File ops deny: <code class="mono" style="color:var(--red)">.env*</code>, <code class="mono" style="color:var(--red)">node_modules/</code>, <code class="mono" style="color:var(--red)">docker-compose.yml</code><br>
+Network allowlist: <code class="mono" style="color:var(--teal)">api.anthropic.com</code>, <code class="mono" style="color:var(--teal)">github.com</code>, <code class="mono" style="color:var(--teal)">*.amazonaws.com</code><br>
+All interactions logged. Human review required on all AI outputs.
+</div>
+</div></div>
+</div>
+
+<div class="expandable" data-expand>
+<div class="expandable-header" onclick="this.parentElement.classList.toggle('open')">
+<svg class="expandable-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+<span class="badge badge-amber">3</span>
+<span style="font-weight:600;font-size:14px">Token Budget</span>
+<span style="font-size:12px;color:var(--text3);margin-left:auto">config/token_budgets.json</span>
+</div>
+<div class="expandable-body"><div class="expandable-inner">
+<div style="font-size:13px;color:var(--text2);line-height:1.8">
+Daily limit: <code class="mono" style="color:var(--amber)">$50/day</code> &middot; Monthly limit: <code class="mono" style="color:var(--amber)">$500/month</code><br>
+Per-request max tokens:<br>
+&emsp;Haiku: <code class="mono" style="color:var(--text)">2,000 tokens</code><br>
+&emsp;Sonnet: <code class="mono" style="color:var(--text)">4,000 tokens</code><br>
+&emsp;Opus: <code class="mono" style="color:var(--text)">8,000 tokens</code>
+</div>
+<!-- Token gauge visual -->
+<div style="margin-top:16px">
+<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px"><span style="color:var(--text3)">DAILY BUDGET</span><span style="color:var(--amber)">$50.00</span></div>
+<div style="background:var(--bg);border-radius:6px;height:12px;overflow:hidden;border:1px solid var(--border)">
+<div style="height:100%;width:35%;background:linear-gradient(90deg,var(--teal),var(--amber));border-radius:6px;transition:width .3s"></div>
+</div>
+<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text3)">
+<span>Haiku: ~$0.002/call</span><span>Sonnet: ~$0.02/call</span><span>Opus: ~$0.08/call</span>
+</div>
+</div>
+</div></div>
+</div>
+
+<div class="expandable" data-expand>
+<div class="expandable-header" onclick="this.parentElement.classList.toggle('open')">
+<svg class="expandable-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+<span class="badge badge-purple">4</span>
+<span style="font-weight:600;font-size:14px">Model Routing</span>
+<span style="font-size:12px;color:var(--text3);margin-left:auto">config &#8594; registry &#8594; env fallback</span>
+</div>
+<div class="expandable-body"><div class="expandable-inner">
+<div style="font-size:13px;color:var(--text2);line-height:1.8">
+Three-tier resolution: <code class="mono" style="color:var(--purple)">config/token_budgets.json</code> model_routing &#8594; assist registry default &#8594; <code class="mono" style="color:var(--text)">AI_DEFAULT_MODEL</code> env var.<br>
+Never hardcoded at the call site. Gateway resolves model before every call.
+</div>
+</div></div>
+</div>
+
+<div class="expandable" data-expand>
+<div class="expandable-header" onclick="this.parentElement.classList.toggle('open')">
+<svg class="expandable-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+<span class="badge badge-green">5</span>
+<span style="font-weight:600;font-size:14px">Telemetry Trace</span>
+<span style="font-size:12px;color:var(--text3);margin-left:auto">telemetry/traces/YYYY-MM-DD.jsonl</span>
+</div>
+<div class="expandable-body"><div class="expandable-inner">
+<div style="font-size:13px;color:var(--text2);line-height:1.8">
+Every AI call traced: <code class="mono" style="color:var(--teal)">id</code>, <code class="mono" style="color:var(--teal)">assist</code>, <code class="mono" style="color:var(--teal)">model</code>, <code class="mono" style="color:var(--teal)">latencyMs</code>, <code class="mono" style="color:var(--teal)">status</code>, <code class="mono" style="color:var(--teal)">inputTokens</code>, <code class="mono" style="color:var(--teal)">outputTokens</code>, <code class="mono" style="color:var(--teal)">workshopId</code>, <code class="mono" style="color:var(--teal)">userId</code><br>
+JSONL format, one file per day. Machine-parseable for audits and tuning.
+</div>
+</div></div>
+</div>
+
+<div class="expandable" data-expand>
+<div class="expandable-header" onclick="this.parentElement.classList.toggle('open')">
+<svg class="expandable-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+<span class="badge badge-green">6</span>
+<span style="font-weight:600;font-size:14px">Metrics Aggregation</span>
+<span style="font-size:12px;color:var(--text3);margin-left:auto">telemetry/metrics/YYYY-MM-DD.json</span>
+</div>
+<div class="expandable-body"><div class="expandable-inner">
+<div style="font-size:13px;color:var(--text2);line-height:1.8">
+Daily aggregation: total calls, successes, errors, avg latency per <code class="mono" style="color:var(--text)">assist:model</code> pair.<br>
+Accept rate target: <code class="mono" style="color:var(--green)">&gt;70%</code> per assist type.<br>
+API: <code class="mono" style="color:var(--blue)">harness.getMetrics</code>, <code class="mono" style="color:var(--blue)">harness.getTraces</code> tRPC endpoints.
+</div>
+</div></div>
+</div>
+
+<div class="expandable" data-expand>
+<div class="expandable-header" onclick="this.parentElement.classList.toggle('open')">
+<svg class="expandable-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+<span class="badge badge-amber">7</span>
+<span style="font-weight:600;font-size:14px">MongoDB Interaction Log</span>
+<span style="font-size:12px;color:var(--text3);margin-left:auto">workshop.aiInteractions[]</span>
+</div>
+<div class="expandable-body"><div class="expandable-inner">
+<div style="font-size:13px;color:var(--text2);line-height:1.8">
+Every workshop AI call persisted as embedded doc: <code class="mono" style="color:var(--text)">assist</code>, <code class="mono" style="color:var(--text)">model</code>, <code class="mono" style="color:var(--text)">input</code>, <code class="mono" style="color:var(--text)">output</code>, <code class="mono" style="color:var(--text)">status</code> (PROPOSED/ACCEPTED/EDITED/REJECTED), <code class="mono" style="color:var(--text)">userId</code>, <code class="mono" style="color:var(--text)">timestamp</code>.<br>
+Queryable for tuning prompts and measuring assist quality.
+</div>
+</div></div>
+</div>
+
+<div class="expandable" data-expand>
+<div class="expandable-header" onclick="this.parentElement.classList.toggle('open')">
+<svg class="expandable-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+<span class="badge badge-teal">8</span>
+<span style="font-weight:600;font-size:14px">Human Review</span>
+<span style="font-size:12px;color:var(--text3);margin-left:auto">Accept / Edit / Discard on ALL outputs</span>
+</div>
+<div class="expandable-body"><div class="expandable-inner">
+<div style="font-size:13px;color:var(--text2);line-height:1.8">
+AI output always lands as a <span style="color:var(--text)">proposed draft</span> in an editable surface.<br>
+User actions: <span class="badge badge-green" style="font-size:9px">ACCEPT</span> <span class="badge badge-amber" style="font-size:9px">EDIT</span> <span class="badge badge-red" style="font-size:9px">DISCARD</span><br>
+Final status recorded in AIInteraction. Rejected outputs = signal for prompt tuning.<br>
+Never auto-commit AI output without an accept step.
+</div>
+</div></div>
+</div>
+</div>
+
+<!-- SECURITY CARD -->
+<div class="card" style="margin-top:24px">
+<div class="card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Security</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px">
+<div>
+<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;color:var(--red);margin-bottom:4px">Authentication</div>
+<div style="font-size:12px;color:var(--text2);line-height:1.8">NextAuth + Microsoft SSO + TOTP 2FA<br>Middleware enforcement on all routes<br>API key server-only (never in client bundle)</div>
+</div>
+<div>
+<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;color:var(--red);margin-bottom:4px">Authorization</div>
+<div style="font-size:12px;color:var(--text2);line-height:1.8">RBAC: Owner &gt; Lead &gt; Contributor &gt; Viewer<br>Org-scoped queries on every endpoint<br>Zod validation on every tRPC procedure</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ============ 05 AGENTIC CONTROL PLANE ============ -->
+<section class="section" id="agentic">
+<div class="section-eyebrow">05 — Agentic Control Plane</div>
+<h2 class="section-title">Agentic Control Plane</h2>
+<p class="section-desc">Three-agent orchestration (Planner, Generator, Evaluator), done contracts for machine-verifiable acceptance, and a structured file hierarchy for specs, execution, and guardrails.</p>
+
+<!-- DIRECTORY TREE -->
+<div class="tree" style="margin-bottom:24px">
+<span class="dir">.claude/</span><br>
+&nbsp;&nbsp;<span class="dir">agents/</span> <span class="comment">&#8594; planner.yml, generator.yml, evaluator.yml</span><br>
+&nbsp;&nbsp;<span class="dir">commands/</span> <span class="comment">&#8594; workshop.md, audit.md</span><br>
+&nbsp;&nbsp;<span class="dir">skills/</span> <span class="comment">&#8594; workshop-assist.md</span><br>
+<span class="dir">specs/</span><br>
+&nbsp;&nbsp;<span class="file">ARCHITECTURE.md</span><br>
+&nbsp;&nbsp;<span class="dir">features/</span> <span class="comment">&#8594; presales-scope-builder.md, workshop-findings.md</span><br>
+&nbsp;&nbsp;<span class="dir">done_contracts/</span> <span class="comment">&#8594; workshop-v1.json</span><br>
+<span class="dir">execution/</span><br>
+&nbsp;&nbsp;<span class="dir">workflows/</span> <span class="comment">&#8594; deploy.yml</span><br>
+&nbsp;&nbsp;<span class="file">tasks.json</span><br>
+<span class="dir">config/</span><br>
+&nbsp;&nbsp;<span class="file">token_budgets.json</span> <span class="comment">&#8594; $50/day, model routing, per-request caps</span><br>
+&nbsp;&nbsp;<span class="file">rate_limits.json</span> <span class="comment">&#8594; rpm/rph per endpoint type</span><br>
+<span class="dir">gatekeeper/</span><br>
+&nbsp;&nbsp;<span class="file">sandbox.config.json</span> <span class="comment">&#8594; file/git/network/AI rules</span><br>
+&nbsp;&nbsp;<span class="dir">approvals/</span> <span class="comment">&#8594; human approval records</span><br>
+<span class="dir">telemetry/</span><br>
+&nbsp;&nbsp;<span class="dir">traces/</span> <span class="comment">&#8594; YYYY-MM-DD.jsonl per-call traces</span><br>
+&nbsp;&nbsp;<span class="dir">metrics/</span> <span class="comment">&#8594; YYYY-MM-DD.json daily aggregates</span><br>
+<span class="dir">tests/</span><br>
+&nbsp;&nbsp;<span class="dir">agent_evals/</span> <span class="comment">&#8594; findings-quality.md</span><br>
+<span class="dir">.githooks/</span><br>
+&nbsp;&nbsp;<span class="file">pre-commit</span> <span class="comment">&#8594; secrets scan + TypeScript check</span><br>
+&nbsp;&nbsp;<span class="file">pre-push</span> <span class="comment">&#8594; full build verification</span><br>
+<span class="file">.mcp.json</span> <span class="comment">&#8594; Model Context Protocol: 6 tools (list_opportunities, get_workshop, run_workshop_assist...)</span>
+</div>
+
+<!-- AGENT PERSONAS -->
+<h3 style="margin-bottom:16px">Agent Personas</h3>
+<div class="card-grid card-grid-3" style="margin-bottom:24px">
+<div class="card" style="border-color:var(--purple)">
+<div class="card-title" style="color:var(--purple)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg> Planner</div>
+<div class="agent-meta" style="margin-bottom:8px"><span class="badge badge-purple">OPUS</span></div>
+<div class="card-desc">
+Reads specs + ARCHITECTURE.md &#8594; writes execution plans. Decomposes features into ordered tasks with dependencies. Outputs structured task lists for the Generator.
+</div>
+</div>
+<div class="card" style="border-color:var(--teal)">
+<div class="card-title" style="color:var(--teal)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg> Generator</div>
+<div class="agent-meta" style="margin-bottom:8px"><span class="badge badge-teal">SONNET</span></div>
+<div class="card-desc">
+Reads plans &#8594; writes code. Forbidden patterns enforced by sandbox.config.json. Cannot modify .env, package.json, or docker-compose.yml. Writes to src/, tests/, specs/ only.
+</div>
+</div>
+<div class="card" style="border-color:var(--amber)">
+<div class="card-title" style="color:var(--amber)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> Evaluator</div>
+<div class="agent-meta" style="margin-bottom:8px"><span class="badge badge-amber">OPUS</span></div>
+<div class="card-desc">
+7-criteria grading rubric: correctness, types, guardrails, tests, patterns, UX, performance. Pass/fail with line-level feedback. Gates the Generator from merging substandard code.
+</div>
+</div>
+</div>
+
+<!-- DONE CONTRACTS -->
+<div class="card">
+<div class="card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg> Done Contracts</div>
+<div class="card-desc" style="margin-bottom:12px">JSON schemas defining machine-verifiable acceptance criteria per feature. Evaluated by the Evaluator agent against actual implementation.</div>
+<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:var(--font-mono);font-size:12px;color:var(--text2);line-height:1.8;overflow-x:auto">
+<span style="color:var(--text3)">// specs/done_contracts/workshop-v1.json</span><br>
+{<br>
+&nbsp;&nbsp;<span style="color:var(--teal)">"feature"</span>: <span style="color:var(--amber)">"workshop-v1"</span>,<br>
+&nbsp;&nbsp;<span style="color:var(--teal)">"criteria"</span>: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span style="color:var(--teal)">"check"</span>: <span style="color:var(--amber)">"9 tabs render"</span>, <span style="color:var(--teal)">"type"</span>: <span style="color:var(--amber)">"ui"</span> },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span style="color:var(--teal)">"check"</span>: <span style="color:var(--amber)">"scores persist on refresh"</span>, <span style="color:var(--teal)">"type"</span>: <span style="color:var(--amber)">"data"</span> },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span style="color:var(--teal)">"check"</span>: <span style="color:var(--amber)">"AI assist logs interaction"</span>, <span style="color:var(--teal)">"type"</span>: <span style="color:var(--amber)">"ai"</span> },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span style="color:var(--teal)">"check"</span>: <span style="color:var(--amber)">"gap rollup matches scored dims"</span>, <span style="color:var(--teal)">"type"</span>: <span style="color:var(--amber)">"logic"</span> }<br>
+&nbsp;&nbsp;]<br>
+}
+</div>
+</div>
+</section>
+<!-- ============ 06 DEPLOYMENT & OPERATIONS ============ -->
+<section class="section" id="deployment">
+<div class="section-eyebrow">06 — Deployment & Operations</div>
+<h2 class="section-title">Deployment & Operations</h2>
+<p class="section-desc">Docker Compose on EC2 via AWS SSM. Three containers, ~7 minute builds, git-hooks-enforced quality gates. 40+ features across 3 waves.</p>
+
+<!-- DEPLOY PIPELINE -->
+<div id="deploy-pipeline">
+<h3 style="margin-bottom:16px">Deploy Pipeline</h3>
+<div class="steps" style="margin-bottom:32px">
+<div class="step"><div class="step-dot active"></div><div class="step-title">1. Push to feature branch</div><div class="step-desc"><code class="mono" style="font-size:11px">git push origin main:feature/&lt;name&gt;</code> &mdash; pre-push hook validates: secrets scan + full TypeScript build</div></div>
+<div class="step"><div class="step-dot active"></div><div class="step-title">2. SSM command to EC2</div><div class="step-desc">AWS Systems Manager sends deploy command to <code class="mono" style="font-size:11px">i-085cae314b9dda866</code></div></div>
+<div class="step"><div class="step-dot active"></div><div class="step-title">3. Build & deploy</div><div class="step-desc"><code class="mono" style="font-size:11px">git fetch + checkout + docker compose build + up -d</code> &mdash; ~7 minute build cycle</div></div>
+<div class="step"><div class="step-dot active"></div><div class="step-title">4. Health check</div><div class="step-desc"><code class="mono" style="font-size:11px">curl https://salespilot.galent.ai</code> &mdash; verify 200 response, check container logs</div></div>
+<div class="step"><div class="step-dot"></div><div class="step-title">5. Fallback</div><div class="step-desc">If SSM fails: <code class="mono" style="font-size:11px">aws ec2 reboot-instances</code> &#8594; retry deploy sequence</div></div>
+</div>
+</div>
+
+<!-- INFRASTRUCTURE -->
+<div class="card-grid card-grid-2" style="margin-bottom:24px">
+<div class="card">
+<div class="card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><circle cx="6" cy="6" r="1"/><circle cx="6" cy="18" r="1"/></svg> Infrastructure</div>
+<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:13px;color:var(--text2);margin-top:12px">
+<span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">EC2</span><span>i-085cae314b9dda866 (52.20.222.188)</span>
+<span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">APP</span><span>Next.js 14 (App Router, TypeScript strict)</span>
+<span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">DB</span><span>MongoDB 7 (mongo:7 container)</span>
+<span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">CACHE</span><span>Redis 7 (redis:7-alpine container)</span>
+<span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">BUILD</span><span>~7 minutes (Docker multi-stage)</span>
+<span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">DOMAIN</span><span>salespilot.galent.ai (nginx reverse proxy)</span>
+<span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">HOOKS</span><span>pre-commit (secrets + TS) + pre-push (full build)</span>
+</div>
+</div>
+<div class="card">
+<div class="card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg> Tech Stack</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+<span class="badge badge-teal">NEXT.JS 14</span>
+<span class="badge badge-teal">TYPESCRIPT</span>
+<span class="badge badge-teal">TAILWIND CSS</span>
+<span class="badge badge-teal">SHADCN/UI</span>
+<span class="badge badge-blue">tRPC</span>
+<span class="badge badge-blue">ZOD</span>
+<span class="badge badge-blue">REACT QUERY</span>
+<span class="badge badge-amber">MONGODB 7</span>
+<span class="badge badge-amber">MONGOOSE</span>
+<span class="badge badge-amber">REDIS 7</span>
+<span class="badge badge-purple">ANTHROPIC SDK</span>
+<span class="badge badge-purple">CLAUDE 4.6</span>
+<span class="badge badge-green">DOCKER</span>
+<span class="badge badge-green">AWS EC2</span>
+<span class="badge badge-green">SSM</span>
+<span class="badge badge-red">NEXTAUTH</span>
+<span class="badge badge-red">TOTP 2FA</span>
+<span class="badge badge-blue">SOCKET.IO</span>
+<span class="badge badge-blue">RECHARTS</span>
+<span class="badge badge-blue">D3.JS</span>
+</div>
+</div>
+</div>
+
+<!-- FEATURE MAP -->
+<div id="feature-map">
+<h3 style="margin-bottom:16px">Feature Map</h3>
+
+<div class="card" style="margin-bottom:16px">
+<div class="card-title" style="margin-bottom:12px"><span class="badge badge-teal" style="margin-right:4px">WAVE 1-2</span> Core Platform</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<span class="feature-pill">Pipeline (7 views)</span>
+<span class="feature-pill">Deal Detail (13 tabs)</span>
+<span class="feature-pill">Presales (5 tabs)</span>
+<span class="feature-pill">Kanban Board</span>
+<span class="feature-pill">Table View</span>
+<span class="feature-pill">Timeline</span>
+<span class="feature-pill">Waterfall</span>
+<span class="feature-pill">Funnel Analytics</span>
+<span class="feature-pill">Accounts & CRM</span>
+<span class="feature-pill">Leads</span>
+<span class="feature-pill">Contacts / Stakeholders</span>
+<span class="feature-pill">Contracts</span>
+<span class="feature-pill">Tasks</span>
+<span class="feature-pill">Calendar</span>
+<span class="feature-pill">Schedule</span>
+<span class="feature-pill">Forecasting</span>
+<span class="feature-pill">Admin / Users</span>
+<span class="feature-pill">Settings</span>
+<span class="feature-pill">Integrations</span>
+<span class="feature-pill">Knowledge Graph</span>
+</div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+<div class="card-title" style="margin-bottom:12px"><span class="badge badge-purple" style="margin-right:4px">WAVE 3</span> AI Intelligence Layer (20 features)</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<span class="feature-pill">Intelligence Mindmap</span>
+<span class="feature-pill">Deal Copilot</span>
+<span class="feature-pill">Conversational Pipeline</span>
+<span class="feature-pill">Meeting Intelligence</span>
+<span class="feature-pill">Win/Loss Autopsy</span>
+<span class="feature-pill">Revenue Signals</span>
+<span class="feature-pill">AI Email Composer</span>
+<span class="feature-pill">Autonomous Mode</span>
+<span class="feature-pill">TCV Approvals</span>
+<span class="feature-pill">Client Health Score</span>
+<span class="feature-pill">Sales Playbooks</span>
+<span class="feature-pill">Leader Dashboard</span>
+<span class="feature-pill">Smart Forecast</span>
+<span class="feature-pill">Competitive Battle Station</span>
+<span class="feature-pill">Custom Dashboards</span>
+<span class="feature-pill">Buyer Intent Signals</span>
+<span class="feature-pill">Territory & Quota</span>
+<span class="feature-pill">AI Deal Rooms</span>
+<span class="feature-pill">Growth & Expansion</span>
+<span class="feature-pill">Campaign Management</span>
+</div>
+</div>
+
+<div class="card">
+<div class="card-title" style="margin-bottom:12px"><span class="badge badge-amber" style="margin-right:4px">WORKSHOPS</span> Assessment Engine</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<span class="feature-pill">9-Tab Workshop Flow</span>
+<span class="feature-pill">12 AI Assists</span>
+<span class="feature-pill">10+ Templates</span>
+<span class="feature-pill">Framework Builder</span>
+<span class="feature-pill">Maturity Scoring</span>
+<span class="feature-pill">Gap Heatmap</span>
+<span class="feature-pill">Readiness Spine</span>
+<span class="feature-pill">Use Case Matrix</span>
+<span class="feature-pill">Scope Rollup</span>
+<span class="feature-pill">Proposal Generator</span>
+<span class="feature-pill">Deep Discovery</span>
+<span class="feature-pill">Stage Gates</span>
+<span class="feature-pill">Deal Integration</span>
+<span class="feature-pill">PDF/PPTX Export</span>
+</div>
+</div>
+</div>
+
+<!-- ROUTES -->
+<div style="margin-top:24px">
+<h3 style="margin-bottom:16px">All Routes <span class="badge badge-teal" style="margin-left:8px">39 PAGES</span></h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Route</th><th>Domain</th><th>Key Components</th></tr></thead>
+<tbody>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/</code></td><td>Landing</td><td>Auth redirect</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/dashboard</code></td><td>Home</td><td>KPI cards, pipeline summary, signals</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/pipeline</code></td><td>Sales</td><td>Kanban, table, timeline, waterfall, funnel views</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/pipeline/[stage]</code></td><td>Sales</td><td>Stage-filtered pipeline view</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/accounts</code></td><td>CRM</td><td>Account list, health scores, expansion signals</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/leads</code></td><td>CRM</td><td>Lead management, scoring</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/stakeholders</code></td><td>CRM</td><td>Relationship mapping, influence matrix</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/contracts</code></td><td>Legal</td><td>Contract tracking, renewal alerts</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/presales</code></td><td>Presales</td><td>5-tab presales hub</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/workshop/[id]</code></td><td>Workshop</td><td>9-tab assessment engine</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/ask</code></td><td>AI</td><td>Conversational pipeline interface</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/agents</code></td><td>AI</td><td>Agent fleet dashboard</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/agents/logs</code></td><td>AI</td><td>Agent execution logs, traces</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/forecasting</code></td><td>Analytics</td><td>Smart forecast, scenario models</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/insights</code></td><td>Analytics</td><td>Revenue signals, trend analysis</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/graph</code></td><td>Intelligence</td><td>Knowledge graph visualization</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/deal-room</code></td><td>Collaboration</td><td>AI deal rooms, shared workspace</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/campaigns</code></td><td>Outreach</td><td>Campaign management, sequences</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/growth</code></td><td>Expansion</td><td>Whitespace analysis, cross-sell</td></tr>
+<tr><td><code class="mono" style="font-size:11px;color:var(--teal)">/enablement</code></td><td>Coaching</td><td>Sales playbooks, objection handling</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+</section>
+
+<!-- FOOTER -->
+<footer style="border-top:1px solid var(--border);padding-top:32px;margin-top:64px;text-align:center">
+<div style="font-family:var(--font-head);font-size:20px;color:var(--teal);margin-bottom:8px">SalesPilot v4.0</div>
+<div style="font-size:13px;color:var(--text3);margin-bottom:4px">AI-native enterprise sales intelligence platform</div>
+<div style="font-size:12px;color:var(--text3)">276 source files &middot; 39 routes &middot; 127 components &middot; 24 tRPC routers &middot; 21 models &middot; 13 agents &middot; 12 assists</div>
+<div style="font-size:11px;color:var(--text3);margin-top:12px">Built by Galent &middot; Powered by Claude &middot; Architecture dossier generated June 2026</div>
+</footer>
+
+</div><!-- /main-inner -->
+</main>
+<script>
+// ── Theme Toggle ──
+function toggleTheme(){
+  const html=document.documentElement;
+  const next=html.dataset.theme==='dark'?'light':'dark';
+  html.dataset.theme=next;
+  localStorage.setItem('theme',next);
+  updateThemeIcon(next);
+}
+function updateThemeIcon(t){
+  document.getElementById('themeIcon').innerHTML=t==='dark'
+    ?'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+    :'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+}
+(function(){const t=localStorage.getItem('theme');if(t){document.documentElement.dataset.theme=t;updateThemeIcon(t)}})();
+
+// ── Scroll Tracking ──
+const sectionIds=['overview','ai-architecture','workshop-engine','guardrails','agentic','deployment'];
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      document.querySelectorAll('.sidebar-link[data-section]').forEach(l=>l.classList.remove('active'));
+      const link=document.querySelector(`.sidebar-link[data-section="${e.target.id}"]`);
+      if(link)link.classList.add('active');
+    }
+  });
+},{rootMargin:'-80px 0px -60% 0px',threshold:0});
+sectionIds.forEach(id=>{const el=document.getElementById(id);if(el)observer.observe(el)});
+
+// Close sidebar on mobile nav click
+document.querySelectorAll('.sidebar-link').forEach(l=>{
+  l.addEventListener('click',()=>{
+    if(window.innerWidth<=920)document.querySelector('.sidebar').classList.remove('open');
+  });
+});
+
+// ── Search ──
+const searchData=[
+  {title:'Overview',section:'01 — OVERVIEW',id:'overview'},
+  {title:'System Shape Diagram',section:'01 — OVERVIEW',id:'system-shape'},
+  {title:'AI Architecture',section:'02 — AI',id:'ai-architecture'},
+  {title:'AI Call Flow',section:'02 — AI',id:'ai-call-flow'},
+  {title:'AI Gateway',section:'02 — AI',id:'ai-architecture'},
+  {title:'Assist Registry',section:'02 — AI',id:'assist-registry'},
+  {title:'Agent Fleet (13 agents)',section:'02 — AI',id:'agent-fleet'},
+  {title:'Deal Coach Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Research Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Outreach Drafter Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Pipeline Hygiene Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Forecast Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Intake Processor Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Proposal Drafter Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Account Intelligence Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Competitive Intel Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Growth & Expansion Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Enablement Coach Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Signal Processor Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Campaign Manager Agent',section:'02 — AI',id:'agent-fleet'},
+  {title:'Model Router (sonnet/opus/haiku)',section:'02 — AI',id:'ai-architecture'},
+  {title:'Workshop Engine',section:'03 — WORKSHOP',id:'workshop-engine'},
+  {title:'9-Tab Workshop Flow',section:'03 — WORKSHOP',id:'workshop-flow'},
+  {title:'Workshop Data Model',section:'03 — WORKSHOP',id:'workshop-engine'},
+  {title:'Assessment Scoring (Maturity 0-4)',section:'03 — WORKSHOP',id:'workshop-engine'},
+  {title:'Deliverable Assets',section:'03 — WORKSHOP',id:'workshop-engine'},
+  {title:'finding.synthesize',section:'02 — AI',id:'assist-registry'},
+  {title:'dimension.detail',section:'02 — AI',id:'assist-registry'},
+  {title:'proposal.generate',section:'02 — AI',id:'assist-registry'},
+  {title:'scope.synthesize',section:'02 — AI',id:'assist-registry'},
+  {title:'Guardrails & Observability',section:'04 — GUARDRAILS',id:'guardrails'},
+  {title:'Guardrail Chain (8 layers)',section:'04 — GUARDRAILS',id:'guardrail-chain'},
+  {title:'Rate Limiting',section:'04 — GUARDRAILS',id:'guardrail-chain'},
+  {title:'Sandbox Validation',section:'04 — GUARDRAILS',id:'guardrail-chain'},
+  {title:'Token Budget ($50/day)',section:'04 — GUARDRAILS',id:'guardrail-chain'},
+  {title:'Telemetry Traces',section:'04 — GUARDRAILS',id:'guardrail-chain'},
+  {title:'Security (NextAuth + SSO + 2FA)',section:'04 — GUARDRAILS',id:'guardrails'},
+  {title:'RBAC (Owner/Lead/Contributor/Viewer)',section:'04 — GUARDRAILS',id:'guardrails'},
+  {title:'Agentic Control Plane',section:'05 — AGENTIC',id:'agentic'},
+  {title:'Planner Agent (opus)',section:'05 — AGENTIC',id:'agentic'},
+  {title:'Generator Agent (sonnet)',section:'05 — AGENTIC',id:'agentic'},
+  {title:'Evaluator Agent (opus)',section:'05 — AGENTIC',id:'agentic'},
+  {title:'Done Contracts',section:'05 — AGENTIC',id:'agentic'},
+  {title:'Directory Structure',section:'05 — AGENTIC',id:'agentic'},
+  {title:'MCP Protocol (.mcp.json)',section:'05 — AGENTIC',id:'agentic'},
+  {title:'Deployment & Operations',section:'06 — DEPLOY',id:'deployment'},
+  {title:'Deploy Pipeline (SSM)',section:'06 — DEPLOY',id:'deploy-pipeline'},
+  {title:'Infrastructure (EC2, Docker)',section:'06 — DEPLOY',id:'deployment'},
+  {title:'Feature Map (40+ features)',section:'06 — DEPLOY',id:'feature-map'},
+  {title:'All Routes (39 pages)',section:'06 — DEPLOY',id:'deployment'},
+  {title:'Tech Stack',section:'06 — DEPLOY',id:'deployment'},
+  {title:'tRPC Routers (24)',section:'06 — DEPLOY',id:'deployment'},
+  {title:'Mongoose Models (21)',section:'06 — DEPLOY',id:'deployment'},
+  {title:'MongoDB',section:'06 — DEPLOY',id:'deployment'},
+  {title:'Redis',section:'06 — DEPLOY',id:'deployment'},
+  {title:'Docker Compose',section:'06 — DEPLOY',id:'deployment'},
+  {title:'Anthropic SDK',section:'02 — AI',id:'ai-architecture'},
+  {title:'Claude Sonnet 4.6',section:'02 — AI',id:'ai-architecture'},
+  {title:'Claude Opus 4.6',section:'02 — AI',id:'ai-architecture'},
+  {title:'Claude Haiku 4.5',section:'02 — AI',id:'ai-architecture'},
+];
+
+let highlightedIdx=-1;
+
+function openSearch(){
+  document.getElementById('searchOverlay').classList.add('open');
+  const inp=document.getElementById('searchPaletteInput');
+  inp.value='';inp.focus();
+  filterSearch('');
+  highlightedIdx=-1;
+}
+function closeSearch(){
+  document.getElementById('searchOverlay').classList.remove('open');
+}
+function filterSearch(q){
+  const res=document.getElementById('searchResults');
+  const items=q?searchData.filter(d=>d.title.toLowerCase().includes(q.toLowerCase())||d.section.toLowerCase().includes(q.toLowerCase())):searchData.slice(0,12);
+  highlightedIdx=-1;
+  res.innerHTML=items.map((d,i)=>`<div class="search-result" data-idx="${i}" onclick="goTo('${d.id}')"><div><div class="search-result-title">${d.title}</div><div class="search-result-section">${d.section}</div></div></div>`).join('');
+}
+function goTo(id){
+  closeSearch();
+  const el=document.getElementById(id);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openSearch();return}
+  if(e.key==='Escape'){closeSearch();return}
+  const overlay=document.getElementById('searchOverlay');
+  if(!overlay.classList.contains('open'))return;
+  const results=overlay.querySelectorAll('.search-result');
+  if(e.key==='ArrowDown'){e.preventDefault();highlightedIdx=Math.min(highlightedIdx+1,results.length-1);updateHighlight(results)}
+  if(e.key==='ArrowUp'){e.preventDefault();highlightedIdx=Math.max(highlightedIdx-1,0);updateHighlight(results)}
+  if(e.key==='Enter'&&highlightedIdx>=0){results[highlightedIdx].click()}
+});
+function updateHighlight(results){
+  results.forEach((r,i)=>r.classList.toggle('highlighted',i===highlightedIdx));
+  if(results[highlightedIdx])results[highlightedIdx].scrollIntoView({block:'nearest'});
+}
+</script>
+</body>
+</html>
