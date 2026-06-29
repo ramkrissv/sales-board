@@ -320,9 +320,15 @@ function AccountRow({ account, meta, expanded, onToggle, onEdit, onDelete, score
     { enabled: expanded && oppIds.length > 0 }
   );
 
-  const [accountBrief, setAccountBrief] = useState<string | null>(null);
+  // Account brief — load from DB first, generate if missing
+  const [accountBrief, setAccountBrief] = useState<string | null>((account as any).aiBrief || null);
+  const accountUpdateMutation = trpc.account.update.useMutation();
   const accountBriefMutation = trpc.ai.chat.useMutation({
-    onSuccess: (data: any) => setAccountBrief(data.response),
+    onSuccess: (data: any) => {
+      setAccountBrief(data.response);
+      // Persist to DB so it survives navigation
+      accountUpdateMutation.mutate({ id: account._id.toString(), aiBrief: data.response, aiBriefGeneratedAt: new Date().toISOString() } as any);
+    },
   });
 
   useEffect(() => {

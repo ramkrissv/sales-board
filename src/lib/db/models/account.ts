@@ -13,6 +13,9 @@ export interface IAccount extends Document {
   accountHealth?: number;
   penetration?: number;
   territory?: string;
+  aiBrief?: string;
+  aiBriefGeneratedAt?: Date;
+  intentData?: any;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +37,9 @@ const AccountSchema = new Schema<IAccount>(
     accountHealth: { type: Number, min: 0, max: 100 },
     penetration: { type: Number, min: 0, max: 100 },
     territory: { type: String },
+    aiBrief: { type: String },
+    aiBriefGeneratedAt: { type: Date },
+    intentData: { type: Schema.Types.Mixed },
   },
   { timestamps: true }
 );
