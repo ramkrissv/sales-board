@@ -1,0 +1,13 @@
+{
+  "feature": "Presales Scope Builder v1",
+  "version": "1.0",
+  "completed": "2026-06-28",
+  "criteria": {
+    "8_workstreams": { "status": "pass", "evidence": "Discovery, Architecture, Dev, QA, DevOps, Data/AI, Training, PM" },
+    "5_execution_models": { "status": "pass", "evidence": "Pod Squad, Managed Capacity, Outcome-Based, AI-Powered, Hybrid" },
+    "ai_generation": { "status": "pass", "evidence": "Generates 6-10 scope items from deal context" },
+    "push_to_studio": { "status": "pass", "evidence": "Converts scope items to proposal sections" },
+    "effort_integration": { "status": "pass", "evidence": "Scope summary in Effort Estimator card" },
+    "export_integration": { "status": "pass", "evidence": "PDF/DOCX/Markdown include scope table" }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "feature": "AI Gateway v1",
+  "version": "1.0",
+  "completed": "2026-06-29",
+  "criteria": {
+    "13_call_sites_wired": { "status": "pass", "evidence": "account.ts, lead.ts (4), integration.ts, ai.ts (4), workshop.ts, harness.ts" },
+    "rate_limit_enforced": { "status": "pass", "evidence": "checkRateLimit() in budgets.ts, 30 rpm from config" },
+    "sandbox_validation": { "status": "pass", "evidence": "validatePrompt() in sandbox.ts, catches hardcoded secrets" },
+    "token_budget_caps": { "status": "pass", "evidence": "getMaxTokens() reads config/token_budgets.json" },
+    "telemetry_traces": { "status": "pass", "evidence": "logTrace() writes to telemetry/traces/YYYY-MM-DD.jsonl" },
+    "telemetry_metrics": { "status": "pass", "evidence": "updateMetrics() writes to telemetry/metrics/YYYY-MM-DD.json" },
+    "eval_suite_passes": { "status": "pass", "evidence": "harness.runEval gateway suite: 6/6 tests" }
+  }
+}

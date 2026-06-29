@@ -48,3 +48,6 @@ telemetry/traces/*.jsonl
 telemetry/metrics/*.json
 !telemetry/traces/README.md
 !telemetry/metrics/README.md
+
+# User-specific overrides (gitignored)
+CLAUDE.local.md

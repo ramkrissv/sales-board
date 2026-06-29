@@ -1,0 +1,13 @@
+{
+  "feature": "Platform Evals v1",
+  "version": "1.0",
+  "completed": "2026-06-29",
+  "criteria": {
+    "gateway_suite": { "status": "pass", "tests": 6, "evidence": "Config validity, gateway resolution, sandbox validation" },
+    "telemetry_suite": { "status": "pass", "tests": 3, "evidence": "Module resolution, trace write, metrics read" },
+    "config_suite": { "status": "pass", "tests": 3, "evidence": "3 config files valid JSON" },
+    "workshop_suite": { "status": "pass", "tests": 8, "evidence": "Scoring math, constants, AI registry" },
+    "ui_runner": { "status": "pass", "evidence": "EvalRunner component on Agents page, click-to-run" },
+    "total_assertions": { "status": "pass", "count": 20 }
+  }
+}
