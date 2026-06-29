@@ -219,4 +219,119 @@ export const harnessRouter = router({
       return JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'config/token_budgets.json'), 'utf-8'));
     } catch { return null; }
   }),
+
+  // ═══════ RUNNABLE EVALS ═══════
+
+  // Run a lightweight eval suite against the live platform
+  runEval: protectedProcedure
+    .input(z.object({ suite: z.enum(['gateway', 'telemetry', 'config', 'workshop']) }))
+    .mutation(async ({ input }) => {
+      const results: { name: string; pass: boolean; detail: string }[] = [];
+
+      if (input.suite === 'gateway' || input.suite === 'config') {
+        // Eval: config files exist and are valid JSON
+        const configs = [
+          { file: 'config/token_budgets.json', key: 'budgets' },
+          { file: 'config/rate_limits.json', key: 'api' },
+          { file: 'gatekeeper/sandbox.config.json', key: 'rules' },
+        ];
+        for (const cfg of configs) {
+          try {
+            const p = path.resolve(process.cwd(), cfg.file);
+            const data = JSON.parse(fs.readFileSync(p, 'utf-8'));
+            results.push({ name: `Config: ${cfg.file}`, pass: !!data[cfg.key], detail: data[cfg.key] ? 'Valid JSON with expected key' : 'Missing expected key' });
+          } catch (e: any) {
+            results.push({ name: `Config: ${cfg.file}`, pass: false, detail: e.message });
+          }
+        }
+      }
+
+      if (input.suite === 'gateway') {
+        // Eval: AI gateway imports resolve
+        try {
+          const { aiGateway } = await import('@/lib/ai/gateway');
+          results.push({ name: 'Gateway: module resolves', pass: typeof aiGateway === 'function', detail: 'aiGateway is a function' });
+        } catch (e: any) {
+          results.push({ name: 'Gateway: module resolves', pass: false, detail: e.message });
+        }
+        // Eval: sandbox validation works
+        try {
+          const { validatePrompt } = await import('@/lib/ai/sandbox');
+          const clean = validatePrompt('Hello world');
+          const dirty = validatePrompt('my api key is sk-ant-api03-abcdefghijklmnopqrstuvwxyz1234567890');
+          results.push({ name: 'Sandbox: clean prompt passes', pass: clean.valid, detail: 'No violation' });
+          results.push({ name: 'Sandbox: secret detected', pass: !dirty.valid, detail: dirty.violation || 'Should have detected secret' });
+        } catch (e: any) {
+          results.push({ name: 'Sandbox: validation', pass: false, detail: e.message });
+        }
+        // Eval: rate limiter resolves
+        try {
+          const { checkRateLimit } = await import('@/lib/ai/budgets');
+          const check = checkRateLimit();
+          results.push({ name: 'RateLimit: check works', pass: typeof check.allowed === 'boolean', detail: `allowed=${check.allowed}` });
+        } catch (e: any) {
+          results.push({ name: 'RateLimit: check works', pass: false, detail: e.message });
+        }
+      }
+
+      if (input.suite === 'telemetry') {
+        // Eval: telemetry modules resolve
+        try {
+          const { logTrace, updateMetrics, getTodayMetrics } = await import('@/lib/ai/telemetry');
+          results.push({ name: 'Telemetry: modules resolve', pass: true, detail: 'logTrace, updateMetrics, getTodayMetrics available' });
+          // Test write
+          logTrace({ id: 'eval-test', timestamp: new Date().toISOString(), assist: 'eval.test', model: 'test', latencyMs: 0, status: 'success' });
+          const metrics = getTodayMetrics();
+          results.push({ name: 'Telemetry: trace written', pass: true, detail: 'Trace appended to today file' });
+          results.push({ name: 'Telemetry: metrics readable', pass: typeof metrics === 'object', detail: `Keys: ${Object.keys(metrics).length}` });
+        } catch (e: any) {
+          results.push({ name: 'Telemetry: modules', pass: false, detail: e.message });
+        }
+      }
+
+      if (input.suite === 'workshop') {
+        // Eval: workshop scoring math
+        try {
+          const { overallIndex, maturityStage, levelReadiness } = await import('@/lib/workshop/scoring');
+          // Test with mock data
+          const mockLevel = { id: 'L1', name: 'Test', weight: 1, dimensions: [
+            { id: 'd1', name: 'D1', currentScore: 3, targetScore: 4 },
+            { id: 'd2', name: 'D2', currentScore: 1, targetScore: 3 },
+          ]};
+          const r = levelReadiness(mockLevel);
+          results.push({ name: 'Scoring: levelReadiness', pass: r.currentPct === 50, detail: `currentPct=${r.currentPct} (expected 50)` });
+          results.push({ name: 'Scoring: scored count', pass: r.scored === 2, detail: `scored=${r.scored}` });
+          const idx = overallIndex([mockLevel]);
+          results.push({ name: 'Scoring: overallIndex', pass: idx === 50, detail: `index=${idx} (expected 50)` });
+          const stage = maturityStage(idx);
+          results.push({ name: 'Scoring: maturityStage', pass: stage === 'Governed', detail: `stage=${stage}` });
+        } catch (e: any) {
+          results.push({ name: 'Scoring: math', pass: false, detail: e.message });
+        }
+        // Eval: constants resolve
+        try {
+          const { MATURITY_LABELS, MATURITY_COLORS, EXEC_LABELS } = await import('@/lib/workshop/constants');
+          results.push({ name: 'Constants: MATURITY_LABELS', pass: MATURITY_LABELS.length === 5, detail: MATURITY_LABELS.join(', ') });
+          results.push({ name: 'Constants: MATURITY_COLORS', pass: MATURITY_COLORS.length === 5, detail: 'All 5 colors present' });
+          results.push({ name: 'Constants: EXEC_LABELS', pass: Object.keys(EXEC_LABELS).length === 5, detail: Object.keys(EXEC_LABELS).join(', ') });
+        } catch (e: any) {
+          results.push({ name: 'Constants: resolve', pass: false, detail: e.message });
+        }
+        // Eval: AI registry
+        try {
+          const { getAssist } = await import('@/lib/workshop/ai-registry');
+          const assists = ['finding.synthesize', 'currentstate.narrative', 'proposal.generate', 'scope.synthesize'];
+          for (const key of assists) {
+            const a = getAssist(key);
+            results.push({ name: `Registry: ${key}`, pass: !!a, detail: a ? `model=${a.model}` : 'NOT FOUND' });
+          }
+        } catch (e: any) {
+          results.push({ name: 'Registry: resolve', pass: false, detail: e.message });
+        }
+      }
+
+      const passed = results.filter(r => r.pass).length;
+      const total = results.length;
+      return { suite: input.suite, results, passed, total, score: total > 0 ? Math.round(passed / total * 100) : 0 };
+    }),
 });

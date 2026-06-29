@@ -273,6 +273,12 @@ export default function AgentsPage() {
         <AgentTelemetry />
       </div>
 
+      {/* Platform Evals */}
+      <div className="g-surface g-elevated p-4">
+        <div className="g-section-label mb-2">Platform Evals</div>
+        <EvalRunner />
+      </div>
+
       {/* Tools Reference */}
       <details>
         <summary className="g-section-label cursor-pointer hover:text-foreground">Platform Tools (17 available)</summary>
@@ -368,6 +374,77 @@ function AgentTelemetry() {
           No AI calls logged today. Invoke an agent or use any AI feature to see telemetry here.
         </div>
       )}
+    </div>
+  );
+}
+
+function EvalRunner() {
+  const [running, setRunning] = useState<string | null>(null);
+  const [results, setResults] = useState<Record<string, any>>({});
+  const runEval = trpc.harness.runEval.useMutation();
+
+  const suites = [
+    { id: 'gateway' as const, label: 'AI Gateway', desc: 'Rate limits, sandbox, token budgets', color: '#7c3aed' },
+    { id: 'telemetry' as const, label: 'Telemetry', desc: 'Trace logging, metrics aggregation', color: '#3b82f6' },
+    { id: 'config' as const, label: 'Config', desc: 'Config files valid and loaded', color: '#f59e0b' },
+    { id: 'workshop' as const, label: 'Workshop', desc: 'Scoring math, constants, AI registry', color: '#0FB5AD' },
+  ];
+
+  const handleRun = (suite: 'gateway' | 'telemetry' | 'config' | 'workshop') => {
+    setRunning(suite);
+    runEval.mutate({ suite }, {
+      onSuccess: (data) => { setResults(prev => ({ ...prev, [suite]: data })); setRunning(null); },
+      onError: () => setRunning(null),
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {suites.map(s => {
+          const r = results[s.id];
+          return (
+            <button key={s.id} onClick={() => handleRun(s.id)} disabled={running !== null}
+              className="p-3 rounded-lg border border-border text-left hover:border-opacity-60 transition-all disabled:opacity-50"
+              style={{ borderColor: r ? (r.score === 100 ? '#22c55e30' : '#f59e0b30') : `${s.color}20` }}>
+              <div className="flex items-center gap-2 mb-1">
+                {running === s.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: s.color }} />
+                ) : r ? (
+                  <div className={`text-sm font-bold font-display ${r.score === 100 ? 'text-emerald-400' : 'text-amber-400'}`}>{r.score}%</div>
+                ) : (
+                  <Play className="h-3.5 w-3.5" style={{ color: s.color }} />
+                )}
+                <span className="text-[10px] font-semibold text-foreground">{s.label}</span>
+              </div>
+              <div className="text-[9px] text-muted-foreground">{s.desc}</div>
+              {r && (
+                <div className="text-[9px] mt-1" style={{ color: r.score === 100 ? '#22c55e' : '#f59e0b' }}>
+                  {r.passed}/{r.total} passed
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Detailed results */}
+      {Object.entries(results).map(([suite, data]: [string, any]) => (
+        <details key={suite} open={data.score < 100}>
+          <summary className="text-[9px] font-mono uppercase tracking-wider cursor-pointer hover:text-foreground" style={{ color: data.score === 100 ? '#22c55e' : '#f59e0b' }}>
+            {suite}: {data.passed}/{data.total} ({data.score}%)
+          </summary>
+          <div className="mt-1 space-y-0.5">
+            {data.results.map((r: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 px-2 py-1 rounded text-[9px] hover:bg-card/50">
+                <span className={`w-1.5 h-1.5 rounded-full ${r.pass ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                <span className="font-mono text-foreground w-48 truncate">{r.name}</span>
+                <span className="text-muted-foreground truncate">{r.detail}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      ))}
     </div>
   );
 }
