@@ -1,0 +1,13 @@
+#!/bin/sh
+# Pre-push hook: full build verification
+
+echo "Running pre-push build check..."
+
+npx next build 2>&1 | tail -5
+
+if [ $? -ne 0 ]; then
+  echo "ERROR: Build failed. Fix errors before pushing."
+  exit 1
+fi
+
+echo "Build passed. Push allowed."

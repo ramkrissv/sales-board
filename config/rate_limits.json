@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "api": {
+    "global": { "rpm": 60, "rph": 1000 },
+    "ai_endpoints": { "rpm": 30, "rph": 500, "concurrent": 5 },
+    "trpc_mutations": { "rpm": 120, "rph": 3000 },
+    "export_endpoints": { "rpm": 10, "rph": 50 }
+  },
+  "websocket": {
+    "connections_per_user": 3,
+    "messages_per_minute": 100
+  },
+  "upload": {
+    "max_file_size_mb": 25,
+    "allowed_types": [".pdf", ".docx", ".xlsx", ".csv", ".png", ".jpg", ".txt", ".md"]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "feature": "Client Workshops v1",
+  "version": "1.0",
+  "completed": "2026-06-24",
+  "criteria": {
+    "9_tab_workshop_page": { "status": "pass", "evidence": "src/app/workshop/[id]/page.tsx" },
+    "10_assessment_templates": { "status": "pass", "evidence": "src/lib/db/seed-workshop-templates.ts" },
+    "12_ai_assists": { "status": "pass", "evidence": "src/lib/workshop/ai-registry.ts" },
+    "scoring_math_tested": { "status": "pass", "evidence": "tests/workshop-scoring.test.ts" },
+    "clone_on_create": { "status": "pass", "evidence": "src/lib/trpc/routers/workshop.ts:create" },
+    "deal_integration": { "status": "pass", "evidence": "auto-creates Discovery opportunity" },
+    "html_pdf_export": { "status": "pass", "evidence": "src/lib/workshop/export.ts" },
+    "stage_gates": { "status": "pass", "evidence": "StageGate component on 6 tabs" },
+    "consistency_check": { "status": "pass", "evidence": "ConsistencyCheck in WorkshopCockpit" },
+    "composable_templates": { "status": "pass", "evidence": "WorkshopsTab multi-service-line" }
+  }
+}

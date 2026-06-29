@@ -1,0 +1,43 @@
+# Deploy Workflow — Push to EC2 via SSM
+# State: agent reads and writes status here
+
+name: deploy-to-production
+instance: i-085cae314b9dda866
+ip: 52.20.222.188
+
+steps:
+  - id: build
+    action: "npx next build"
+    expect: "Compiled successfully"
+    on_fail: fix_errors
+
+  - id: commit
+    action: "git add -A && git commit"
+    skip_if: clean_working_tree
+
+  - id: push
+    action: "git push origin main:feature/{branch_name}"
+    note: "Never push directly to main (permission blocked)"
+
+  - id: deploy
+    action: |
+      aws ssm send-command --instance-ids {instance}
+        --document-name AWS-RunShellScript
+        --parameters 'commands=["sudo -u ubuntu bash -c \"cd /home/ubuntu/sales-board && git fetch origin && git checkout feature/{branch_name} && git reset --hard origin/feature/{branch_name} && docker compose build && docker compose up -d\""]'
+    timeout: 600
+
+  - id: verify
+    action: "aws ssm get-command-invocation --command-id {command_id} --instance-id {instance}"
+    expect: "Success"
+    retry: 3
+    retry_interval: 60
+
+  - id: health_check
+    action: "curl -s -o /dev/null -w '%{http_code}' https://salespilot.galent.ai"
+    expect: "200|307"
+
+recovery:
+  ssm_undeliverable:
+    action: "aws ec2 reboot-instances --instance-ids {instance}"
+    wait: 180
+    retry_deploy: true

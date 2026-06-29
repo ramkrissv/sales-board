@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "description": "Model Context Protocol configuration for SalesPilot",
+  "server": {
+    "endpoint": "/api/mcp",
+    "auth": "bearer",
+    "tools": [
+      {
+        "name": "list_opportunities",
+        "description": "List all opportunities with optional status filter",
+        "parameters": { "status": { "type": "string", "enum": ["Discovery", "Qualification", "Proposal", "Negotiation", "Won", "Lost"] } }
+      },
+      {
+        "name": "get_workshop",
+        "description": "Get workshop by ID with full assessment data",
+        "parameters": { "workshopId": { "type": "string", "required": true } }
+      },
+      {
+        "name": "run_workshop_assist",
+        "description": "Run an AI assist on a workshop",
+        "parameters": {
+          "workshopId": { "type": "string", "required": true },
+          "assistKey": { "type": "string", "required": true },
+          "input": { "type": "object" }
+        }
+      },
+      {
+        "name": "create_opportunity",
+        "description": "Create a new opportunity/deal",
+        "parameters": { "customerName": { "type": "string" }, "opportunityName": { "type": "string" }, "status": { "type": "string" } }
+      },
+      {
+        "name": "search_pipeline",
+        "description": "Search pipeline by customer name or keyword",
+        "parameters": { "query": { "type": "string", "required": true } }
+      }
+    ]
+  }
+}

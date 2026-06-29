@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "description": "Sandbox guardrails for agent operations",
+  "rules": {
+    "file_operations": {
+      "allow_write": ["src/", "tests/", "public/", "specs/", "execution/"],
+      "deny_write": [".env*", "node_modules/", "docker-compose.yml", "package.json"],
+      "require_approval": ["src/middleware.ts", "src/lib/trpc/routers/ai.ts", "CLAUDE.md"]
+    },
+    "git_operations": {
+      "allow": ["add", "commit", "push (feature branches)", "status", "diff", "log"],
+      "deny": ["push --force", "reset --hard", "push origin main"],
+      "require_approval": ["rebase", "merge", "tag"]
+    },
+    "network": {
+      "allow_outbound": ["api.anthropic.com", "github.com", "*.amazonaws.com"],
+      "deny_outbound": ["*"],
+      "note": "Allowlist — block everything not explicitly permitted"
+    },
+    "ai_operations": {
+      "max_tokens_per_call": 8000,
+      "require_human_review": true,
+      "log_all_interactions": true,
+      "forbidden_in_prompts": ["password", "secret", "api_key", "token"]
+    }
+  }
+}

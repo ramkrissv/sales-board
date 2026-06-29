@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "note": "Hard dollar caps and model tier routing. Checked before every AI call.",
+  "budgets": {
+    "daily_limit_usd": 50,
+    "monthly_limit_usd": 500,
+    "per_request_max_tokens": {
+      "haiku": 2000,
+      "sonnet": 4000,
+      "opus": 8000
+    }
+  },
+  "model_routing": {
+    "cheap_high_volume": {
+      "model": "claude-haiku-4-5",
+      "use_cases": ["autocomplete", "tag_suggestions", "quick_classify"]
+    },
+    "standard": {
+      "model": "claude-sonnet-4-6",
+      "use_cases": ["finding.synthesize", "dimension.detail", "gap.narrative", "usecase.enrich", "scope.detail", "content.detail", "consistency.check"]
+    },
+    "heavy_synthesis": {
+      "model": "claude-opus-4-8",
+      "use_cases": ["currentstate.narrative", "proposal.generate", "scope.synthesize", "pilot.recommend", "exec.summary"]
+    }
+  },
+  "rate_limits": {
+    "requests_per_minute": 30,
+    "requests_per_hour": 500,
+    "concurrent_max": 5
+  }
+}

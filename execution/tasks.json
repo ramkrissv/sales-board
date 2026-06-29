@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "project": "salespilot",
+  "updated": "2026-06-29",
+  "active_tasks": [
+    {
+      "id": "T001",
+      "title": "Streaming for prose assists",
+      "status": "deferred",
+      "priority": "low",
+      "description": "Progressive text rendering for proposal/narrative generation",
+      "assigned_to": "generator",
+      "spec": null
+    },
+    {
+      "id": "T002",
+      "title": "Auto-rank from ongoing workshop inputs",
+      "status": "pending",
+      "priority": "medium",
+      "description": "AI auto-ranks and adds tasks/suggestions as more input is fed to workshop chat",
+      "assigned_to": "generator",
+      "spec": null
+    },
+    {
+      "id": "T003",
+      "title": "Integration buttons in chat interfaces",
+      "status": "pending",
+      "priority": "low",
+      "description": "Inline integration feature buttons in chat interfaces",
+      "assigned_to": "generator",
+      "spec": null
+    }
+  ],
+  "completed_tasks": [
+    "Presales Scope Builder",
+    "Workshop Findings Dashboard (McKinsey-grade)",
+    "Workshop Cockpit deep upgrade",
+    "Workshop Proposal enhanced",
+    "Architecture Dossier (12-slide)",
+    "Codebase alignment (DRY constants)",
+    "Multi-asset deliverable generation",
+    "Lifecycle-based routing",
+    "Guide v4.0 updates"
+  ]
+}

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agentic Project Structure Template | Claude Code</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0B1120;color:#E2E8F0;padding:40px;min-height:100vh}
+h1{font-family:'Space Grotesk',sans-serif;font-size:2rem;margin-bottom:4px;background:linear-gradient(135deg,#0FB5AD,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{font-family:'Space Grotesk',sans-serif;font-size:1rem;color:#94A3B8;font-weight:400;margin-bottom:32px}
+.grid{display:grid;grid-template-columns:360px 1fr;gap:40px;max-width:1200px;margin:0 auto}
+.tree{font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:2}
+.folder{color:#f59e0b}
+.file{color:#94A3B8}
+.yml{color:#0FB5AD}
+.json{color:#7c3aed}
+.md{color:#E2E8F0}
+.indent{padding-left:20px}
+.indent2{padding-left:40px}
+.indent3{padding-left:60px}
+.cards{display:flex;flex-direction:column;gap:16px}
+.card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;position:relative}
+.card::before{content:'';position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:2px}
+.card-teal::before{background:#0FB5AD}
+.card-purple::before{background:#7c3aed}
+.card-amber::before{background:#f59e0b}
+.card-red::before{background:#C8472E}
+.card-blue::before{background:#3b82f6}
+.card-green::before{background:#22c55e}
+.card h3{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;margin-bottom:4px;padding-left:12px}
+.card-teal h3{color:#0FB5AD}
+.card-purple h3{color:#7c3aed}
+.card-amber h3{color:#f59e0b}
+.card-red h3{color:#C8472E}
+.card-blue h3{color:#3b82f6}
+.card-green h3{color:#22c55e}
+.card ul{list-style:none;padding-left:12px}
+.card li{font-size:12px;color:#94A3B8;padding:2px 0}
+.card li::before{content:'✓';color:#0FB5AD;margin-right:8px;font-size:11px}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;margin-left:8px}
+.tag-ro{background:rgba(15,181,173,0.1);color:#0FB5AD}
+.tag-rw{background:rgba(124,58,237,0.1);color:#7c3aed}
+.tag-wo{background:rgba(245,158,11,0.1);color:#f59e0b}
+.footer{text-align:center;margin-top:40px;color:#64748B;font-size:12px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+@media print{body{background:#fff;color:#1a1a2e}.card{border-color:#e4e7ee}}
+</style>
+</head>
+<body>
+
+<div style="max-width:1200px;margin:0 auto 32px">
+<h1>Claude Code Agentic Project Structure</h1>
+<h2>Template for enterprise-grade AI-native projects</h2>
+</div>
+
+<div class="grid">
+<!-- LEFT: Directory Tree -->
+<div>
+<div class="tree">
+<div><span class="folder">📁</span> my-project/</div>
+
+<div class="indent"><span class="folder">📁</span> .claude/</div>
+<div class="indent2"><span class="folder">📁</span> agents/</div>
+<div class="indent3"><span class="yml">📄</span> planner.yml</div>
+<div class="indent3"><span class="yml">📄</span> generator.yml</div>
+<div class="indent3"><span class="yml">📄</span> evaluator.yml</div>
+<div class="indent2"><span class="folder">📁</span> commands/</div>
+<div class="indent3"><span class="md">📄</span> deploy.md</div>
+<div class="indent3"><span class="md">📄</span> audit.md</div>
+<div class="indent2"><span class="folder">📁</span> skills/</div>
+<div class="indent3"><span class="md">📄</span> patterns.md</div>
+
+<div class="indent"><span class="folder">📁</span> specs/</div>
+<div class="indent2"><span class="md">📄</span> ARCHITECTURE.md</div>
+<div class="indent2"><span class="folder">📁</span> features/</div>
+<div class="indent3"><span class="md">📄</span> feature-name.md</div>
+<div class="indent2"><span class="folder">📁</span> done_contracts/</div>
+<div class="indent3"><span class="json">📄</span> feature-v1.json</div>
+
+<div class="indent"><span class="folder">📁</span> execution/</div>
+<div class="indent2"><span class="folder">📁</span> workflows/</div>
+<div class="indent3"><span class="yml">📄</span> deploy.yml</div>
+<div class="indent2"><span class="json">📄</span> tasks.json</div>
+
+<div class="indent"><span class="folder">📁</span> tests/</div>
+<div class="indent2"><span class="folder">📁</span> agent_evals/</div>
+<div class="indent3"><span class="md">📄</span> quality-bench.md</div>
+<div class="indent2"><span class="folder">📁</span> integration/</div>
+
+<div class="indent"><span class="folder">📁</span> telemetry/</div>
+<div class="indent2"><span class="folder">📁</span> traces/</div>
+<div class="indent2"><span class="folder">📁</span> metrics/</div>
+
+<div class="indent"><span class="folder">📁</span> config/</div>
+<div class="indent2"><span class="json">📄</span> token_budgets.json</div>
+<div class="indent2"><span class="json">📄</span> rate_limits.json</div>
+
+<div class="indent"><span class="folder">📁</span> gatekeeper/</div>
+<div class="indent2"><span class="folder">📁</span> approvals/</div>
+<div class="indent2"><span class="json">📄</span> sandbox.config.json</div>
+
+<div class="indent"><span class="folder">📁</span> .githooks/</div>
+<div class="indent2"><span class="file">📄</span> pre-commit</div>
+<div class="indent2"><span class="file">📄</span> pre-push</div>
+
+<div class="indent"><span class="json">📄</span> .mcp.json</div>
+<div class="indent"><span class="md">📄</span> CLAUDE.md</div>
+<div class="indent"><span class="md">📄</span> CLAUDE.local.md</div>
+</div>
+</div>
+
+<!-- RIGHT: Explanation Cards -->
+<div class="cards">
+
+<div class="card card-teal">
+<h3>ENGINE CONFIGURATION <span class="tag tag-ro">Agent Read-Only</span></h3>
+<ul>
+<li>Isolated sub-agent personas with constraints</li>
+<li>Planner: specs → execution plans</li>
+<li>Generator: independent code-writing with guardrails</li>
+<li>Evaluator: strict grading rubric (7 criteria)</li>
+<li>Slash commands mapped to .md files</li>
+<li>Reusable skills & technical pattern snippets</li>
+</ul>
+</div>
+
+<div class="card card-purple">
+<h3>SPEC ENGINEERING <span class="tag tag-ro">Immutable</span></h3>
+<ul>
+<li>ARCHITECTURE.md — core technical boundaries</li>
+<li>Feature specs with acceptance criteria</li>
+<li>Done contracts: JSON schemas defining "success"</li>
+<li>Agents read but never modify specs</li>
+</ul>
+</div>
+
+<div class="card card-amber">
+<h3>FLOW ENGINEERING <span class="tag tag-rw">Agent Read-Write</span></h3>
+<ul>
+<li>Reusable workflow YAML (deploy, build, test)</li>
+<li>tasks.json — single-source-of-truth state machine</li>
+<li>Planner writes workflows, Generator reads them</li>
+</ul>
+</div>
+
+<div class="card card-red">
+<h3>HARNESS ENGINEERING <span class="tag tag-wo">Validation Loop</span></h3>
+<ul>
+<li>Agent evals — regression benchmarks for prompt drift</li>
+<li>Quality gates per AI assist (accept rate, output length)</li>
+<li>Integration tests for critical flows</li>
+</ul>
+</div>
+
+<div class="card card-blue">
+<h3>OBSERVABILITY LAYER <span class="tag tag-wo">Append-Only</span></h3>
+<ul>
+<li>AI interaction traces (input, output, status, model, cost)</li>
+<li>Latency metrics per assist type</li>
+<li>Accept/reject rates for prompt tuning signals</li>
+</ul>
+</div>
+
+<div class="card card-green">
+<h3>ECONOMICS & SAFETY <span class="tag tag-ro">System Caps</span></h3>
+<ul>
+<li>Token budgets: daily/monthly dollar caps</li>
+<li>Model tier routing (haiku → sonnet → opus)</li>
+<li>Rate limits per endpoint category</li>
+</ul>
+</div>
+
+<div class="card card-red">
+<h3>SECURE ACCESS LAYER <span class="tag tag-ro">Sandbox</span></h3>
+<ul>
+<li>File write allowlist/denylist per agent</li>
+<li>Git operation guardrails (no force push)</li>
+<li>Network allowlist (API endpoints only)</li>
+<li>High-risk changes queued for human approval</li>
+</ul>
+</div>
+
+<div class="card card-teal">
+<h3>ROOT CONFIG FILES</h3>
+<ul>
+<li>.githooks/ — pre-commit (secrets scan, TypeScript check) + pre-push (build verify)</li>
+<li>.mcp.json — Model Context Protocol tool schemas</li>
+<li>CLAUDE.md — global routing + bootstrap rules</li>
+<li>CLAUDE.local.md — user-specific overrides (gitignored)</li>
+</ul>
+</div>
+
+</div>
+</div>
+
+<div class="footer">
+  Galent AI · Agentic Project Template · Works with Claude Code, Cursor, Windsurf<br>
+  Based on SalesPilot architecture · <a href="https://salespilot.galent.ai" style="color:#0FB5AD">salespilot.galent.ai</a>
+</div>
+
+</body>
+</html>
