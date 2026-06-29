@@ -344,11 +344,31 @@ Return ONLY valid JSON:
         if (opp) {
           const stakeholders = await Stakeholder.find({ opportunityId: input.context.opportunityId }).lean();
           const tasks = await Task.find({ opportunityId: input.context.opportunityId }).lean();
+          // Include workshop assessment data if deal has a linked workshop
+          let workshopContext = '';
+          if ((opp as any).workshopId) {
+            try {
+              const WS = mongoose.models.Workshop || (await import('@/lib/db/models/workshop')).Workshop;
+              const ws = await WS.findOne({ id: (opp as any).workshopId }).lean();
+              if (ws) {
+                const levels = (ws as any).framework?.levels || [];
+                const allDims = levels.flatMap((l: any) => l.dimensions || []);
+                const scored = allDims.filter((d: any) => d.currentScore != null);
+                const gaps = allDims.filter((d: any) => d.currentScore != null && d.targetScore != null && d.targetScore > d.currentScore);
+                workshopContext = `\nWORKSHOP ASSESSMENT: ${(ws as any).title}
+Readiness: ${scored.length > 0 ? Math.round(scored.reduce((s: number, d: any) => s + d.currentScore, 0) / scored.length / 4 * 100) : 0}%
+Scored: ${scored.length}/${allDims.length} dimensions | Gaps: ${gaps.length}
+Top gaps: ${gaps.sort((a: any, b: any) => (b.targetScore - b.currentScore) - (a.targetScore - a.currentScore)).slice(0, 5).map((d: any) => d.name).join(', ') || 'None'}
+Use cases: ${(ws as any).useCases?.length || 0} | Scope items: ${(ws as any).scopeItems?.length || 0}`;
+              }
+            } catch {} // Workshop model may not be available
+          }
+
           dealContext = `\n\nCURRENT DEAL FOCUS: ${(opp as any).customerName} - ${(opp as any).opportunityName}
 Status: ${(opp as any).status} | TCV: $${((opp as any).tcv || 0).toLocaleString()} | Margin: ${(opp as any).margin || 'N/A'}%
 Owner: ${(opp as any).primaryOwner} | Close: ${(opp as any).expectedCloseDate} | Duration: ${(opp as any).dealDuration}
 Stakeholders: ${stakeholders.map((s: any) => `${s.name} (${s.title})${s.isDecisionMaker ? ' [DM]' : ''}`).join(', ') || 'None'}
-Tasks: ${tasks.length} total, ${tasks.filter((t: any) => t.status === 'complete').length} complete, ${tasks.filter((t: any) => t.status === 'pending' && new Date(t.dueDate) < new Date()).length} overdue
+Tasks: ${tasks.length} total, ${tasks.filter((t: any) => t.status === 'complete').length} complete, ${tasks.filter((t: any) => t.status === 'pending' && new Date(t.dueDate) < new Date()).length} overdue${workshopContext}
 Conversation: ${((opp as any).conversationLog || '').slice(0, 500)}`;
         }
       }

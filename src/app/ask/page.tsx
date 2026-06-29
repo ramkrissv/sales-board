@@ -141,14 +141,18 @@ function AskContent() {
     const isCreateIntent = /\b(new|create|add|log|register)\b.*\b(opportunity|deal|opp|lead|engagement|project)\b/i.test(lower)
       || /\b(opportunity|deal)\b.*\b(with|for|from)\b/i.test(lower);
 
-    // Add context about the pipeline to the query
+    // Add context about the pipeline + workshops to the query
+    const dealsWithWorkshops = opportunities.filter((o: any) => o.workshopId);
+    const workshopContext = dealsWithWorkshops.length > 0
+      ? `\nDeals with active workshops (${dealsWithWorkshops.length}): ${dealsWithWorkshops.map((o: any) => `${o.customerName} (${o.status}, workshop: ${o.workshopId})`).join(', ')}. You can reference workshop assessments, findings, and scope when answering questions about these deals.`
+      : '';
     const context = `Current pipeline data: ${opportunities.length} total opportunities. By stage: ${
       ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Lost'].map(s =>
         `${s}: ${opportunities.filter(o => o.status === s).length}`
       ).join(', ')
     }. Total TCV: $${opportunities.reduce((s, o) => s + (o.tcv || 0), 0).toLocaleString()}. Top accounts: ${
       [...new Set(opportunities.map(o => o.customerName))].slice(0, 5).join(', ')
-    }.`;
+    }.${workshopContext}`;
 
     const createInstruction = isCreateIntent ? `\n\nIMPORTANT: The user wants to CREATE a new opportunity. Extract all fields from their message and include this JSON in your response (in addition to a friendly confirmation):
 {"_action":"create_opportunity","customerName":"<company>","opportunityName":"<company — description>","primaryOwner":"<sales rep if mentioned>","serviceLine":"<if mentioned>","tcv":0,"status":"Discovery","stakeholders":[{"name":"<if mentioned>","role":"<if mentioned>"}]}

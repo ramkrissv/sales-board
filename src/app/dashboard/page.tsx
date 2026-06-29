@@ -110,6 +110,43 @@ function AnalyticsContent() {
         ))}
       </div>
 
+      {/* AI Pipeline Insights */}
+      {opportunities.length > 0 && (() => {
+        const insights: { text: string; type: 'warning' | 'success' | 'info' }[] = [];
+        const staleDays = 14;
+        const staleDeals = activeDeals.filter(o => {
+          const updated = new Date(o.updatedAt);
+          return (Date.now() - updated.getTime()) > staleDays * 86400000;
+        });
+        if (staleDeals.length > 0) insights.push({ text: `${staleDeals.length} deal${staleDeals.length > 1 ? 's' : ''} stale (no activity in ${staleDays}+ days) — ${staleDeals.slice(0, 2).map(d => d.customerName).join(', ')}${staleDeals.length > 2 ? ` +${staleDeals.length - 2} more` : ''}`, type: 'warning' });
+        const closingSoon = activeDeals.filter(o => { const d = new Date(o.expectedCloseDate); return d.getTime() - Date.now() < 7 * 86400000 && d.getTime() > Date.now(); });
+        if (closingSoon.length > 0) insights.push({ text: `${closingSoon.length} deal${closingSoon.length > 1 ? 's' : ''} closing this week: ${closingSoon.map(d => `${d.customerName} ($${Math.round((d.tcv || 0) / 1000)}k)`).join(', ')}`, type: 'info' });
+        if (winRate > 0 && winRate < 25) insights.push({ text: `Win rate is ${winRate}% — below 25% threshold. Review qualification criteria and deal selection.`, type: 'warning' });
+        if (winRate >= 40) insights.push({ text: `Win rate at ${winRate}% — strong execution. Consider expanding pipeline volume.`, type: 'success' });
+        const zeroDollar = activeDeals.filter(o => !o.tcv || o.tcv === 0);
+        if (zeroDollar.length > 2) insights.push({ text: `${zeroDollar.length} active deals have $0 TCV — pricing needed for ${zeroDollar.slice(0, 2).map(d => d.customerName).join(', ')}`, type: 'warning' });
+        const topStage = funnelData.reduce((a, b) => a.count > b.count ? a : b);
+        if (topStage.stage === 'Discovery' && topStage.count > activeDeals.length * 0.5) insights.push({ text: `${Math.round(topStage.count / Math.max(1, activeDeals.length) * 100)}% of pipeline is in Discovery — accelerate qualification to improve velocity.`, type: 'info' });
+        const workshopDeals = opportunities.filter((o: any) => o.workshopId);
+        if (workshopDeals.length > 0) insights.push({ text: `${workshopDeals.length} deal${workshopDeals.length > 1 ? 's have' : ' has'} active workshop assessments — check Findings for recommendations.`, type: 'info' });
+        return insights.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {insights.map((insight, i) => (
+              <div key={i} className={`px-4 py-3 rounded-xl flex items-start gap-2.5 ${
+                insight.type === 'warning' ? 'bg-amber-500/5 border border-amber-500/20' :
+                insight.type === 'success' ? 'bg-emerald-500/5 border border-emerald-500/20' :
+                'bg-blue-500/5 border border-blue-500/20'
+              }`}>
+                <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                  insight.type === 'warning' ? 'bg-amber-400' : insight.type === 'success' ? 'bg-emerald-400' : 'bg-blue-400'
+                }`} />
+                <span className="text-xs text-foreground leading-relaxed">{insight.text}</span>
+              </div>
+            ))}
+          </div>
+        ) : null;
+      })()}
+
       {/* Sales Funnel — Interactive Multi-View */}
       <div className="p-5 rounded-xl g-surface g-elevated hover-glow">
         <div className="flex items-center justify-between mb-4">
