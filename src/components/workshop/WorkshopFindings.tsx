@@ -303,45 +303,32 @@ Use tables extensively. Reference actual scores and findings.`,
     };
 
     try {
-      // For assessment_report and gap_analysis — use data-driven export with optional AI narrative
-      if (assetType === 'assessment_report') {
-        // Use the existing rich generateFindingsHTML which is fully data-driven
-        const { generateFindingsHTML } = await import('@/lib/workshop/export');
-        const html = generateFindingsHTML(workshop, { recommendations: allRecs.map(r => r), narrative: findings?.narrative });
-        const w = window.open('', '_blank');
-        if (w) { w.document.write(html); w.document.close(); }
-        setAssets(prev => ({ ...prev, [assetType]: 'generated' }));
-        setGeneratingAsset(null);
-        return;
+      const exportModule = await import('@/lib/workshop/export');
+      let html = '';
+
+      switch (assetType) {
+        case 'assessment_report':
+          html = exportModule.generateAssessmentReportHTML(workshop, findings?.narrative);
+          break;
+        case 'roadmap':
+          html = exportModule.generateRoadmapHTML(workshop);
+          break;
+        case 'architecture_review':
+          html = exportModule.generateArchitectureHTML(workshop);
+          break;
+        case 'exec_briefing':
+          html = exportModule.generateExecBriefingHTML(workshop);
+          break;
+        case 'gap_analysis':
+          html = exportModule.generateGapAnalysisHTML(workshop);
+          break;
+        default:
+          html = exportModule.generateFindingsHTML(workshop, { recommendations: allRecs.map(r => r), narrative: findings?.narrative });
       }
 
-      // For proposal-related assets — use data-driven proposal export
-      if (assetType === 'exec_briefing') {
-        // Generate a compact version of findings HTML
-        const { generateFindingsHTML } = await import('@/lib/workshop/export');
-        const html = generateFindingsHTML(workshop, { recommendations: allRecs.filter(r => r.category === 'quick_wins' || r.category === 'strategic').slice(0, 5).map(r => r), narrative: findings?.narrative?.split('\n\n').slice(0, 2).join('\n\n') });
-        const w = window.open('', '_blank');
-        if (w) { w.document.write(html); w.document.close(); }
-        setAssets(prev => ({ ...prev, [assetType]: 'generated' }));
-        setGeneratingAsset(null);
-        return;
-      }
-
-      // For other assets — AI generates narrative, then we wrap in data-driven template
-      const result = await runAssist.mutateAsync({
-        workshopId: workshop.id,
-        assistKey: 'currentstate.narrative',
-        input: { levels: levels.map((l: any) => ({ name: l.name, readiness: levelReadiness(l).currentPct, dims: [] })), _customPrompt: prompts[assetType] },
-      });
-      const content = typeof result.output === 'string' ? result.output : result.raw || '';
-      const clean = content.replace(/```[a-z]*\n?/gi, '').replace(/```\n?/g, '').trim();
-      setAssets(prev => ({ ...prev, [assetType]: clean }));
-
-      // Wrap AI narrative in data-driven HTML with real infographics
-      const { generateFindingsHTML } = await import('@/lib/workshop/export');
-      const baseHTML = generateFindingsHTML(workshop, { recommendations: allRecs.map(r => r), narrative: clean });
       const w = window.open('', '_blank');
-      if (w) { w.document.write(baseHTML); w.document.close(); }
+      if (w) { w.document.write(html); w.document.close(); }
+      setAssets(prev => ({ ...prev, [assetType]: 'generated' }));
     } catch (e) { console.error(`Asset ${assetType} failed:`, e); }
     setGeneratingAsset(null);
   };
