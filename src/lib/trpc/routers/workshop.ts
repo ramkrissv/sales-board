@@ -443,7 +443,10 @@ export const workshopRouter = router({
       // Support custom prompt override for asset generation
       const hasCustomPrompt = input.input?._customPrompt;
       const prompt = hasCustomPrompt || assist.buildPrompt(context, input.input);
-      const model = process.env.AI_DEFAULT_MODEL || (hasCustomPrompt ? 'claude-sonnet-4-6' : assist.model);
+      // Use the assist's specified model — only fall back to env default for non-opus assists
+      const model = assist.model.includes('opus')
+        ? assist.model  // Never override opus assists — they need the capability
+        : (process.env.AI_DEFAULT_MODEL || assist.model);
 
       // Heavy assists or custom prompts need more tokens
       const isHeavy = hasCustomPrompt || assist.model.includes('opus') || ['currentstate.narrative', 'proposal.generate', 'scope.synthesize'].includes(input.assistKey);
