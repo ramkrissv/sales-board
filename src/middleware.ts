@@ -17,7 +17,9 @@ export async function middleware(request: NextRequest) {
     pathname.endsWith('.png') ||
     pathname.endsWith('.ico') ||
     pathname.endsWith('.xml') ||
-    pathname.endsWith('.zip')
+    pathname.endsWith('.zip') ||
+    pathname.endsWith('.html') ||
+    pathname.startsWith('/dossier')
   ) {
     return NextResponse.next();
   }
