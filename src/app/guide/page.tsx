@@ -184,7 +184,7 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
       <li><strong>Proposal Studio</strong> — Conversational AI drafts proposals. 150+ templates across 12 domains. Filters to Qualification+ deals only.</li>
       <li><strong>Pricing Desk</strong> — Rate cards by geo. Apply Pricing auto-populates both TCV and Margin % on the deal.</li>
       <li><strong>Solutioning</strong> — Effort estimator, SA assignments, architecture notes, and <strong>Scope Builder</strong> with workstream-grouped scope items, execution model per item (Pod Squad, Managed Capacity, Outcome-Based, AI-Powered, Hybrid), phase (P1/P2/P3), effort points, and AI scope generation from deal context.</li>
-      <li><strong>Contracts</strong> — SOW, MSA, NDA lifecycle with approval chains.</li>
+      <li><strong>Contracts</strong> — SOW, MSA, NDA lifecycle with approval chains. <strong>8 contract templates</strong> (SOW T&amp;M, SOW Fixed Price, SOW Outcome-Based, MSA, NDA Mutual, NDA One-Way, Amendment, Renewal) — click to pre-fill type, pricing model, and standard terms.</li>
       <li><strong>Export</strong> — PDF, DOCX, Markdown export for proposals.</li>
     </ul>
 
@@ -225,7 +225,10 @@ function buildPDFContent(stats: { pipeline: string; activeDeals: number; wonDeal
 
     <h3>AI Agents (13)</h3>
     <ul>
-      <li><strong>13 AI Agents</strong> — Deal Coach, Research, Outreach, Hygiene, Forecast, Intake, Proposal, Account Intel, Competitive Intel, Growth, Enablement Coach, Signal Processor, Campaign Manager.</li>
+      <li><strong>13 AI Agents</strong> — Deal Coach, Research, Outreach, Hygiene, Forecast, Intake, Proposal, Account Intel, Competitive Intel, Growth, Enablement Coach, Signal Processor, Campaign Manager. Each with model routing, guardrails, blocked actions, approval requirements, and optional cron schedules.</li>
+      <li><strong>AI Execution Telemetry</strong> — Live on Agents page: AI calls today, active assists, recent traces with latency/model/status. Reads from telemetry/traces/ and telemetry/metrics/.</li>
+      <li><strong>Platform Evals</strong> — 4 runnable eval suites on Agents page: Gateway (6 tests), Telemetry (3 tests), Config (3 tests), Workshop (8 tests). Click to run, see pass/fail per assertion. Total: 20 platform health checks.</li>
+      <li><strong>AI Gateway</strong> — Every AI call (13 call sites) goes through guardrail chain: rate limit (config/token_budgets.json) → sandbox validation (gatekeeper/sandbox.config.json) → token budget → Anthropic API → telemetry trace → metrics update.</li>
       <li><strong>MCP Server</strong> — 15 tools + invoke_agent exposed at /api/mcp. Compatible with Claude Desktop, Cursor, VS Code.</li>
       <li><strong>Sales Enablement</strong> — 3 AI coaches (Platform, Offerings, Objection), 6 offerings with battle cards, 5 stage-based playbooks.</li>
       <li><strong>Ask Galent</strong> — Natural language pipeline queries with GenUI interactive action buttons.</li>
