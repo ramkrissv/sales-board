@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { connectDB } from '@/lib/db/connection';
+import { getMaxTokens, getModelForUseCase, checkRateLimit } from '@/lib/ai/budgets';
 import mongoose from 'mongoose';
 
 function getWorkshopModel() {
@@ -440,19 +441,29 @@ export const workshopRouter = router({
         framework: (workshop as any).framework,
       };
 
+      // Rate limit check (reads from config/rate_limits.json)
+      const rateCheck = checkRateLimit();
+      if (!rateCheck.allowed) {
+        throw new Error(`Rate limit exceeded. Retry after ${rateCheck.retryAfter}s.`);
+      }
+
       // Support custom prompt override for asset generation
       const hasCustomPrompt = input.input?._customPrompt;
       const prompt = hasCustomPrompt || assist.buildPrompt(context, input.input);
-      // Use the assist's specified model — only fall back to env default for non-opus assists
+
+      // Model routing: config/token_budgets.json → assist registry → env default
+      const configModel = getModelForUseCase(input.assistKey);
       const model = assist.model.includes('opus')
         ? assist.model  // Never override opus assists — they need the capability
-        : (process.env.AI_DEFAULT_MODEL || assist.model);
+        : (configModel || process.env.AI_DEFAULT_MODEL || assist.model);
 
-      // Heavy assists or custom prompts need more tokens
+      // Token limits from config/token_budgets.json
       const isHeavy = hasCustomPrompt || assist.model.includes('opus') || ['currentstate.narrative', 'proposal.generate', 'scope.synthesize'].includes(input.assistKey);
+      const maxTokens = isHeavy ? getMaxTokens('opus') : getMaxTokens(model);
+
       const response = await client.messages.create({
         model,
-        max_tokens: isHeavy ? 8000 : 4000,
+        max_tokens: maxTokens,
         messages: [{ role: 'user', content: prompt }],
       });
 

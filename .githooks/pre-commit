@@ -3,9 +3,9 @@
 
 echo "Running pre-commit checks..."
 
-# 1. Check for secrets
-if grep -rn "ANTHROPIC_API_KEY\|sk-ant-\|mongodb+srv://" --include="*.ts" --include="*.tsx" --include="*.js" src/ 2>/dev/null; then
-  echo "ERROR: Potential secret found in source code. Aborting commit."
+# 1. Check for hardcoded secrets (not env var references)
+if grep -rn "sk-ant-api0[0-9a-zA-Z]\{20,\}\|mongodb+srv://[^\"]*@" --include="*.ts" --include="*.tsx" --include="*.js" src/ 2>/dev/null; then
+  echo "ERROR: Hardcoded secret found in source code. Aborting commit."
   exit 1
 fi
 

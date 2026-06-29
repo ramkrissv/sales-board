@@ -3,6 +3,7 @@ import { router, protectedProcedure } from '../trpc';
 import { connectDB } from '@/lib/db/connection';
 import { analyzeDeal, analyzePipeline } from '@/lib/ai/deal-coach';
 import { parseAIJson } from '@/lib/ai/parse-json';
+import { checkRateLimit } from '@/lib/ai/budgets';
 import mongoose from 'mongoose';
 
 function getOpportunityModel() {
@@ -289,6 +290,10 @@ Return ONLY valid JSON:
       })
     )
     .mutation(async ({ input }) => {
+      // Rate limit enforcement (config/token_budgets.json)
+      const rateCheck = checkRateLimit();
+      if (!rateCheck.allowed) throw new Error(`Rate limit exceeded. Retry after ${rateCheck.retryAfter}s.`);
+
       const { getAnthropicClient } = await import('@/lib/ai/anthropic');
       const client = getAnthropicClient();
       const model = process.env.AI_DEFAULT_MODEL || 'claude-sonnet-4-6';
