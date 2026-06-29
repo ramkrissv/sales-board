@@ -547,6 +547,17 @@ function NewContractForm({ engagementTypes, opportunities, onClose }: { engageme
     },
   });
 
+  const CONTRACT_TEMPLATES = [
+    { id: 'sow_tm', label: 'SOW — Time & Material', type: 'SOW' as const, pricingModel: 'Time & Material', terms: 'Standard T&M terms. Monthly billing in arrears. 30-day payment terms. Change requests require written approval. IP owned by client upon payment.', renewalReminderDays: 60 },
+    { id: 'sow_fp', label: 'SOW — Fixed Price', type: 'SOW' as const, pricingModel: 'Fixed Price', terms: 'Fixed price engagement. Milestone-based payments (30/30/30/10). Change orders require SOW amendment. Acceptance criteria per deliverable. 15-day UAT window.', renewalReminderDays: 60 },
+    { id: 'sow_outcome', label: 'SOW — Outcome-Based', type: 'SOW' as const, pricingModel: 'Outcome-Based', terms: 'Outcome-based pricing. Success metrics defined in Appendix A. Quarterly measurement cadence. Base fee + performance bonus structure. 90-day pilot with go/no-go gate.', renewalReminderDays: 90 },
+    { id: 'msa', label: 'Master Service Agreement', type: 'MSA' as const, pricingModel: '', terms: 'Master terms governing all SOWs. 2-year initial term with auto-renewal. Standard liability, indemnification, and IP clauses. Governing law: State of Delaware. Dispute resolution via arbitration.', autoRenew: true, renewalReminderDays: 90 },
+    { id: 'nda_mutual', label: 'NDA — Mutual', type: 'NDA' as const, pricingModel: '', terms: 'Mutual non-disclosure agreement. 2-year confidentiality period. Covers proprietary information, trade secrets, and business plans. Standard carve-outs for public information and independent development.', renewalReminderDays: 30 },
+    { id: 'nda_one', label: 'NDA — One-Way (Client)', type: 'NDA' as const, pricingModel: '', terms: 'One-way NDA protecting client confidential information. 3-year term. Return/destroy obligations upon termination. Injunctive relief clause.', renewalReminderDays: 30 },
+    { id: 'amendment', label: 'SOW Amendment', type: 'Amendment' as const, pricingModel: '', terms: 'Amendment to existing SOW. Changes: [scope/timeline/pricing as applicable]. All other terms of the original SOW remain in effect. Effective upon both party signatures.', renewalReminderDays: 60 },
+    { id: 'renewal', label: 'Renewal', type: 'Renewal' as const, pricingModel: '', terms: 'Renewal of existing agreement. Same terms and conditions unless modified herein. Updated pricing per rate card revision. New term: 12 months from effective date.', autoRenew: true, renewalReminderDays: 60 },
+  ];
+
   const [form, setForm] = useState({
     title: '',
     type: 'SOW' as const,
@@ -560,6 +571,19 @@ function NewContractForm({ engagementTypes, opportunities, onClose }: { engageme
     renewalReminderDays: 60,
     terms: '',
   });
+
+  const applyTemplate = (templateId: string) => {
+    const tpl = CONTRACT_TEMPLATES.find(t => t.id === templateId);
+    if (!tpl) return;
+    setForm(prev => ({
+      ...prev,
+      type: tpl.type as any,
+      pricingModel: tpl.pricingModel || prev.pricingModel,
+      terms: tpl.terms,
+      autoRenew: (tpl as any).autoRenew || false,
+      renewalReminderDays: tpl.renewalReminderDays || 60,
+    }));
+  };
 
   const selectedEng = engagementTypes.find((et: any) => et.code === form.engagementType);
 
@@ -580,6 +604,23 @@ function NewContractForm({ engagementTypes, opportunities, onClose }: { engageme
         <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
           <X className="h-4 w-4" />
         </button>
+      </div>
+
+      {/* Template selector */}
+      <div>
+        <label className="text-xs text-muted-foreground mb-1.5 block">Start from template</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {CONTRACT_TEMPLATES.map(tpl => (
+            <button key={tpl.id} type="button" onClick={() => applyTemplate(tpl.id)}
+              className={`px-2.5 py-1.5 text-[10px] rounded-lg border transition-colors ${
+                form.type === tpl.type && form.terms === tpl.terms
+                  ? 'border-[#7c3aed]/40 bg-[#7c3aed]/10 text-[#7c3aed]'
+                  : 'border-border text-muted-foreground hover:text-foreground hover:border-[#7c3aed]/20'
+              }`}>
+              {tpl.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

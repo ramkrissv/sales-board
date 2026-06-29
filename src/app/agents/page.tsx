@@ -264,6 +264,15 @@ export default function AgentsPage() {
         </div>
       </div>
 
+      {/* Execution History — reads from telemetry */}
+      <div className="g-surface g-elevated p-4">
+        <div className="g-section-label mb-2 flex items-center justify-between">
+          <span>AI Execution Telemetry</span>
+          <span className="text-[9px] font-mono text-muted-foreground">{new Date().toISOString().slice(0, 10)}</span>
+        </div>
+        <AgentTelemetry />
+      </div>
+
       {/* Tools Reference */}
       <details>
         <summary className="g-section-label cursor-pointer hover:text-foreground">Platform Tools (17 available)</summary>
@@ -286,6 +295,79 @@ export default function AgentsPage() {
           ))}
         </div>
       </details>
+    </div>
+  );
+}
+
+function AgentTelemetry() {
+  const { data: metricsData } = trpc.harness.getMetrics.useQuery();
+  const { data: tracesData } = trpc.harness.getTraces.useQuery({ limit: 20 });
+
+  const metrics = metricsData?.metrics || {};
+  const traces = tracesData?.traces || [];
+  const totalCalls = (metrics as any)?._totalCalls || 0;
+
+  const metricEntries = Object.entries(metrics).filter(([k]) => !k.startsWith('_')).sort((a: any, b: any) => (b[1]?.calls || 0) - (a[1]?.calls || 0));
+
+  return (
+    <div className="space-y-3">
+      {/* Summary KPIs */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="p-3 rounded-lg bg-card border border-border text-center">
+          <div className="text-lg font-bold text-[#7c3aed] font-display">{totalCalls}</div>
+          <div className="text-[9px] text-muted-foreground">AI Calls Today</div>
+        </div>
+        <div className="p-3 rounded-lg bg-card border border-border text-center">
+          <div className="text-lg font-bold text-[#0FB5AD] font-display">{metricEntries.length}</div>
+          <div className="text-[9px] text-muted-foreground">Active Assists</div>
+        </div>
+        <div className="p-3 rounded-lg bg-card border border-border text-center">
+          <div className="text-lg font-bold text-foreground font-display">{traces.length}</div>
+          <div className="text-[9px] text-muted-foreground">Recent Traces</div>
+        </div>
+      </div>
+
+      {/* Metrics by assist */}
+      {metricEntries.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">Assist Metrics</div>
+          {metricEntries.slice(0, 8).map(([key, val]: [string, any]) => (
+            <div key={key} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-card/50">
+              <span className="text-[10px] font-mono text-[#7c3aed] flex-1 truncate">{key}</span>
+              <span className="text-[9px] text-muted-foreground">{val.calls} calls</span>
+              <span className="text-[9px] text-emerald-400">{val.successes}✓</span>
+              {val.errors > 0 && <span className="text-[9px] text-red-400">{val.errors}✗</span>}
+              <span className="text-[9px] text-muted-foreground">{val.avgLatencyMs}ms</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Recent traces */}
+      {traces.length > 0 && (
+        <details>
+          <summary className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground cursor-pointer hover:text-foreground">
+            Recent Traces ({traces.length})
+          </summary>
+          <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto">
+            {traces.map((t: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 px-2 py-1 rounded text-[9px] hover:bg-card/50">
+                <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'success' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                <span className="font-mono text-[#7c3aed] w-32 truncate">{t.assist}</span>
+                <span className="text-muted-foreground w-20 truncate">{t.model?.split('-').pop()}</span>
+                <span className="text-muted-foreground">{t.latencyMs}ms</span>
+                <span className="text-muted-foreground ml-auto">{new Date(t.timestamp).toLocaleTimeString()}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+
+      {totalCalls === 0 && traces.length === 0 && (
+        <div className="text-center py-4 text-[10px] text-muted-foreground">
+          No AI calls logged today. Invoke an agent or use any AI feature to see telemetry here.
+        </div>
+      )}
     </div>
   );
 }
