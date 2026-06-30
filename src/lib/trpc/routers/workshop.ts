@@ -503,6 +503,23 @@ export const workshopRouter = router({
     }),
 
   // ── Delete finding (clear finding from dimension) ──
+  // ── Save whiteboard state ──
+  saveWhiteboard: protectedProcedure
+    .input(z.object({
+      workshopId: z.string(),
+      sections: z.array(z.any()),
+      notes: z.array(z.any()),
+    }))
+    .mutation(async ({ input }) => {
+      await connectDB();
+      const WS = getWorkshopModel();
+      return WS.findOneAndUpdate(
+        { id: input.workshopId },
+        { $set: { whiteboard: { sections: input.sections, notes: input.notes } } },
+        { new: true }
+      ).lean();
+    }),
+
   deleteFinding: protectedProcedure
     .input(z.object({ workshopId: z.string(), levelId: z.string(), dimensionId: z.string() }))
     .mutation(async ({ input }) => {

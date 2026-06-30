@@ -329,6 +329,7 @@ export default function WorkshopPage() {
                   dimensions={currentLevel?.dimensions || []}
                   customerName={ws.customerName}
                   onScore={handleScore}
+                  whiteboardNotes={(ws as any).whiteboard?.notes || []}
                   levelId={currentLevel?.id || ''}
                 />
 
@@ -465,9 +466,10 @@ export default function WorkshopPage() {
 }
 
 // ── Assessment Chat — conversational AI for scoring and strategic insights ──
-function AssessmentChat({ workshopId, levelName, dimensions, customerName, onScore, levelId }: {
+function AssessmentChat({ workshopId, levelName, dimensions, customerName, onScore, levelId, whiteboardNotes = [] }: {
   workshopId: string; levelName: string; dimensions: any[]; customerName: string;
   onScore: (dimId: string, field: string, value: any) => void; levelId: string;
+  whiteboardNotes?: any[];
 }) {
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; text: string; scores?: { dimId: string; dimName: string; current: number; target: number }[] }[]>([]);
   const [input, setInput] = useState('');
@@ -500,8 +502,13 @@ function AssessmentChat({ workshopId, levelName, dimensions, customerName, onSco
     // Build conversation history for continuity
     const history = messages.slice(-6).map(m => `${m.role === 'user' ? 'Human' : 'Assistant'}: ${m.text}`).join('\n');
 
+    // Include whiteboard discoveries as context
+    const wbContext = whiteboardNotes.length > 0
+      ? `\n\nWHITEBOARD DISCOVERIES (${whiteboardNotes.length} notes from discovery phase):\n${whiteboardNotes.slice(0, 20).map((n: any) => `- ${n.text}`).join('\n')}`
+      : '';
+
     chatMutation.mutate({
-      message: `You are a McKinsey senior consultant + Google architect running an assessment workshop for ${customerName}. Current level: "${levelName}". ${scored.length}/${dimensions.length} dimensions scored (${completionPct}%).
+      message: `You are a McKinsey senior consultant + Google architect running an assessment workshop for ${customerName}. Current level: "${levelName}". ${scored.length}/${dimensions.length} dimensions scored (${completionPct}%).${wbContext}
 
 DIMENSIONS:
 ${dimContext}

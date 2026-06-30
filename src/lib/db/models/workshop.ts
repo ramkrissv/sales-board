@@ -197,6 +197,12 @@ const WorkshopSchema = new Schema({
   // AI interaction log
   aiInteractions: [AIInteractionSchema],
 
+  // Whiteboard — freeform discovery notes (persisted, feeds into Assess AI context)
+  whiteboard: {
+    sections: [{ id: String, title: String, icon: String, color: String, collapsed: Boolean, source: String }],
+    notes: [{ id: String, text: String, color: String, sectionId: String, votes: Number, type: String, fileName: String, timestamp: Number }],
+  },
+
   createdBy: String,
   updatedBy: String,
 }, { timestamps: true });

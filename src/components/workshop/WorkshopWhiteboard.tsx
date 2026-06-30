@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { trpc } from '@/lib/trpc/client';
 import {
   Plus, Trash2, Pencil, Check, X, Palette, LayoutGrid,
   Sparkles, Loader2, ChevronDown, ChevronUp, FileText,
-  Mic, MicOff, Upload, Play, Square, Clock, Image,
+  Mic, MicOff, Upload, Play, Square, Clock, Image, Camera,
 } from 'lucide-react';
 
 const COLORS = [
@@ -76,8 +77,80 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
     return sections;
   };
 
-  const [sections, setSections] = useState<Section[]>(buildDefaultSections);
-  const [notes, setNotes] = useState<StickyNote[]>([]);
+  const savedWb = (workshop as any).whiteboard;
+  const [sections, setSections] = useState<Section[]>(savedWb?.sections?.length > 0 ? savedWb.sections : buildDefaultSections());
+  const [notes, setNotes] = useState<StickyNote[]>(savedWb?.notes || []);
+
+  // Auto-save to MongoDB
+  const saveWbMutation = trpc.workshop.saveWhiteboard.useMutation();
+  const saveDebounce = useRef<any>(null);
+  const autoSave = useCallback((s: Section[], n: StickyNote[]) => {
+    if (saveDebounce.current) clearTimeout(saveDebounce.current);
+    saveDebounce.current = setTimeout(() => {
+      saveWbMutation.mutate({ workshopId: workshop.id, sections: s as any, notes: n as any });
+    }, 1500);
+  }, [workshop.id]);
+
+  // Trigger auto-save on changes
+  const updateSections = (updater: (prev: Section[]) => Section[]) => {
+    updateSections(prev => { const next = updater(prev); autoSave(next, notes); return next; });
+  };
+  const updateNotes = (updater: (prev: StickyNote[]) => StickyNote[]) => {
+    updateNotes(prev => { const next = updater(prev); autoSave(sections, next); return next; });
+  };
+
+  // OCR: extract text from whiteboard/sticky note photos via AI
+  const [ocrProcessing, setOcrProcessing] = useState(false);
+  const handleImageOCR = async (file: File, sectionId: string) => {
+    setOcrProcessing(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        // Send image to AI for text extraction + section suggestion
+        const res = await fetch('/api/trpc/ai.chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json: {
+            message: `This is a photo of sticky notes or a whiteboard from a ${workshop.customerName} assessment workshop. Extract ALL text visible. Return as a JSON array of objects: [{"text":"<note text>","suggestedSection":"<one of: Key Observations, Pain Points, Opportunities, Risks, Architecture, People & Org, Quick Wins, Strategic Themes, Questions, Decisions, or a level/workstream name>"}]. Be thorough — capture every sticky note and piece of text. If multiple sticky notes visible, return one object per note.`,
+            context: { page: 'workshop-whiteboard' },
+          }}),
+        });
+        const data = await res.json();
+        const response = data?.result?.data?.json?.response || data?.result?.data?.response || '';
+
+        // Parse extracted notes
+        try {
+          const match = response.match(/\[[\s\S]*\]/);
+          if (match) {
+            const extracted = JSON.parse(match[0]);
+            const newNotes: StickyNote[] = extracted.map((item: any) => {
+              // Try to match suggested section
+              const matchedSection = sections.find(s =>
+                s.title.toLowerCase().includes((item.suggestedSection || '').toLowerCase())
+              );
+              return {
+                id: uid(),
+                text: item.text || '',
+                color: matchedSection ? matchedSection.color : 'yellow',
+                sectionId: matchedSection?.id || sectionId,
+                votes: 0,
+                type: 'note' as const,
+                timestamp: Date.now(),
+              };
+            }).filter((n: StickyNote) => n.text.trim());
+            updateNotes(prev => [...prev, ...newNotes]);
+          } else {
+            // Fallback: add response as single note
+            updateNotes(prev => [...prev, { id: uid(), text: response.slice(0, 500), color: 'yellow', sectionId, votes: 0, type: 'note', timestamp: Date.now() }]);
+          }
+        } catch {
+          updateNotes(prev => [...prev, { id: uid(), text: `📷 Photo uploaded: ${file.name}`, color: 'green', sectionId, votes: 0, type: 'image', fileName: file.name, timestamp: Date.now() }]);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {}
+    setTimeout(() => setOcrProcessing(false), 3000);
+  };
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editBuffer, setEditBuffer] = useState('');
   const [addingTo, setAddingTo] = useState<string | null>(null);
@@ -113,7 +186,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
         stream.getTracks().forEach(t => t.stop());
         const duration = recordingTime;
         // Create a note for the recording
-        setNotes(prev => [...prev, {
+        updateNotes(prev => [...prev, {
           id: uid(),
           text: `🎙️ Audio recording (${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, '0')})`,
           color: 'blue',
@@ -148,7 +221,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
     setTranscribing(true);
     // Create a note indicating transcription
-    setNotes(prev => [...prev, {
+    updateNotes(prev => [...prev, {
       id: uid(),
       text: '⏳ Transcribing audio...',
       color: 'teal',
@@ -159,7 +232,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
     }]);
     // In production, this would send to Whisper/Deepgram API
     setTimeout(() => {
-      setNotes(prev => prev.map(n => n.text === '⏳ Transcribing audio...' ? { ...n, text: '📝 Audio captured — add notes from the recording above' } : n));
+      updateNotes(prev => prev.map(n => n.text === '⏳ Transcribing audio...' ? { ...n, text: '📝 Audio captured — add notes from the recording above' } : n));
       setTranscribing(false);
     }, 2000);
   };
@@ -172,7 +245,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
         // Images: show as image note
         const reader = new FileReader();
         reader.onload = () => {
-          setNotes(prev => [...prev, {
+          updateNotes(prev => [...prev, {
             id: uid(),
             text: `📷 ${file.name}`,
             color: 'green',
@@ -185,7 +258,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
         };
         reader.readAsDataURL(file);
       } else if (file.name.endsWith('.pdf') || file.name.endsWith('.docx') || file.name.endsWith('.pptx')) {
-        setNotes(prev => [...prev, {
+        updateNotes(prev => [...prev, {
           id: uid(),
           text: `📄 ${file.name} (${(file.size / 1024).toFixed(0)} KB)`,
           color: 'orange',
@@ -200,7 +273,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
         const reader = new FileReader();
         reader.onload = () => {
           const content = (reader.result as string).slice(0, 500);
-          setNotes(prev => [...prev, {
+          updateNotes(prev => [...prev, {
             id: uid(),
             text: `📄 ${file.name}\n${content}`,
             color: 'orange',
@@ -218,25 +291,25 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
 
   const addNote = (sectionId: string) => {
     if (!newNoteText.trim()) return;
-    setNotes(prev => [...prev, { id: uid(), text: newNoteText.trim(), color: newNoteColor, sectionId, votes: 0, type: 'note', timestamp: Date.now() }]);
+    updateNotes(prev => [...prev, { id: uid(), text: newNoteText.trim(), color: newNoteColor, sectionId, votes: 0, type: 'note', timestamp: Date.now() }]);
     setNewNoteText('');
     setAddingTo(null);
   };
 
-  const deleteNote = (id: string) => setNotes(prev => prev.filter(n => n.id !== id));
-  const voteNote = (id: string) => setNotes(prev => prev.map(n => n.id === id ? { ...n, votes: n.votes + 1 } : n));
-  const updateNote = (id: string, text: string) => { setNotes(prev => prev.map(n => n.id === id ? { ...n, text } : n)); setEditingNote(null); };
+  const deleteNote = (id: string) => updateNotes(prev => prev.filter(n => n.id !== id));
+  const voteNote = (id: string) => updateNotes(prev => prev.map(n => n.id === id ? { ...n, votes: n.votes + 1 } : n));
+  const updateNote = (id: string, text: string) => { updateNotes(prev => prev.map(n => n.id === id ? { ...n, text } : n)); setEditingNote(null); };
 
   const addSection = () => {
     if (!newSectionTitle.trim()) return;
-    setSections(prev => [...prev, { id: `s-${Date.now()}`, title: newSectionTitle.trim(), icon: '📌', color: newSectionColor, collapsed: false, source: 'custom' }]);
+    updateSections(prev => [...prev, { id: `s-${Date.now()}`, title: newSectionTitle.trim(), icon: '📌', color: newSectionColor, collapsed: false, source: 'custom' }]);
     setNewSectionTitle('');
     setShowAddSection(false);
   };
 
-  const deleteSection = (id: string) => { setSections(prev => prev.filter(s => s.id !== id)); setNotes(prev => prev.filter(n => n.sectionId !== id)); };
-  const toggleSection = (id: string) => setSections(prev => prev.map(s => s.id === id ? { ...s, collapsed: !s.collapsed } : s));
-  const moveNote = (noteId: string, targetSectionId: string) => { setNotes(prev => prev.map(n => n.id === noteId ? { ...n, sectionId: targetSectionId } : n)); setDragNote(null); };
+  const deleteSection = (id: string) => { updateSections(prev => prev.filter(s => s.id !== id)); updateNotes(prev => prev.filter(n => n.sectionId !== id)); };
+  const toggleSection = (id: string) => updateSections(prev => prev.map(s => s.id === id ? { ...s, collapsed: !s.collapsed } : s));
+  const moveNote = (noteId: string, targetSectionId: string) => { updateNotes(prev => prev.map(n => n.id === noteId ? { ...n, sectionId: targetSectionId } : n)); setDragNote(null); };
   const getColor = (colorId: string) => COLORS.find(c => c.id === colorId) || COLORS[0];
 
   // AI Summarize
@@ -307,6 +380,15 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
           </button>
         </div>
       </div>
+
+      {/* OCR processing indicator */}
+      {ocrProcessing && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A867F]/10 border border-[#0A867F]/30">
+          <Loader2 className="h-4 w-4 animate-spin text-[#0A867F]" />
+          <span className="text-xs font-medium text-[#0A867F]">Extracting text from photo...</span>
+          <span className="text-[10px] text-muted-foreground">AI is reading sticky notes and whiteboard content</span>
+        </div>
+      )}
 
       {/* Global audio recorder */}
       {isRecording && (
@@ -396,6 +478,12 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
                     <Upload className="h-3 w-3" />
                     <input type="file" className="hidden" multiple accept=".pdf,.docx,.pptx,.txt,.csv,.md,.png,.jpg,.jpeg,.webp"
                       onChange={e => { handleFileUpload(e.target.files, section.id); e.target.value = ''; }} />
+                  </label>
+                  {/* Camera: capture whiteboard/sticky note photo → OCR → auto-section */}
+                  <label className="p-1 rounded text-muted-foreground hover:text-[#0A867F] cursor-pointer transition-colors" title="📸 Capture whiteboard photo (OCR → auto-extract notes)">
+                    <Camera className="h-3 w-3" />
+                    <input type="file" className="hidden" accept="image/*" capture="environment"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleImageOCR(f, section.id); e.target.value = ''; }} />
                   </label>
                   <button onClick={(e) => { e.stopPropagation(); if (confirm(`Delete "${section.title}" and all its notes?`)) deleteSection(section.id); }}
                     className="p-1 rounded text-muted-foreground hover:text-red-400 transition-opacity">
