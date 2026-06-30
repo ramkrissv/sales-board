@@ -3,577 +3,468 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import {
-  Plus, Trash2, Pencil, Check, X, Palette, LayoutGrid,
-  Sparkles, Loader2, ChevronDown, ChevronUp, FileText,
-  Mic, MicOff, Upload, Play, Square, Clock, Image, Camera,
+  Plus, Trash2, Pencil, Check, X, LayoutGrid, MessageSquare,
+  Sparkles, Loader2, ChevronDown, ChevronRight, FileText,
+  Mic, Square, Upload, Camera, Target, Shield, Users,
+  Layers, Zap, AlertTriangle, Lightbulb, Eye, HelpCircle,
+  CheckCircle, Send, ThumbsUp, GripVertical, FolderPlus,
 } from 'lucide-react';
 
-const COLORS = [
-  { id: 'yellow', bg: '#FEF9C3', border: '#FDE047', text: '#854D0E' },
-  { id: 'blue', bg: '#DBEAFE', border: '#93C5FD', text: '#1E40AF' },
-  { id: 'green', bg: '#DCFCE7', border: '#86EFAC', text: '#166534' },
-  { id: 'pink', bg: '#FCE7F3', border: '#F9A8D4', text: '#9D174D' },
-  { id: 'purple', bg: '#F3E8FF', border: '#C4B5FD', text: '#6B21A8' },
-  { id: 'orange', bg: '#FFF7ED', border: '#FDBA74', text: '#9A3412' },
-  { id: 'teal', bg: '#F0FDFA', border: '#5EEAD4', text: '#115E59' },
-  { id: 'red', bg: '#FEF2F2', border: '#FCA5A5', text: '#991B1B' },
-];
-
-interface StickyNote {
+/* ═══════════════════════════════════════
+   Types
+   ═══════════════════════════════════════ */
+interface Note {
   id: string;
   text: string;
   color: string;
-  sectionId: string;
+  groupId: string;
+  subGroupId?: string;
   votes: number;
-  type: 'note' | 'audio' | 'file' | 'image';
+  type: 'note' | 'audio' | 'file';
   fileName?: string;
-  audioDuration?: number;
-  timestamp: number;
+  ts: number;
 }
 
-interface Section {
+interface SubGroup {
+  id: string;
+  title: string;
+}
+
+interface Group {
   id: string;
   title: string;
   icon: string;
   color: string;
-  collapsed: boolean;
-  source: 'template' | 'level' | 'workstream' | 'custom';
+  expanded: boolean;
+  subGroups: SubGroup[];
 }
 
-interface WhiteboardProps {
-  workshop: any;
-  onRefresh: () => void;
-}
+const ICON_MAP: Record<string, any> = {
+  discovery: Eye, pain: AlertTriangle, opportunity: Lightbulb,
+  assessment: Layers, workstream: Target, risk: Shield,
+  people: Users, quickwin: Zap, question: HelpCircle,
+  decision: CheckCircle, general: LayoutGrid,
+};
 
-export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardProps) {
+const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
+
+/* ═══════════════════════════════════════
+   Component
+   ═══════════════════════════════════════ */
+interface Props { workshop: any; onRefresh: () => void; }
+
+export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   const levels = workshop.framework?.levels || [];
   const workstreams = workshop.framework?.workstreams || [];
+  const saved = (workshop as any).whiteboard;
 
-  // Auto-generate sections from assessment framework
-  const buildDefaultSections = (): Section[] => {
-    const sections: Section[] = [];
-    // General discovery sections
-    sections.push({ id: 's-obs', title: 'Key Observations', icon: '👁️', color: 'blue', collapsed: false, source: 'template' });
-    sections.push({ id: 's-pain', title: 'Pain Points & Challenges', icon: '🔥', color: 'red', collapsed: false, source: 'template' });
-    sections.push({ id: 's-opp', title: 'Opportunities', icon: '💡', color: 'green', collapsed: false, source: 'template' });
-    // Per-level sections
-    levels.forEach((l: any, i: number) => {
-      sections.push({ id: `s-level-${l.id || i}`, title: `${l.code || `L${i+1}`}: ${l.name}`, icon: '📊', color: ['blue', 'purple', 'teal'][i % 3], collapsed: true, source: 'level' });
-    });
-    // Per-workstream sections (top 4)
-    workstreams.slice(0, 4).forEach((ws: any) => {
-      sections.push({ id: `s-ws-${ws.code}`, title: `${ws.code}: ${ws.name}`, icon: '🎯', color: 'orange', collapsed: true, source: 'workstream' });
-    });
-    // Additional sections
-    sections.push({ id: 's-risk', title: 'Risks & Concerns', icon: '⚠️', color: 'red', collapsed: true, source: 'template' });
-    sections.push({ id: 's-arch', title: 'Architecture & Technical', icon: '🏗️', color: 'purple', collapsed: true, source: 'template' });
-    sections.push({ id: 's-people', title: 'People, Process & Org', icon: '👥', color: 'pink', collapsed: true, source: 'template' });
-    sections.push({ id: 's-wins', title: 'Quick Wins', icon: '⚡', color: 'yellow', collapsed: true, source: 'template' });
-    sections.push({ id: 's-strategic', title: 'Strategic Themes', icon: '🎯', color: 'teal', collapsed: true, source: 'template' });
-    sections.push({ id: 's-questions', title: 'Open Questions', icon: '❓', color: 'purple', collapsed: true, source: 'template' });
-    sections.push({ id: 's-decisions', title: 'Decisions Made', icon: '✅', color: 'green', collapsed: true, source: 'template' });
-    sections.push({ id: 's-audio', title: 'Audio Recordings', icon: '🎙️', color: 'blue', collapsed: false, source: 'template' });
-    sections.push({ id: 's-docs', title: 'Uploaded Documents', icon: '📎', color: 'orange', collapsed: false, source: 'template' });
-    return sections;
-  };
+  // Build 5 top-level groups with sub-groups
+  const buildGroups = (): Group[] => [
+    {
+      id: 'discovery', title: 'Discovery & Observations', icon: 'discovery', color: '#3b82f6',
+      expanded: true,
+      subGroups: [
+        { id: 'obs', title: 'Key Observations' },
+        { id: 'pain', title: 'Pain Points' },
+        { id: 'opp', title: 'Opportunities' },
+        { id: 'questions', title: 'Open Questions' },
+      ],
+    },
+    {
+      id: 'assessment', title: 'Assessment Domains', icon: 'assessment', color: '#0FB5AD',
+      expanded: false,
+      subGroups: levels.map((l: any, i: number) => ({
+        id: `level-${l.id || i}`,
+        title: `${l.code || `L${i + 1}`}: ${l.name}`,
+      })),
+    },
+    {
+      id: 'workstreams', title: 'Workstream Tracks', icon: 'workstream', color: '#7c3aed',
+      expanded: false,
+      subGroups: workstreams.map((ws: any) => ({
+        id: `ws-${ws.code}`,
+        title: `${ws.code}: ${ws.name}`,
+      })),
+    },
+    {
+      id: 'strategy', title: 'Strategy & Planning', icon: 'quickwin', color: '#f59e0b',
+      expanded: false,
+      subGroups: [
+        { id: 'quickwins', title: 'Quick Wins' },
+        { id: 'strategic', title: 'Strategic Themes' },
+        { id: 'decisions', title: 'Decisions Made' },
+        { id: 'risks', title: 'Risks & Mitigations' },
+      ],
+    },
+    {
+      id: 'context', title: 'People, Process & Architecture', icon: 'people', color: '#22c55e',
+      expanded: false,
+      subGroups: [
+        { id: 'people', title: 'People & Organization' },
+        { id: 'process', title: 'Processes & Governance' },
+        { id: 'arch', title: 'Architecture & Technology' },
+        { id: 'data', title: 'Data & Integration' },
+      ],
+    },
+  ];
 
-  const savedWb = (workshop as any).whiteboard;
-  const [sections, setSections] = useState<Section[]>(savedWb?.sections?.length > 0 ? savedWb.sections : buildDefaultSections());
-  const [notes, setNotes] = useState<StickyNote[]>(savedWb?.notes || []);
-
-  // Auto-save to MongoDB
-  const saveWbMutation = trpc.workshop.saveWhiteboard.useMutation();
-  const saveDebounce = useRef<any>(null);
-  const autoSave = useCallback((s: Section[], n: StickyNote[]) => {
-    if (saveDebounce.current) clearTimeout(saveDebounce.current);
-    saveDebounce.current = setTimeout(() => {
-      saveWbMutation.mutate({ workshopId: workshop.id, sections: s as any, notes: n as any });
-    }, 1500);
-  }, [workshop.id]);
-
-  // Trigger auto-save on changes
-  const updateSections = (updater: (prev: Section[]) => Section[]) => {
-    updateSections(prev => { const next = updater(prev); autoSave(next, notes); return next; });
-  };
-  const updateNotes = (updater: (prev: StickyNote[]) => StickyNote[]) => {
-    updateNotes(prev => { const next = updater(prev); autoSave(sections, next); return next; });
-  };
-
-  // OCR: extract text from whiteboard/sticky note photos via AI
-  const [ocrProcessing, setOcrProcessing] = useState(false);
-  const handleImageOCR = async (file: File, sectionId: string) => {
-    setOcrProcessing(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        // Send image to AI for text extraction + section suggestion
-        const res = await fetch('/api/trpc/ai.chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ json: {
-            message: `This is a photo of sticky notes or a whiteboard from a ${workshop.customerName} assessment workshop. Extract ALL text visible. Return as a JSON array of objects: [{"text":"<note text>","suggestedSection":"<one of: Key Observations, Pain Points, Opportunities, Risks, Architecture, People & Org, Quick Wins, Strategic Themes, Questions, Decisions, or a level/workstream name>"}]. Be thorough — capture every sticky note and piece of text. If multiple sticky notes visible, return one object per note.`,
-            context: { page: 'workshop-whiteboard' },
-          }}),
-        });
-        const data = await res.json();
-        const response = data?.result?.data?.json?.response || data?.result?.data?.response || '';
-
-        // Parse extracted notes
-        try {
-          const match = response.match(/\[[\s\S]*\]/);
-          if (match) {
-            const extracted = JSON.parse(match[0]);
-            const newNotes: StickyNote[] = extracted.map((item: any) => {
-              // Try to match suggested section
-              const matchedSection = sections.find(s =>
-                s.title.toLowerCase().includes((item.suggestedSection || '').toLowerCase())
-              );
-              return {
-                id: uid(),
-                text: item.text || '',
-                color: matchedSection ? matchedSection.color : 'yellow',
-                sectionId: matchedSection?.id || sectionId,
-                votes: 0,
-                type: 'note' as const,
-                timestamp: Date.now(),
-              };
-            }).filter((n: StickyNote) => n.text.trim());
-            updateNotes(prev => [...prev, ...newNotes]);
-          } else {
-            // Fallback: add response as single note
-            updateNotes(prev => [...prev, { id: uid(), text: response.slice(0, 500), color: 'yellow', sectionId, votes: 0, type: 'note', timestamp: Date.now() }]);
-          }
-        } catch {
-          updateNotes(prev => [...prev, { id: uid(), text: `📷 Photo uploaded: ${file.name}`, color: 'green', sectionId, votes: 0, type: 'image', fileName: file.name, timestamp: Date.now() }]);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch {}
-    setTimeout(() => setOcrProcessing(false), 3000);
-  };
+  const [groups, setGroups] = useState<Group[]>(saved?.groups?.length > 0 ? saved.groups : buildGroups());
+  const [notes, setNotes] = useState<Note[]>(saved?.notes || []);
+  const [freeformText, setFreeformText] = useState('');
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
+  const [chatThinking, setChatThinking] = useState(false);
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editBuffer, setEditBuffer] = useState('');
   const [addingTo, setAddingTo] = useState<string | null>(null);
-  const [newNoteText, setNewNoteText] = useState('');
-  const [newNoteColor, setNewNoteColor] = useState('yellow');
-  const [showAddSection, setShowAddSection] = useState(false);
-  const [newSectionTitle, setNewSectionTitle] = useState('');
-  const [newSectionColor, setNewSectionColor] = useState('blue');
-  const [aiSummarizing, setAiSummarizing] = useState(false);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [dragNote, setDragNote] = useState<string | null>(null);
-  const [filterSource, setFilterSource] = useState<string | null>(null);
-
-  // Audio recording state
+  const [newSubGroup, setNewSubGroup] = useState<string | null>(null);
+  const [newSubTitle, setNewSubTitle] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [recordingSection, setRecordingSection] = useState<string | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const [recordTime, setRecordTime] = useState(0);
+  const [ocrProcessing, setOcrProcessing] = useState(false);
+
+  const mediaRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<any>(null);
-  const [transcribing, setTranscribing] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatMutation = trpc.ai.chat.useMutation();
+  const saveWb = trpc.workshop.saveWhiteboard.useMutation();
 
-  const uid = () => `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  // Auto-save
+  const saveRef = useRef<any>(null);
+  const persist = useCallback((g: Group[], n: Note[]) => {
+    if (saveRef.current) clearTimeout(saveRef.current);
+    saveRef.current = setTimeout(() => {
+      saveWb.mutate({ workshopId: workshop.id, sections: g as any, notes: n as any });
+    }, 1200);
+  }, [workshop.id]);
 
-  // Audio recording
-  const startRecording = async (sectionId: string) => {
+  const setG = (fn: (p: Group[]) => Group[]) => setGroups(p => { const n = fn(p); persist(n, notes); return n; });
+  const setN = (fn: (p: Note[]) => Note[]) => setNotes(p => { const n = fn(p); persist(groups, n); return n; });
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
+
+  // ── Freeform input → AI auto-categorize ──
+  const handleFreeformSubmit = async () => {
+    if (!freeformText.trim()) return;
+    const text = freeformText.trim();
+    setFreeformText('');
+
+    // Ask AI to categorize into the right group/subgroup
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      chunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
-        const duration = recordingTime;
-        // Create a note for the recording
-        updateNotes(prev => [...prev, {
-          id: uid(),
-          text: `🎙️ Audio recording (${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, '0')})`,
-          color: 'blue',
-          sectionId,
-          votes: 0,
-          type: 'audio',
-          audioDuration: duration,
-          timestamp: Date.now(),
-        }]);
-        // Auto-transcribe using Web Speech API if available
-        handleTranscribe(chunksRef.current, sectionId);
-      };
-      recorder.start();
-      mediaRecorderRef.current = recorder;
-      setIsRecording(true);
-      setRecordingSection(sectionId);
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
-    } catch { /* mic access denied */ }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      if (timerRef.current) clearInterval(timerRef.current);
+      const allGroups = groups.map(g => `${g.title}: ${g.subGroups.map(s => s.title).join(', ')}`).join('\n');
+      const result = await chatMutation.mutateAsync({
+        message: `Categorize this workshop note into the best matching group and subgroup. Return ONLY JSON: {"groupId":"<id>","subGroupId":"<id>","processedText":"<cleaned note text>"}\n\nGroups:\n${allGroups}\n\nGroup IDs: ${groups.map(g => g.id).join(', ')}\nSubGroup IDs: ${groups.flatMap(g => g.subGroups.map(s => `${g.id}/${s.id}`)).join(', ')}\n\nNote: "${text}"`,
+        context: { page: 'workshop-whiteboard' },
+      });
+      const match = result.response.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        const targetGroup = groups.find(g => g.id === parsed.groupId) || groups[0];
+        const targetSub = targetGroup.subGroups.find(s => s.id === parsed.subGroupId) || targetGroup.subGroups[0];
+        setN(prev => [...prev, { id: uid(), text: parsed.processedText || text, color: targetGroup.color, groupId: targetGroup.id, subGroupId: targetSub?.id, votes: 0, type: 'note', ts: Date.now() }]);
+        // Auto-expand the target group
+        setG(prev => prev.map(g => g.id === targetGroup.id ? { ...g, expanded: true } : g));
+      } else {
+        setN(prev => [...prev, { id: uid(), text, color: '#3b82f6', groupId: 'discovery', subGroupId: 'obs', votes: 0, type: 'note', ts: Date.now() }]);
+      }
+    } catch {
+      setN(prev => [...prev, { id: uid(), text, color: '#3b82f6', groupId: 'discovery', subGroupId: 'obs', votes: 0, type: 'note', ts: Date.now() }]);
     }
   };
 
-  const handleTranscribe = async (chunks: Blob[], sectionId: string) => {
-    // Use SpeechRecognition for live transcription hint
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
-    setTranscribing(true);
-    // Create a note indicating transcription
-    updateNotes(prev => [...prev, {
-      id: uid(),
-      text: '⏳ Transcribing audio...',
-      color: 'teal',
-      sectionId,
-      votes: 0,
-      type: 'note',
-      timestamp: Date.now(),
-    }]);
-    // In production, this would send to Whisper/Deepgram API
-    setTimeout(() => {
-      updateNotes(prev => prev.map(n => n.text === '⏳ Transcribing audio...' ? { ...n, text: '📝 Audio captured — add notes from the recording above' } : n));
-      setTranscribing(false);
-    }, 2000);
-  };
+  // ── AI Copilot Chat ──
+  const handleChat = async () => {
+    if (!chatInput.trim() || chatThinking) return;
+    const msg = chatInput.trim();
+    setChatInput('');
+    setChatMessages(prev => [...prev, { role: 'user', text: msg }]);
+    setChatThinking(true);
 
-  // File upload handler
-  const handleFileUpload = (files: FileList | null, sectionId: string) => {
-    if (!files) return;
-    Array.from(files).forEach(file => {
-      if (file.type.startsWith('image/')) {
-        // Images: show as image note
-        const reader = new FileReader();
-        reader.onload = () => {
-          updateNotes(prev => [...prev, {
-            id: uid(),
-            text: `📷 ${file.name}`,
-            color: 'green',
-            sectionId,
-            votes: 0,
-            type: 'image',
-            fileName: file.name,
-            timestamp: Date.now(),
-          }]);
-        };
-        reader.readAsDataURL(file);
-      } else if (file.name.endsWith('.pdf') || file.name.endsWith('.docx') || file.name.endsWith('.pptx')) {
-        updateNotes(prev => [...prev, {
-          id: uid(),
-          text: `📄 ${file.name} (${(file.size / 1024).toFixed(0)} KB)`,
-          color: 'orange',
-          sectionId,
-          votes: 0,
-          type: 'file',
-          fileName: file.name,
-          timestamp: Date.now(),
-        }]);
-      } else {
-        // Text files — read content
-        const reader = new FileReader();
-        reader.onload = () => {
-          const content = (reader.result as string).slice(0, 500);
-          updateNotes(prev => [...prev, {
-            id: uid(),
-            text: `📄 ${file.name}\n${content}`,
-            color: 'orange',
-            sectionId,
-            votes: 0,
-            type: 'file',
-            fileName: file.name,
-            timestamp: Date.now(),
-          }]);
-        };
-        reader.readAsText(file);
-      }
-    });
-  };
+    const noteSummary = groups.map(g => {
+      const gNotes = notes.filter(n => n.groupId === g.id);
+      return gNotes.length > 0 ? `${g.title} (${gNotes.length}):\n${gNotes.map(n => `  - ${n.text}`).join('\n')}` : '';
+    }).filter(Boolean).join('\n');
 
-  const addNote = (sectionId: string) => {
-    if (!newNoteText.trim()) return;
-    updateNotes(prev => [...prev, { id: uid(), text: newNoteText.trim(), color: newNoteColor, sectionId, votes: 0, type: 'note', timestamp: Date.now() }]);
-    setNewNoteText('');
-    setAddingTo(null);
-  };
-
-  const deleteNote = (id: string) => updateNotes(prev => prev.filter(n => n.id !== id));
-  const voteNote = (id: string) => updateNotes(prev => prev.map(n => n.id === id ? { ...n, votes: n.votes + 1 } : n));
-  const updateNote = (id: string, text: string) => { updateNotes(prev => prev.map(n => n.id === id ? { ...n, text } : n)); setEditingNote(null); };
-
-  const addSection = () => {
-    if (!newSectionTitle.trim()) return;
-    updateSections(prev => [...prev, { id: `s-${Date.now()}`, title: newSectionTitle.trim(), icon: '📌', color: newSectionColor, collapsed: false, source: 'custom' }]);
-    setNewSectionTitle('');
-    setShowAddSection(false);
-  };
-
-  const deleteSection = (id: string) => { updateSections(prev => prev.filter(s => s.id !== id)); updateNotes(prev => prev.filter(n => n.sectionId !== id)); };
-  const toggleSection = (id: string) => updateSections(prev => prev.map(s => s.id === id ? { ...s, collapsed: !s.collapsed } : s));
-  const moveNote = (noteId: string, targetSectionId: string) => { updateNotes(prev => prev.map(n => n.id === noteId ? { ...n, sectionId: targetSectionId } : n)); setDragNote(null); };
-  const getColor = (colorId: string) => COLORS.find(c => c.id === colorId) || COLORS[0];
-
-  // AI Summarize
-  const handleAISummarize = async () => {
-    if (notes.length < 2) return;
-    setAiSummarizing(true);
     try {
-      const allNotes = sections.map(s => {
-        const sNotes = notes.filter(n => n.sectionId === s.id);
-        if (sNotes.length === 0) return '';
-        return `${s.icon} ${s.title}:\n${sNotes.map(n => `  - ${n.text} (${n.votes} votes)`).join('\n')}`;
-      }).filter(Boolean).join('\n\n');
+      const result = await chatMutation.mutateAsync({
+        message: `You are a discovery facilitator for ${workshop.customerName}'s assessment workshop. Help organize whiteboard notes.
 
-      const res = await fetch('/api/trpc/ai.chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ json: {
-          message: `Synthesize these workshop whiteboard notes into actionable themes and findings. Group by: 1) Critical findings 2) Strategic themes 3) Immediate actions needed 4) Questions to resolve. Be specific to ${workshop.customerName}.\n\nNotes:\n${allNotes}`,
-          context: { page: 'workshop-whiteboard' },
-        }}),
+CURRENT WHITEBOARD (${notes.length} notes):
+${noteSummary || '(empty)'}
+
+USER: ${msg}
+
+If the user provides observations, create notes. Return any new notes as: [NOTE: group=<groupId> sub=<subGroupId> text=<note text>]
+Otherwise, respond with insights about the whiteboard content. Be concise (2-3 sentences).`,
+        context: { page: 'workshop-whiteboard' },
       });
-      const data = await res.json();
-      setAiSummary(data?.result?.data?.json?.response || data?.result?.data?.response || 'Unable to summarize.');
-    } catch { setAiSummary('Unable to summarize — try again.'); }
-    setAiSummarizing(false);
+
+      const response = result.response;
+      // Extract any notes the AI suggests
+      const noteMatches = response.matchAll(/\[NOTE:\s*group=(\S+)\s+sub=(\S+)\s+text=([^\]]+)\]/g);
+      for (const match of noteMatches) {
+        const [, groupId, subId, text] = match;
+        const group = groups.find(g => g.id === groupId) || groups[0];
+        setN(prev => [...prev, { id: uid(), text: text.trim(), color: group.color, groupId: group.id, subGroupId: subId, votes: 0, type: 'note', ts: Date.now() }]);
+      }
+      const clean = response.replace(/\[NOTE:[^\]]+\]/g, '').trim();
+      if (clean) setChatMessages(prev => [...prev, { role: 'ai', text: clean }]);
+    } catch {
+      setChatMessages(prev => [...prev, { role: 'ai', text: 'Unable to respond.' }]);
+    }
+    setChatThinking(false);
   };
 
-  // Filter sections
-  const filteredSections = filterSource ? sections.filter(s => s.source === filterSource) : sections;
-  const nonEmptySections = filteredSections.filter(s => notes.some(n => n.sectionId === s.id) || !s.collapsed);
+  // ── Audio recording ──
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        setN(prev => [...prev, { id: uid(), text: `Voice note (${Math.floor(recordTime / 60)}:${String(recordTime % 60).padStart(2, '0')})`, color: '#3b82f6', groupId: 'discovery', subGroupId: 'obs', votes: 0, type: 'audio', ts: Date.now() }]);
+      };
+      recorder.start();
+      mediaRef.current = recorder;
+      setIsRecording(true);
+      setRecordTime(0);
+      timerRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
+    } catch {}
+  };
+
+  const stopRecording = () => {
+    mediaRef.current?.stop();
+    setIsRecording(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  // ── Image OCR → auto-section ──
+  const handleImageOCR = async (file: File) => {
+    setOcrProcessing(true);
+    try {
+      const allSubs = groups.flatMap(g => g.subGroups.map(s => `${g.id}/${s.id}: ${s.title}`)).join(', ');
+      const result = await chatMutation.mutateAsync({
+        message: `Extract ALL text from this whiteboard/sticky note photo for ${workshop.customerName}. Return JSON array: [{"text":"<note>","groupId":"<group>","subGroupId":"<sub>"}]. Available groups/subs: ${allSubs}. One object per distinct note/item visible.`,
+        context: { page: 'workshop-whiteboard' },
+      });
+      const match = result.response.match(/\[[\s\S]*\]/);
+      if (match) {
+        const items = JSON.parse(match[0]);
+        items.forEach((item: any) => {
+          const group = groups.find(g => g.id === item.groupId) || groups[0];
+          setN(prev => [...prev, { id: uid(), text: item.text, color: group.color, groupId: group.id, subGroupId: item.subGroupId, votes: 0, type: 'note', ts: Date.now() }]);
+        });
+      }
+    } catch {}
+    setOcrProcessing(false);
+  };
+
+  // ── File upload ──
+  const handleFile = (file: File, groupId: string, subId?: string) => {
+    if (file.type.startsWith('image/')) {
+      handleImageOCR(file);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = file.name.endsWith('.pdf') || file.name.endsWith('.docx')
+        ? `${file.name} (${(file.size / 1024).toFixed(0)} KB)`
+        : (reader.result as string).slice(0, 500);
+      setN(prev => [...prev, { id: uid(), text: content, color: '#f59e0b', groupId, subGroupId: subId, votes: 0, type: 'file', fileName: file.name, ts: Date.now() }]);
+    };
+    reader.readAsText(file);
+  };
+
+  // ── Add sub-group to a group ──
+  const addSubGroup = (groupId: string) => {
+    if (!newSubTitle.trim()) return;
+    setG(prev => prev.map(g => g.id === groupId ? { ...g, subGroups: [...g.subGroups, { id: uid(), title: newSubTitle.trim() }] } : g));
+    setNewSubTitle('');
+    setNewSubGroup(null);
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+      {/* ═══════ MAIN AREA ═══════ */}
+      <div className="space-y-4">
+        {/* Freeform input — AI auto-categorizes */}
+        <div className="rounded-xl bg-card border border-border overflow-hidden">
+          <div className="px-4 py-3 border-b border-border flex items-center gap-2">
             <LayoutGrid className="h-4 w-4 text-[#f59e0b]" />
-            Discovery Whiteboard
-          </h3>
-          <p className="text-[10px] text-muted-foreground">
-            {sections.length} sections ({sections.filter(s => s.source === 'level').length} from levels, {sections.filter(s => s.source === 'workstream').length} from workstreams) · {notes.length} notes
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {/* Source filter */}
-          <div className="flex gap-0.5 p-0.5 rounded-lg bg-secondary border border-border">
-            {[
-              { id: null, label: 'All' },
-              { id: 'template', label: 'General' },
-              { id: 'level', label: 'Levels' },
-              { id: 'workstream', label: 'Workstreams' },
-            ].map(f => (
-              <button key={f.label} onClick={() => setFilterSource(f.id)}
-                className={`px-2 py-1 text-[10px] rounded-md transition-colors ${filterSource === f.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-                {f.label}
-              </button>
-            ))}
+            <span className="text-sm font-semibold text-foreground">Discovery Whiteboard</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] font-medium ml-auto">{notes.length} notes</span>
           </div>
-          <button onClick={() => setShowAddSection(true)}
-            className="flex items-center gap-1 px-3 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
-            <Plus className="h-3 w-3" /> Section
-          </button>
-          <button onClick={handleAISummarize} disabled={aiSummarizing || notes.length < 2}
-            className="flex items-center gap-1 px-3 py-1.5 text-[10px] rounded-lg bg-[#7c3aed] text-white disabled:opacity-40">
-            {aiSummarizing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-            AI Synthesize
-          </button>
-        </div>
-      </div>
 
-      {/* OCR processing indicator */}
-      {ocrProcessing && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A867F]/10 border border-[#0A867F]/30">
-          <Loader2 className="h-4 w-4 animate-spin text-[#0A867F]" />
-          <span className="text-xs font-medium text-[#0A867F]">Extracting text from photo...</span>
-          <span className="text-[10px] text-muted-foreground">AI is reading sticky notes and whiteboard content</span>
-        </div>
-      )}
-
-      {/* Global audio recorder */}
-      {isRecording && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 animate-pulse">
-          <div className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
-          <span className="text-xs font-medium text-red-400">Recording...</span>
-          <span className="text-xs font-mono text-red-300">{Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')}</span>
-          <div className="flex-1" />
-          <button onClick={stopRecording} className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-red-500 text-white">
-            <Square className="h-3 w-3" /> Stop
-          </button>
-        </div>
-      )}
-
-      {/* Add section form */}
-      {showAddSection && (
-        <div className="p-4 rounded-xl bg-[#f59e0b]/5 border border-[#f59e0b]/20 space-y-3">
-          <div className="flex gap-2">
-            <input value={newSectionTitle} onChange={e => setNewSectionTitle(e.target.value)}
-              placeholder="Section title..." className="flex-1 px-3 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground"
-              onKeyDown={e => e.key === 'Enter' && addSection()} />
-            <div className="flex gap-1">
-              {COLORS.slice(0, 6).map(c => (
-                <button key={c.id} onClick={() => setNewSectionColor(c.id)}
-                  className={`w-6 h-6 rounded-md border-2 ${newSectionColor === c.id ? 'border-foreground scale-110' : 'border-transparent'}`}
-                  style={{ backgroundColor: c.bg }} />
-              ))}
+          <div className="p-4">
+            <div className="flex gap-2">
+              <textarea value={freeformText} onChange={e => setFreeformText(e.target.value)}
+                placeholder="Type an observation, paste notes, or describe what you see — AI will automatically categorize it into the right section..."
+                rows={2}
+                className="flex-1 px-3 py-2.5 text-xs bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:border-[#f59e0b]/40"
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleFreeformSubmit(); } }} />
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <button onClick={handleFreeformSubmit} disabled={!freeformText.trim()}
+                  className="px-3 py-2 rounded-lg bg-[#f59e0b] text-white text-[10px] font-medium disabled:opacity-40 transition-colors hover:bg-[#d97706]">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </button>
+                {/* Voice record */}
+                {isRecording ? (
+                  <button onClick={stopRecording} className="px-3 py-2 rounded-lg bg-red-500 text-white text-[10px]">
+                    <Square className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <button onClick={startRecording} className="px-3 py-2 rounded-lg border border-border text-muted-foreground hover:text-red-400 text-[10px] transition-colors">
+                    <Mic className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {/* Camera OCR */}
+                <label className="px-3 py-2 rounded-lg border border-border text-muted-foreground hover:text-[#0A867F] text-[10px] cursor-pointer transition-colors text-center">
+                  <Camera className="h-3.5 w-3.5 mx-auto" />
+                  <input type="file" className="hidden" accept="image/*" capture="environment"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleImageOCR(f); e.target.value = ''; }} />
+                </label>
+              </div>
             </div>
-            <button onClick={addSection} disabled={!newSectionTitle.trim()}
-              className="px-3 py-1.5 text-[10px] rounded-lg bg-[#f59e0b] text-white font-medium disabled:opacity-50">Add</button>
-            <button onClick={() => setShowAddSection(false)} className="text-[10px] text-muted-foreground">Cancel</button>
+            {isRecording && (
+              <div className="mt-2 flex items-center gap-2 text-red-400 text-[10px]">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                Recording {Math.floor(recordTime / 60)}:{String(recordTime % 60).padStart(2, '0')}
+              </div>
+            )}
+            {ocrProcessing && (
+              <div className="mt-2 flex items-center gap-2 text-[#0A867F] text-[10px]">
+                <Loader2 className="h-3 w-3 animate-spin" /> Extracting text from image...
+              </div>
+            )}
           </div>
         </div>
-      )}
 
-      {/* AI Summary */}
-      {aiSummary && (
-        <div className="p-4 rounded-xl bg-[#7c3aed]/5 border border-[#7c3aed]/20 relative">
-          <button onClick={() => setAiSummary(null)} className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
-          <div className="text-[10px] font-mono uppercase tracking-wider text-[#7c3aed] mb-2 flex items-center gap-1.5">
-            <Sparkles className="h-3 w-3" /> AI-Synthesized Themes
-          </div>
-          <div className="text-xs text-foreground leading-relaxed whitespace-pre-line">{aiSummary}</div>
-        </div>
-      )}
-
-      {/* Sections */}
-      <div className="space-y-3">
-        {filteredSections.map(section => {
-          const sectionNotes = notes.filter(n => n.sectionId === section.id).sort((a, b) => b.votes - a.votes);
-          const color = getColor(section.color);
-          const isAudioSection = section.id === 's-audio';
-          const isDocsSection = section.id === 's-docs';
+        {/* ═══════ GROUPED SECTIONS ═══════ */}
+        {groups.map(group => {
+          const Icon = ICON_MAP[group.icon] || LayoutGrid;
+          const groupNotes = notes.filter(n => n.groupId === group.id);
+          const totalVotes = groupNotes.reduce((s, n) => s + n.votes, 0);
 
           return (
-            <div key={section.id} className="rounded-xl border overflow-hidden transition-colors"
-              style={{ borderColor: color.border + '40', background: sectionNotes.length > 0 ? color.bg + '15' : 'transparent' }}
-              onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = color.border; }}
-              onDragLeave={e => { e.currentTarget.style.borderColor = color.border + '40'; }}
-              onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = color.border + '40'; if (dragNote) moveNote(dragNote, section.id); }}>
+            <div key={group.id} className="rounded-xl border overflow-hidden transition-colors"
+              style={{ borderColor: group.expanded ? group.color + '40' : 'var(--g-line, rgba(255,255,255,0.08))' }}>
+              {/* Group header */}
+              <button onClick={() => setG(prev => prev.map(g => g.id === group.id ? { ...g, expanded: !g.expanded } : g))}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/10 transition-colors">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: group.color + '15' }}>
+                  <Icon className="h-4 w-4" style={{ color: group.color }} />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="text-xs font-semibold text-foreground">{group.title}</div>
+                  <div className="text-[10px] text-muted-foreground">{group.subGroups.length} sections · {groupNotes.length} notes{totalVotes > 0 ? ` · ${totalVotes} votes` : ''}</div>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-medium" style={{ backgroundColor: group.color + '15', color: group.color }}>
+                  {groupNotes.length}
+                </span>
+                {group.expanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+              </button>
 
-              {/* Section header */}
-              <div className="flex items-center gap-2 px-4 py-2.5 group/sec">
-                <button onClick={() => toggleSection(section.id)} className="flex items-center gap-2 flex-1 text-left">
-                  <span className="text-sm">{section.icon}</span>
-                  <span className="text-xs font-semibold" style={{ color: color.text }}>{section.title}</span>
-                  {section.source !== 'template' && (
-                    <span className="text-[8px] px-1.5 py-0.5 rounded-full font-mono" style={{ backgroundColor: color.bg, color: color.text + '99' }}>
-                      {section.source}
-                    </span>
-                  )}
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono" style={{ backgroundColor: color.bg, color: color.text }}>
-                    {sectionNotes.length}
-                  </span>
-                </button>
-                {/* Section actions */}
-                <div className="flex items-center gap-1 opacity-0 group-hover/sec:opacity-100 transition-opacity">
-                  {/* Record audio into this section */}
-                  {!isRecording && (
-                    <button onClick={(e) => { e.stopPropagation(); startRecording(section.id); }}
-                      className="p-1 rounded text-muted-foreground hover:text-red-400 transition-colors" title="Record audio">
-                      <Mic className="h-3 w-3" />
+              {/* Expanded: sub-groups */}
+              {group.expanded && (
+                <div className="border-t border-border">
+                  {group.subGroups.map(sub => {
+                    const subNotes = groupNotes.filter(n => n.subGroupId === sub.id || (!n.subGroupId && sub === group.subGroups[0]));
+                    return (
+                      <div key={sub.id} className="border-b border-border/50 last:border-b-0">
+                        <div className="flex items-center gap-2 px-5 py-2 bg-muted/5">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: group.color }} />
+                          <span className="text-[10px] font-medium text-foreground flex-1">{sub.title}</span>
+                          <span className="text-[9px] text-muted-foreground">{subNotes.length}</span>
+                          {/* Upload into this sub-section */}
+                          <label className="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Upload className="h-2.5 w-2.5" />
+                            <input type="file" className="hidden" accept=".pdf,.docx,.txt,.csv,.png,.jpg,.jpeg"
+                              onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f, group.id, sub.id); e.target.value = ''; }} />
+                          </label>
+                        </div>
+                        {/* Notes in this sub-section */}
+                        {subNotes.length > 0 && (
+                          <div className="px-5 py-2 flex flex-wrap gap-2">
+                            {subNotes.map(note => (
+                              <div key={note.id} draggable onDragStart={() => {}}
+                                className="w-[190px] rounded-lg p-2.5 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 group/note"
+                                style={{ backgroundColor: note.color + '12', border: `1px solid ${note.color}25` }}>
+                                {editingNote === note.id ? (
+                                  <div className="space-y-1">
+                                    <textarea value={editBuffer} onChange={e => setEditBuffer(e.target.value)}
+                                      className="w-full px-1.5 py-1 text-[10px] bg-card border border-border rounded resize-none text-foreground" rows={3} autoFocus />
+                                    <div className="flex gap-1 justify-end">
+                                      <button onClick={() => setEditingNote(null)} className="p-0.5 text-muted-foreground"><X className="h-2.5 w-2.5" /></button>
+                                      <button onClick={() => { setN(prev => prev.map(n => n.id === note.id ? { ...n, text: editBuffer } : n)); setEditingNote(null); }}
+                                        className="p-0.5 text-emerald-400"><Check className="h-2.5 w-2.5" /></button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <p className="text-[10px] leading-relaxed text-foreground mb-1.5 whitespace-pre-wrap line-clamp-4">{note.text}</p>
+                                    <div className="flex items-center gap-1">
+                                      <button onClick={() => setN(prev => prev.map(n => n.id === note.id ? { ...n, votes: n.votes + 1 } : n))}
+                                        className="text-[8px] px-1.5 py-0.5 rounded-full font-medium hover:bg-muted/30 transition-colors" style={{ color: note.color }}>
+                                        <ThumbsUp className="h-2 w-2 inline mr-0.5" />{note.votes}
+                                      </button>
+                                      {note.type !== 'note' && <span className="text-[7px] px-1 rounded bg-muted text-muted-foreground">{note.type}</span>}
+                                      <div className="flex-1" />
+                                      <button onClick={() => { setEditingNote(note.id); setEditBuffer(note.text); }}
+                                        className="p-0.5 opacity-0 group-hover/note:opacity-60 text-muted-foreground"><Pencil className="h-2.5 w-2.5" /></button>
+                                      <button onClick={() => setN(prev => prev.filter(n => n.id !== note.id))}
+                                        className="p-0.5 opacity-0 group-hover/note:opacity-60 text-red-400"><Trash2 className="h-2.5 w-2.5" /></button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Quick add note to sub-section */}
+                        {addingTo === `${group.id}/${sub.id}` ? (
+                          <div className="px-5 py-2">
+                            <div className="flex gap-1.5">
+                              <input value={freeformText} onChange={e => setFreeformText(e.target.value)}
+                                placeholder="Add note..." autoFocus
+                                className="flex-1 px-2 py-1.5 text-[10px] bg-card border border-border rounded-lg text-foreground"
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    setN(prev => [...prev, { id: uid(), text: freeformText.trim(), color: group.color, groupId: group.id, subGroupId: sub.id, votes: 0, type: 'note', ts: Date.now() }]);
+                                    setFreeformText('');
+                                    setAddingTo(null);
+                                  }
+                                  if (e.key === 'Escape') setAddingTo(null);
+                                }} />
+                              <button onClick={() => setAddingTo(null)} className="text-[9px] text-muted-foreground">Esc</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setAddingTo(`${group.id}/${sub.id}`); setFreeformText(''); }}
+                            className="w-full text-left px-5 py-1.5 text-[9px] text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-colors">
+                            <Plus className="h-2.5 w-2.5 inline mr-1" />Add note
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Add sub-group */}
+                  {newSubGroup === group.id ? (
+                    <div className="px-5 py-2 flex gap-1.5 border-t border-border/50">
+                      <input value={newSubTitle} onChange={e => setNewSubTitle(e.target.value)}
+                        placeholder="Sub-section title..." autoFocus
+                        className="flex-1 px-2 py-1.5 text-[10px] bg-card border border-border rounded-lg text-foreground"
+                        onKeyDown={e => { if (e.key === 'Enter') addSubGroup(group.id); if (e.key === 'Escape') setNewSubGroup(null); }} />
+                      <button onClick={() => addSubGroup(group.id)} disabled={!newSubTitle.trim()}
+                        className="px-2 py-1 text-[9px] rounded-lg bg-foreground/10 text-foreground disabled:opacity-40">Add</button>
+                      <button onClick={() => setNewSubGroup(null)} className="text-[9px] text-muted-foreground">Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setNewSubGroup(group.id)}
+                      className="w-full text-left px-5 py-2 text-[9px] text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-colors border-t border-border/50">
+                      <FolderPlus className="h-2.5 w-2.5 inline mr-1" />Add sub-section to {group.title}
                     </button>
                   )}
-                  {/* Upload file/image into this section */}
-                  <label className="p-1 rounded text-muted-foreground hover:text-foreground cursor-pointer transition-colors" title="Upload file or image">
-                    <Upload className="h-3 w-3" />
-                    <input type="file" className="hidden" multiple accept=".pdf,.docx,.pptx,.txt,.csv,.md,.png,.jpg,.jpeg,.webp"
-                      onChange={e => { handleFileUpload(e.target.files, section.id); e.target.value = ''; }} />
-                  </label>
-                  {/* Camera: capture whiteboard/sticky note photo → OCR → auto-section */}
-                  <label className="p-1 rounded text-muted-foreground hover:text-[#0A867F] cursor-pointer transition-colors" title="📸 Capture whiteboard photo (OCR → auto-extract notes)">
-                    <Camera className="h-3 w-3" />
-                    <input type="file" className="hidden" accept="image/*" capture="environment"
-                      onChange={e => { const f = e.target.files?.[0]; if (f) handleImageOCR(f, section.id); e.target.value = ''; }} />
-                  </label>
-                  <button onClick={(e) => { e.stopPropagation(); if (confirm(`Delete "${section.title}" and all its notes?`)) deleteSection(section.id); }}
-                    className="p-1 rounded text-muted-foreground hover:text-red-400 transition-opacity">
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-                <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${section.collapsed ? '-rotate-90' : ''}`} />
-              </div>
-
-              {/* Notes */}
-              {!section.collapsed && (
-                <div className="px-4 pb-3">
-                  <div className="flex flex-wrap gap-2">
-                    {sectionNotes.map(note => {
-                      const noteColor = getColor(note.color);
-                      const isEditing = editingNote === note.id;
-
-                      return (
-                        <div key={note.id} draggable onDragStart={() => setDragNote(note.id)}
-                          className="w-[200px] rounded-lg shadow-sm cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:-translate-y-0.5 group/note"
-                          style={{ backgroundColor: noteColor.bg, border: `1px solid ${noteColor.border}` }}>
-                          <div className="p-3">
-                            {isEditing ? (
-                              <div className="space-y-1.5">
-                                <textarea value={editBuffer} onChange={e => setEditBuffer(e.target.value)}
-                                  className="w-full px-2 py-1 text-[11px] bg-white/50 border border-black/10 rounded resize-none" rows={3}
-                                  style={{ color: noteColor.text }} autoFocus />
-                                <div className="flex gap-1 justify-end">
-                                  <button onClick={() => setEditingNote(null)}><X className="h-3 w-3" /></button>
-                                  <button onClick={() => updateNote(note.id, editBuffer)} className="text-emerald-600"><Check className="h-3 w-3" /></button>
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <p className="text-[11px] leading-relaxed mb-2 whitespace-pre-wrap" style={{ color: noteColor.text }}>{note.text}</p>
-                                <div className="flex items-center gap-1">
-                                  <button onClick={() => voteNote(note.id)}
-                                    className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
-                                    style={{ backgroundColor: noteColor.border + '40', color: noteColor.text }}>
-                                    👍 {note.votes}
-                                  </button>
-                                  {note.type !== 'note' && (
-                                    <span className="text-[8px] px-1 py-0.5 rounded font-mono" style={{ color: noteColor.text + '80' }}>{note.type}</span>
-                                  )}
-                                  <div className="flex-1" />
-                                  <button onClick={() => { setEditingNote(note.id); setEditBuffer(note.text); }}
-                                    className="p-0.5 opacity-0 group-hover/note:opacity-60 hover:!opacity-100" style={{ color: noteColor.text }}>
-                                    <Pencil className="h-2.5 w-2.5" />
-                                  </button>
-                                  <button onClick={() => deleteNote(note.id)}
-                                    className="p-0.5 opacity-0 group-hover/note:opacity-60 hover:!opacity-100 text-red-400">
-                                    <Trash2 className="h-2.5 w-2.5" />
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Add note */}
-                    {addingTo === section.id ? (
-                      <div className="w-[200px] rounded-lg p-3 space-y-2" style={{ backgroundColor: getColor(newNoteColor).bg, border: `1px dashed ${color.border}` }}>
-                        <textarea value={newNoteText} onChange={e => setNewNoteText(e.target.value)}
-                          placeholder="Type your note..." autoFocus rows={3}
-                          className="w-full px-2 py-1 text-[11px] bg-white/50 border border-black/10 rounded resize-none"
-                          style={{ color: getColor(newNoteColor).text }}
-                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addNote(section.id); } }} />
-                        <div className="flex items-center gap-1">
-                          {COLORS.slice(0, 6).map(c => (
-                            <button key={c.id} onClick={() => setNewNoteColor(c.id)}
-                              className={`w-4 h-4 rounded-full border ${newNoteColor === c.id ? 'border-foreground ring-1 ring-foreground' : 'border-transparent'}`}
-                              style={{ backgroundColor: c.bg }} />
-                          ))}
-                          <div className="flex-1" />
-                          <button onClick={() => setAddingTo(null)} className="text-[9px] text-muted-foreground">Cancel</button>
-                          <button onClick={() => addNote(section.id)} disabled={!newNoteText.trim()}
-                            className="text-[9px] px-2 py-0.5 rounded bg-foreground/10 text-foreground font-medium disabled:opacity-40">Add</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button onClick={() => setAddingTo(section.id)}
-                        className="w-[200px] h-[90px] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors hover:border-opacity-80"
-                        style={{ borderColor: color.border + '40', color: color.text + '60' }}>
-                        <Plus className="h-4 w-4" />
-                        <span className="text-[10px]">Add note</span>
-                      </button>
-                    )}
-                  </div>
                 </div>
               )}
             </div>
@@ -581,20 +472,68 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: WhiteboardPr
         })}
       </div>
 
-      {/* Stats */}
-      {notes.length > 0 && (
-        <div className="flex items-center gap-4 px-4 py-2 rounded-lg bg-secondary/20 text-[10px] text-muted-foreground flex-wrap">
-          <span>{notes.length} notes</span>
-          <span>{notes.reduce((s, n) => s + n.votes, 0)} votes</span>
-          <span>{notes.filter(n => n.type === 'audio').length} recordings</span>
-          <span>{notes.filter(n => n.type === 'file' || n.type === 'image').length} files</span>
-          <span>{sections.filter(s => s.source === 'level').length} level sections</span>
-          <span>{sections.filter(s => s.source === 'workstream').length} workstream sections</span>
-          {notes.filter(n => n.votes >= 2).length > 0 && (
-            <span className="text-[#f59e0b]">{notes.filter(n => n.votes >= 2).length} high-priority (2+ votes)</span>
-          )}
+      {/* ═══════ AI COPILOT SIDEBAR ═══════ */}
+      <div className="rounded-xl bg-card border border-border overflow-hidden h-fit sticky top-20">
+        <div className="px-4 py-3 bg-[#0B1120] text-white flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-[#0FB5AD]" />
+          <span className="text-xs font-semibold">Discovery Copilot</span>
+          <span className="text-[9px] text-white/40 ml-auto">{notes.length} notes</span>
         </div>
-      )}
+
+        {/* Chat messages */}
+        <div className="max-h-[350px] overflow-y-auto p-3 space-y-2">
+          {chatMessages.length === 0 && (
+            <div className="space-y-2 py-2">
+              <p className="text-[10px] text-muted-foreground text-center">Describe observations or upload content — AI organizes it</p>
+              {[
+                'What patterns do you see across all notes?',
+                'Summarize the whiteboard into key themes',
+                `What should we focus on for ${workshop.customerName}?`,
+                'Suggest dimensions to add based on these observations',
+              ].map((q, i) => (
+                <button key={i} onClick={() => { setChatInput(q); }}
+                  className="w-full text-left px-3 py-2 rounded-lg bg-secondary/30 text-[10px] text-foreground hover:bg-secondary/50 transition-colors">
+                  {q}
+                </button>
+              ))}
+            </div>
+          )}
+          {chatMessages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[90%] px-3 py-2 rounded-xl text-[10px] leading-relaxed ${
+                msg.role === 'user' ? 'bg-[#f59e0b] text-white rounded-tr-sm' : 'bg-secondary/50 text-foreground rounded-tl-sm'
+              }`}>{msg.text}</div>
+            </div>
+          ))}
+          {chatThinking && (
+            <div className="flex justify-start">
+              <div className="px-3 py-2 rounded-xl bg-secondary/50 text-[10px] text-muted-foreground rounded-tl-sm flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin text-[#f59e0b]" /> Thinking...
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Chat input */}
+        <div className="px-3 py-2 border-t border-border">
+          <div className="flex gap-1.5">
+            <label className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground cursor-pointer shrink-0">
+              <Upload className="h-3.5 w-3.5" />
+              <input type="file" className="hidden" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
+                onChange={e => { const f = e.target.files?.[0]; if (f) { if (f.type.startsWith('image/')) handleImageOCR(f); else handleFile(f, 'discovery', 'obs'); } e.target.value = ''; }} />
+            </label>
+            <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleChat()}
+              placeholder="Ask, describe, or paste..."
+              className="flex-1 px-3 py-1.5 text-[10px] bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#f59e0b]/40" />
+            <button onClick={handleChat} disabled={!chatInput.trim() || chatThinking}
+              className="p-1.5 rounded-lg bg-[#f59e0b] text-white disabled:opacity-40">
+              <Send className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
