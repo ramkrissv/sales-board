@@ -16,13 +16,15 @@ import WorkshopProposal from '@/components/workshop/WorkshopProposal';
 import WorkshopIntake from '@/components/workshop/WorkshopIntake';
 import WorkshopFindings from '@/components/workshop/WorkshopFindings';
 import StageGate from '@/components/workshop/StageGate';
-import { Wrench, ClipboardList, Award } from 'lucide-react';
+import WorkshopWhiteboard from '@/components/workshop/WorkshopWhiteboard';
+import { Wrench, ClipboardList, Award, LayoutGrid } from 'lucide-react';
 
-type WorkshopTab = 'overview' | 'intake' | 'assess' | 'usecases' | 'scope' | 'findings' | 'proposal' | 'builder' | 'settings';
+type WorkshopTab = 'overview' | 'intake' | 'whiteboard' | 'assess' | 'usecases' | 'scope' | 'findings' | 'proposal' | 'builder' | 'settings';
 
 const TABS: { id: WorkshopTab; label: string; icon: any }[] = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
   { id: 'intake', label: 'Intake', icon: ClipboardList },
+  { id: 'whiteboard', label: 'Whiteboard', icon: LayoutGrid },
   { id: 'assess', label: 'Assess', icon: Layers },
   { id: 'usecases', label: 'Use Cases', icon: Target },
   { id: 'scope', label: 'Scope', icon: FileText },
@@ -227,6 +229,16 @@ export default function WorkshopPage() {
             { label: 'Customer identified', met: !!ws.customerName },
           ]} output={['Business context', 'Technical landscape', 'Stakeholder map', 'Success criteria']} />
           <WorkshopIntake workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
+        </div>
+      )}
+
+      {/* ── WHITEBOARD TAB ── */}
+      {activeTab === 'whiteboard' && (
+        <div className="space-y-4">
+          <StageGate stage="Discovery Whiteboard" entry={[
+            { label: 'Intake completed', met: !!(ws as any).intake },
+          ]} output={['Observations captured', 'Pain points identified', 'Themes synthesized', 'Ready for structured assessment']} />
+          <WorkshopWhiteboard workshop={ws} onRefresh={() => utils.workshop.getById.invalidate({ id: workshopId })} />
         </div>
       )}
 
