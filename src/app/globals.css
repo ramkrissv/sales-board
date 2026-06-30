@@ -83,6 +83,15 @@
 }
 
 @layer base {
+  html {
+    font-size: 110%; /* 10% larger across entire platform — all rem units scale */
+  }
+  /* Scale pixel-based Tailwind arbitrary sizes too (+10%) */
+  .text-\[7px\] { font-size: 7.7px !important; }
+  .text-\[8px\] { font-size: 8.8px !important; }
+  .text-\[9px\] { font-size: 9.9px !important; }
+  .text-\[10px\] { font-size: 11px !important; }
+  .text-\[11px\] { font-size: 12.1px !important; }
   * { @apply border-border; }
   body {
     @apply font-sans antialiased;
