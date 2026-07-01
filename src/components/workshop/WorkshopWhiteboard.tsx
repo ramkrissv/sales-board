@@ -192,7 +192,8 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
           collapsed: false,
           children: (s.children || []).map((c: string) => ({ id: uid(), text: c })),
         }));
-        setSections(prev => [...prev, ...newSections]);
+        // REPLACE default sections with extracted ones (not append)
+        setSections(newSections);
       }
     } catch {}
     setExtractingSections(false);
@@ -857,14 +858,23 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
                                       ) : att.type === 'image' && att.url ? (
                                         <img src={att.url} alt={att.content} className="h-20 rounded border border-border object-cover" />
                                       ) : att.type === 'text' ? (
-                                        <div className="w-[200px] p-2 rounded border border-border bg-card relative group/txt">
-                                          <div className="text-[9px] text-foreground min-h-[30px] outline-none" contentEditable suppressContentEditableWarning
+                                        <div className="w-[280px] rounded-lg border border-border bg-card relative group/txt overflow-hidden">
+                                          {/* Mini formatting bar */}
+                                          <div className="flex items-center gap-0.5 px-2 py-1 border-b border-border/50 bg-muted/20 opacity-0 group-hover/txt:opacity-100 transition-opacity">
+                                            <button onClick={() => document.execCommand('bold')} className="px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground hover:text-foreground rounded hover:bg-muted/50">B</button>
+                                            <button onClick={() => document.execCommand('italic')} className="px-1.5 py-0.5 text-[8px] italic text-muted-foreground hover:text-foreground rounded hover:bg-muted/50">I</button>
+                                            <button onClick={() => document.execCommand('insertUnorderedList')} className="px-1.5 py-0.5 text-[8px] text-muted-foreground hover:text-foreground rounded hover:bg-muted/50">• List</button>
+                                            <div className="flex-1" />
+                                            <button onClick={() => setExpandedEditor({ sectionId: section.id, noteId: note.id, attId: att.id, content: att.content })}
+                                              className="p-0.5 text-muted-foreground hover:text-foreground" title="Full editor">
+                                              <Maximize2 className="h-2.5 w-2.5" />
+                                            </button>
+                                          </div>
+                                          <div className="p-2.5 text-[10px] text-foreground min-h-[50px] outline-none leading-relaxed
+                                            [&_b]:font-semibold [&_i]:italic [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5"
+                                            contentEditable suppressContentEditableWarning
                                             onBlur={e => { const t = e.currentTarget.innerHTML || ''; setSections(prev => prev.map(s => s.id === section.id ? { ...s, children: (s.children || []).map(n => n.id === note.id ? { ...n, attachments: (n.attachments || []).map(a => a.id === att.id ? { ...a, content: t } : a) } : n) } : s)); }}
                                             dangerouslySetInnerHTML={{ __html: att.content || 'Click to type...' }} />
-                                          <button onClick={() => setExpandedEditor({ sectionId: section.id, noteId: note.id, attId: att.id, content: att.content })}
-                                            className="absolute top-1 right-1 p-0.5 rounded bg-muted text-muted-foreground opacity-0 group-hover/txt:opacity-100 hover:text-foreground transition-opacity" title="Expand editor">
-                                            <Maximize2 className="h-2.5 w-2.5" />
-                                          </button>
                                         </div>
                                       ) : att.type === 'file' ? (
                                         <div className="px-2 py-1.5 rounded border border-border bg-card flex items-center gap-1.5">
@@ -1069,6 +1079,11 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
                                   <Camera className="h-3 w-3" /> Photo
                                   <input type="file" className="hidden" accept="image/*" capture="environment" onChange={e => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onload = () => addAttachment(fSection.id, note.id, { id: uid(), type: 'image', content: f.name, url: r.result as string }); r.readAsDataURL(f); } }} />
                                 </label>
+                                {/* Diagram — opens sketch pad in popup */}
+                                <button onClick={() => addAttachment(fSection.id, note.id, { id: uid(), type: 'text', content: '<h3>Architecture Diagram</h3><p>Use the Sketch Pad zone below to draw diagrams, then screenshot and upload here.</p>' })}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-[#0FB5AD] hover:border-[#0FB5AD]/30">
+                                  <PenTool className="h-3 w-3" /> Diagram
+                                </button>
                               </div>
 
                               {/* Attachments — larger in fullscreen */}
@@ -1287,8 +1302,9 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
                   {[
                     'Summarize notes into themes',
                     'What patterns do you see?',
-                    'Suggest assessment dimensions',
-                    `Create stickies for pain points`,
+                    'Organize all content into the right sections',
+                    'Suggest assessment dimensions from notes',
+                    `Create stickies for ${workshop.customerName}'s pain points`,
                   ].map((q, i) => (
                     <button
                       key={i}
