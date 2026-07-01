@@ -158,6 +158,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editNoteText, setEditNoteText] = useState('');
   const [addingSection, setAddingSection] = useState(false);
+  const [fullscreenSectionId, setFullscreenSectionId] = useState<string | null>(null);
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [extractingSections, setExtractingSections] = useState(false);
 
@@ -754,6 +755,14 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
                     )}
                     <div className="flex items-center gap-0.5 opacity-0 group-hover/sec:opacity-100 transition-opacity">
                       <button onClick={() => { setAddingNoteTo(section.id); setNewNoteText(''); }} className="p-0.5 text-muted-foreground hover:text-[#3B82F6]" title="Add note"><Plus className="h-3 w-3" /></button>
+                      <label className="p-0.5 text-muted-foreground hover:text-[#10B981] cursor-pointer" title="Upload files">
+                        <Upload className="h-3 w-3" />
+                        <input type="file" className="hidden" multiple accept={UPLOAD_ACCEPT} onChange={e => handleFileUpload(e.target.files)} />
+                      </label>
+                      <button onClick={() => { setFullscreenSectionId(section.id); setSections(prev => prev.map(s => s.id === section.id ? { ...s, collapsed: false } : s)); }}
+                        className="p-0.5 text-muted-foreground hover:text-foreground" title="Expand to full screen">
+                        <Maximize2 className="h-3 w-3" />
+                      </button>
                       <button onClick={() => deleteSection(section.id)} className="p-0.5 text-muted-foreground hover:text-red-400" title="Delete section"><Trash2 className="h-3 w-3" /></button>
                     </div>
                   </div>
@@ -890,6 +899,139 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
               ))}
             </div>
           </div>
+
+          {/* ═══ SECTION FULLSCREEN MODAL ═══ */}
+          {fullscreenSectionId && (() => {
+            const fSection = sections.find(s => s.id === fullscreenSectionId);
+            if (!fSection) return null;
+            return (
+              <div className="fixed inset-0 z-50 bg-background overflow-y-auto" onClick={e => { if (e.target === e.currentTarget) setFullscreenSectionId(null); }}>
+                <div className="max-w-5xl mx-auto p-8">
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-6">
+                    <h2 className="text-xl font-semibold text-foreground font-display flex-1">{fSection.title}</h2>
+                    <button onClick={() => { setAddingNoteTo(fSection.id); setNewNoteText(''); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[#3B82F6] text-white"><Plus className="h-3 w-3" /> Add Item</button>
+                    <label className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground cursor-pointer">
+                      <Upload className="h-3 w-3" /> Upload
+                      <input type="file" className="hidden" multiple accept={UPLOAD_ACCEPT} onChange={e => handleFileUpload(e.target.files)} />
+                    </label>
+                    <button onClick={() => setFullscreenSectionId(null)}
+                      className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground"><Minimize2 className="h-4 w-4" /></button>
+                  </div>
+
+                  {/* Add note form */}
+                  {addingNoteTo === fSection.id && (
+                    <div className="mb-4 flex gap-2 p-3 rounded-lg border border-border bg-muted/20">
+                      <input value={newNoteText} onChange={e => setNewNoteText(e.target.value)} autoFocus
+                        placeholder="Add a note or topic..."
+                        className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-[#3B82F6]/50"
+                        onKeyDown={e => { if (e.key === 'Enter') addNoteToSection(fSection.id); if (e.key === 'Escape') setAddingNoteTo(null); }} />
+                      <button onClick={() => addNoteToSection(fSection.id)} disabled={!newNoteText.trim()}
+                        className="px-4 py-2 text-xs rounded-lg bg-[#3B82F6] text-white disabled:opacity-40">Add</button>
+                    </div>
+                  )}
+
+                  {/* Notes — full-size cards */}
+                  <div className="space-y-3">
+                    {(fSection.children || []).map(note => {
+                      const atts = note.attachments || [];
+                      return (
+                        <div key={note.id} className="rounded-xl border border-border bg-card overflow-hidden hover:border-[#3B82F6]/30 transition-colors">
+                          {/* Note header */}
+                          <div className="flex items-center gap-3 px-5 py-3 group/fn">
+                            <button onClick={() => toggleNoteExpand(fSection.id, note.id)} className="shrink-0">
+                              {note.expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                            </button>
+                            {editingNoteId === note.id ? (
+                              <div className="flex-1 flex gap-2">
+                                <input value={editNoteText} onChange={e => setEditNoteText(e.target.value)} autoFocus
+                                  className="flex-1 px-3 py-1.5 text-sm bg-card border border-border rounded-lg text-foreground focus:outline-none"
+                                  onKeyDown={e => { if (e.key === 'Enter') saveEditNote(fSection.id, note.id); if (e.key === 'Escape') setEditingNoteId(null); }} />
+                                <button onClick={() => saveEditNote(fSection.id, note.id)} className="p-1 text-emerald-400"><Check className="h-4 w-4" /></button>
+                                <button onClick={() => setEditingNoteId(null)} className="p-1 text-muted-foreground"><X className="h-4 w-4" /></button>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-foreground flex-1 cursor-pointer" onClick={() => toggleNoteExpand(fSection.id, note.id)}>{note.text}</span>
+                            )}
+                            {atts.length > 0 && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#f59e0b]/10 text-[#f59e0b]">{atts.length} items</span>}
+                            <div className="flex gap-1 opacity-0 group-hover/fn:opacity-100 transition-opacity">
+                              <button onClick={() => { setEditingNoteId(note.id); setEditNoteText(note.text); }} className="p-1 text-muted-foreground hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => deleteNote(fSection.id, note.id)} className="p-1 text-muted-foreground hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                            </div>
+                          </div>
+
+                          {/* Expanded content — rich workspace */}
+                          {note.expanded && (
+                            <div className="px-5 pb-4 border-t border-border/50 pt-3">
+                              {/* Action bar */}
+                              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                <button onClick={() => addAttachment(fSection.id, note.id, { id: uid(), type: 'sticky', content: 'New sticky', color: STICKY_COLORS[Math.floor(Math.random()*6)].bg })}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-[#f59e0b] hover:border-[#f59e0b]/30">
+                                  <StickyNote className="h-3 w-3" /> Sticky Note
+                                </button>
+                                <button onClick={() => addAttachment(fSection.id, note.id, { id: uid(), type: 'text', content: '' })}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-[#3B82F6] hover:border-[#3B82F6]/30">
+                                  <FileText className="h-3 w-3" /> Text Note
+                                </button>
+                                <label className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-[#10B981] hover:border-[#10B981]/30 cursor-pointer">
+                                  <Upload className="h-3 w-3" /> File / Image
+                                  <input type="file" className="hidden" multiple accept={UPLOAD_ACCEPT} onChange={e => handleNoteFileUpload(e.target.files, fSection.id, note.id)} />
+                                </label>
+                                <label className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-[#8B5CF6] hover:border-[#8B5CF6]/30 cursor-pointer">
+                                  <Camera className="h-3 w-3" /> Photo
+                                  <input type="file" className="hidden" accept="image/*" capture="environment" onChange={e => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onload = () => addAttachment(fSection.id, note.id, { id: uid(), type: 'image', content: f.name, url: r.result as string }); r.readAsDataURL(f); } }} />
+                                </label>
+                              </div>
+
+                              {/* Attachments — larger in fullscreen */}
+                              {atts.length > 0 ? (
+                                <div className="flex flex-wrap gap-3">
+                                  {atts.map(att => (
+                                    <div key={att.id} className="group/att relative">
+                                      {att.type === 'sticky' ? (
+                                        <div className="w-[200px] min-h-[100px] p-3 rounded-lg cursor-default"
+                                          style={{ backgroundColor: att.color || '#FEF3C7', boxShadow: '2px 3px 8px rgba(0,0,0,0.1)', transform: `rotate(${(parseInt(att.id, 36) % 5 - 2) * 0.4}deg)` }}>
+                                          <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap outline-none" contentEditable suppressContentEditableWarning
+                                            onBlur={e => { const t = e.currentTarget.textContent || ''; setSections(prev => prev.map(s => s.id === fSection.id ? { ...s, children: (s.children || []).map(n => n.id === note.id ? { ...n, attachments: (n.attachments || []).map(a => a.id === att.id ? { ...a, content: t } : a) } : n) } : s)); }}>
+                                            {att.content}
+                                          </div>
+                                        </div>
+                                      ) : att.type === 'image' && att.url ? (
+                                        <img src={att.url} alt={att.content} className="h-32 rounded-lg border border-border object-cover" />
+                                      ) : att.type === 'text' ? (
+                                        <div className="w-[280px] p-3 rounded-lg border border-border bg-card">
+                                          <div className="text-sm text-foreground leading-relaxed outline-none min-h-[40px]" contentEditable suppressContentEditableWarning
+                                            onBlur={e => { const t = e.currentTarget.textContent || ''; setSections(prev => prev.map(s => s.id === fSection.id ? { ...s, children: (s.children || []).map(n => n.id === note.id ? { ...n, attachments: (n.attachments || []).map(a => a.id === att.id ? { ...a, content: t } : a) } : n) } : s)); }}>
+                                            {att.content || 'Click to type...'}
+                                          </div>
+                                        </div>
+                                      ) : att.type === 'file' ? (
+                                        <div className="px-3 py-2 rounded-lg border border-border bg-card flex items-center gap-2">
+                                          <FileText className="h-4 w-4 text-[#3B82F6]" />
+                                          <span className="text-xs text-foreground">{att.content}</span>
+                                        </div>
+                                      ) : null}
+                                      <button onClick={() => deleteAttachment(fSection.id, note.id, att.id)}
+                                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/att:opacity-100 transition-opacity text-[10px]">
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground italic">Add stickies, notes, files, or images to this area</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ╔══════════════════════════════════════╗
              ║  ZONE 3: SKETCH PAD                  ║
