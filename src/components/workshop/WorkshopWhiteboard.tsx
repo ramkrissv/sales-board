@@ -159,6 +159,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   const [editNoteText, setEditNoteText] = useState('');
   const [addingSection, setAddingSection] = useState(false);
   const [fullscreenSectionId, setFullscreenSectionId] = useState<string | null>(null);
+  const [expandedEditor, setExpandedEditor] = useState<{ sectionId: string; noteId: string; attId: string; content: string } | null>(null);
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [extractingSections, setExtractingSections] = useState(false);
 
@@ -223,7 +224,15 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
 
-  // --- Auto-save (2s debounce) ---
+  // Keep refs to latest state for save
+  const stickiesRef = useRef(stickies);
+  const sectionsRef = useRef(sections);
+  const mediaRef2 = useRef(mediaItems);
+  useEffect(() => { stickiesRef.current = stickies; }, [stickies]);
+  useEffect(() => { sectionsRef.current = sections; }, [sections]);
+  useEffect(() => { mediaRef2.current = mediaItems; }, [mediaItems]);
+
+  // --- Auto-save (2s debounce) — uses refs for fresh state ---
   const persist = useCallback(() => {
     if (saveRef.current) clearTimeout(saveRef.current);
     saveRef.current = setTimeout(() => {
@@ -233,7 +242,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
         workshopId: workshop.id,
         sections: [] as any,
         notes: [{
-          id: 'wb-state', text: JSON.stringify({ stickies, sections, mediaItems, canvasData: cData }),
+          id: 'wb-state', text: JSON.stringify({ stickies: stickiesRef.current, sections: sectionsRef.current, mediaItems: mediaRef2.current, canvasData: cData }),
           color: '', sectionId: '', groupId: '', votes: 0, type: 'note' as const, timestamp: Date.now(),
         }] as any,
       });
@@ -842,11 +851,14 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
                                       ) : att.type === 'image' && att.url ? (
                                         <img src={att.url} alt={att.content} className="h-20 rounded border border-border object-cover" />
                                       ) : att.type === 'text' ? (
-                                        <div className="w-[200px] p-2 rounded border border-border bg-card">
-                                          <div className="text-[9px] text-foreground" contentEditable suppressContentEditableWarning
-                                            onBlur={e => { const t = e.currentTarget.textContent || ''; setSections(prev => prev.map(s => s.id === section.id ? { ...s, children: s.children.map(n => n.id === note.id ? { ...n, attachments: (n.attachments || []).map(a => a.id === att.id ? { ...a, content: t } : a) } : n) } : s)); }}>
-                                            {att.content || 'Click to type...'}
-                                          </div>
+                                        <div className="w-[200px] p-2 rounded border border-border bg-card relative group/txt">
+                                          <div className="text-[9px] text-foreground min-h-[30px] outline-none" contentEditable suppressContentEditableWarning
+                                            onBlur={e => { const t = e.currentTarget.innerHTML || ''; setSections(prev => prev.map(s => s.id === section.id ? { ...s, children: (s.children || []).map(n => n.id === note.id ? { ...n, attachments: (n.attachments || []).map(a => a.id === att.id ? { ...a, content: t } : a) } : n) } : s)); }}
+                                            dangerouslySetInnerHTML={{ __html: att.content || 'Click to type...' }} />
+                                          <button onClick={() => setExpandedEditor({ sectionId: section.id, noteId: note.id, attId: att.id, content: att.content })}
+                                            className="absolute top-1 right-1 p-0.5 rounded bg-muted text-muted-foreground opacity-0 group-hover/txt:opacity-100 hover:text-foreground transition-opacity" title="Expand editor">
+                                            <Maximize2 className="h-2.5 w-2.5" />
+                                          </button>
                                         </div>
                                       ) : att.type === 'file' ? (
                                         <div className="px-2 py-1.5 rounded border border-border bg-card flex items-center gap-1.5">
@@ -899,6 +911,58 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
               ))}
             </div>
           </div>
+
+          {/* ═══ RICH TEXT EDITOR MODAL ═══ */}
+          {expandedEditor && (
+            <div className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-sm flex items-center justify-center p-8">
+              <div className="w-full max-w-4xl bg-card rounded-2xl border border-border shadow-2xl flex flex-col max-h-[85vh]">
+                {/* Toolbar */}
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
+                  <FileText className="h-4 w-4 text-[#3B82F6]" />
+                  <span className="text-sm font-semibold text-foreground">Rich Text Editor</span>
+                  <div className="flex-1" />
+                  {/* Formatting toolbar */}
+                  <div className="flex items-center gap-0.5 px-2 py-1 rounded-lg bg-secondary/30 border border-border">
+                    <button onClick={() => document.execCommand('bold')} className="px-2 py-1 text-xs font-bold text-muted-foreground hover:text-foreground rounded hover:bg-muted/30" title="Bold">B</button>
+                    <button onClick={() => document.execCommand('italic')} className="px-2 py-1 text-xs italic text-muted-foreground hover:text-foreground rounded hover:bg-muted/30" title="Italic">I</button>
+                    <button onClick={() => document.execCommand('underline')} className="px-2 py-1 text-xs underline text-muted-foreground hover:text-foreground rounded hover:bg-muted/30" title="Underline">U</button>
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <button onClick={() => document.execCommand('insertUnorderedList')} className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground rounded hover:bg-muted/30" title="Bullet list">• List</button>
+                    <button onClick={() => document.execCommand('insertOrderedList')} className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground rounded hover:bg-muted/30" title="Numbered list">1. List</button>
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <button onClick={() => document.execCommand('formatBlock', false, 'h3')} className="px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground rounded hover:bg-muted/30" title="Heading">H</button>
+                    <button onClick={() => document.execCommand('formatBlock', false, 'blockquote')} className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground rounded hover:bg-muted/30" title="Quote">"</button>
+                  </div>
+                  <button onClick={() => {
+                    const editor = document.getElementById('rich-editor');
+                    if (editor) {
+                      const html = editor.innerHTML;
+                      setSections(prev => prev.map(s => s.id === expandedEditor.sectionId ? {
+                        ...s, children: (s.children || []).map(n => n.id === expandedEditor.noteId ? {
+                          ...n, attachments: (n.attachments || []).map(a => a.id === expandedEditor.attId ? { ...a, content: html } : a)
+                        } : n)
+                      } : s));
+                    }
+                    setExpandedEditor(null);
+                  }} className="px-4 py-1.5 text-xs rounded-lg bg-[#3B82F6] text-white hover:bg-[#2563EB]">Save & Close</button>
+                  <button onClick={() => setExpandedEditor(null)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground border border-border">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {/* Editor area */}
+                <div id="rich-editor"
+                  className="flex-1 overflow-y-auto p-6 text-sm text-foreground leading-relaxed outline-none prose prose-sm max-w-none
+                    [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h3]:mt-4 [&_h3]:mb-2
+                    [&_blockquote]:border-l-3 [&_blockquote]:border-[#3B82F6] [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground
+                    [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5
+                    [&_li]:my-1"
+                  contentEditable
+                  suppressContentEditableWarning
+                  dangerouslySetInnerHTML={{ __html: expandedEditor.content || '<p>Start typing your content here...</p>' }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* ═══ SECTION FULLSCREEN MODAL ═══ */}
           {fullscreenSectionId && (() => {
