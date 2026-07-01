@@ -415,6 +415,23 @@ main, [role="main"] {
 ::-webkit-scrollbar-thumb { background: var(--g-line); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--g-fg-3); }
 
+/* ─── Fullscreen Panel Mode ─── */
+.g-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 50 !important;
+  max-width: none !important;
+  border-radius: 0 !important;
+  overflow-y: auto !important;
+  background: var(--g-bg) !important;
+  padding: 24px !important;
+  animation: fadeInUp 0.25s ease-out;
+}
+.g-fullscreen > *:first-child {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
 /* ─── Selection ─── */
 ::selection {
   background: rgba(124, 58, 237, 0.2);

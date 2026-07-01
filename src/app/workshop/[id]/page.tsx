@@ -17,7 +17,7 @@ import WorkshopIntake from '@/components/workshop/WorkshopIntake';
 import WorkshopFindings from '@/components/workshop/WorkshopFindings';
 import StageGate from '@/components/workshop/StageGate';
 import WorkshopWhiteboard from '@/components/workshop/WorkshopWhiteboard';
-import { Wrench, ClipboardList, Award, LayoutGrid } from 'lucide-react';
+import { Wrench, ClipboardList, Award, LayoutGrid, Maximize2, Minimize2 } from 'lucide-react';
 
 type WorkshopTab = 'overview' | 'intake' | 'whiteboard' | 'assess' | 'usecases' | 'scope' | 'findings' | 'proposal' | 'builder' | 'settings';
 
@@ -68,6 +68,7 @@ export default function WorkshopPage() {
   });
 
   const [activeTab, setActiveTab] = useState<WorkshopTab>('overview');
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeLevel, setActiveLevel] = useState<string>('L1');
 
   // Debounced finding update
@@ -127,7 +128,7 @@ export default function WorkshopPage() {
   const workstreams = ws.framework?.workstreams || [];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className={`max-w-6xl mx-auto space-y-6 ${isFullscreen ? 'g-fullscreen' : ''}`}>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -216,6 +217,10 @@ export default function WorkshopPage() {
             {tab.label}
           </button>
         ))}
+        <button onClick={() => setIsFullscreen(f => !f)}
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors ml-1" title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+          {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+        </button>
       </div>
 
       {/* ── OVERVIEW TAB ── */}

@@ -19,7 +19,7 @@ import {
   Percent, Link2, Globe, Target, BarChart3,
   Briefcase, CheckCircle2, ChevronRight, Search,
   Settings, Cpu, ClipboardList, Layers, Calendar,
-  Building2, TrendingUp, Zap, Shield
+  Building2, TrendingUp, Zap, Shield, Maximize2, Minimize2
 } from 'lucide-react';
 import { Document, Packer, Paragraph, HeadingLevel, TextRun } from 'docx';
 import WorkshopsTabComponent from '@/components/workshop/WorkshopsTab';
@@ -183,6 +183,7 @@ export default function PresalesPage() {
 
   /* ── Tab state ── */
   const [activeTab, setActiveTab] = useState<PresalesTab>('command');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   /* ── Selected deal (shared across all tabs) ── */
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
@@ -790,7 +791,7 @@ User message: ${text.trim()}`;
      RENDER
      ═══════════════════════════════════════════════════════ */
   return (
-    <div className="max-w-[1600px] mx-auto space-y-4 pb-8">
+    <div className={`max-w-[1600px] mx-auto space-y-4 pb-8 ${isFullscreen ? 'g-fullscreen' : ''}`}>
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
@@ -828,6 +829,10 @@ User message: ${text.trim()}`;
             <ClipboardList className="h-3.5 w-3.5" />
             Contracts
           </Link>
+          <button onClick={() => setIsFullscreen(f => !f)}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors" title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+            {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+          </button>
         </div>
       </div>
 
