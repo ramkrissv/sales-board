@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import dynamic from 'next/dynamic';
 import { trpc } from '@/lib/trpc/client';
 import {
   Plus, Trash2, Pencil, Check, X, LayoutGrid,
@@ -12,13 +11,6 @@ import {
   Shield, Users, Zap, FolderPlus, FileText, Image,
   PenTool, Shapes, ArrowRight, Move,
 } from 'lucide-react';
-import { ENTERPRISE_AI_WORKSHOP_TEMPLATE, templateToWhiteboardZones } from '@/lib/workshop/pptx-templates';
-
-// Dynamic import Excalidraw (no SSR — it uses DOM APIs)
-const Excalidraw = dynamic(
-  () => import('@excalidraw/excalidraw').then(mod => mod.Excalidraw),
-  { ssr: false, loading: () => <div className="flex items-center justify-center h-full text-muted-foreground text-xs"><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading whiteboard...</div> }
-);
 
 const STICKY_COLORS = [
   { id: 'yellow', bg: '#FEF3C7', shadow: '#F59E0B', text: '#92400E' },
@@ -94,8 +86,6 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
 
   const [sections, setSections] = useState<Section[]>(saved?.sections?.length > 0 ? saved.sections.map((s: any) => ({ ...s, collapsed: s.collapsed ?? true })) : buildSections());
   const [notes, setNotes] = useState<Note[]>(saved?.notes || []);
-  const [excalidrawData, setExcalidrawData] = useState<any>(saved?.drawingData || null);
-
   // Chat state
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
@@ -286,16 +276,10 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
       {/* ═══════ MAIN AREA ═══════ */}
       <div className={`flex-1 flex overflow-hidden ${viewMode === 'split' ? 'gap-0' : ''}`}>
 
-        {/* DRAW VIEW — Excalidraw canvas */}
+        {/* DRAW VIEW — HTML5 Canvas freehand drawing */}
         {(viewMode === 'draw' || viewMode === 'split') && (
-          <div className={`${viewMode === 'split' ? 'w-1/2 border-r border-border' : 'flex-1'} bg-white dark:bg-[#121212] overflow-hidden`}>
-            <Excalidraw
-              theme="light"
-              onChange={(elements: any, state: any) => {
-                setExcalidrawData({ elements, state });
-              }}
-              initialData={excalidrawData ? { elements: excalidrawData.elements } : undefined}
-            />
+          <div className={`${viewMode === 'split' ? 'w-1/2 border-r border-border' : 'flex-1'} overflow-hidden relative`}>
+            <DrawCanvas />
           </div>
         )}
 
@@ -418,6 +402,121 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Built-in drawing canvas (no external deps) ──
+function DrawCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [drawing, setDrawing] = useState(false);
+  const [color, setColor] = useState('#1a1a2e');
+  const [lineWidth, setLineWidth] = useState(2);
+  const [tool, setTool] = useState<'pen' | 'eraser' | 'text'>('pen');
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    canvas.width = canvas.offsetWidth * 2;
+    canvas.height = canvas.offsetHeight * 2;
+    ctx.scale(2, 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Draw dot grid
+    ctx.fillStyle = '#e5e5e5';
+    for (let x = 0; x < canvas.offsetWidth; x += 20) {
+      for (let y = 0; y < canvas.offsetHeight; y += 20) {
+        ctx.beginPath();
+        ctx.arc(x, y, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }, []);
+
+  const getPos = (e: React.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const startDraw = (e: React.MouseEvent) => {
+    setDrawing(true);
+    lastPos.current = getPos(e);
+  };
+
+  const draw = (e: React.MouseEvent) => {
+    if (!drawing || !canvasRef.current || !lastPos.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
+    ctx.lineWidth = tool === 'eraser' ? lineWidth * 5 : lineWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    lastPos.current = pos;
+  };
+
+  const stopDraw = () => { setDrawing(false); lastPos.current = null; };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#e5e5e5';
+    for (let x = 0; x < canvas.offsetWidth; x += 20) {
+      for (let y = 0; y < canvas.offsetHeight; y += 20) {
+        ctx.beginPath();
+        ctx.arc(x, y, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  };
+
+  const DRAW_COLORS = ['#1a1a2e', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
+
+  return (
+    <div className="h-full flex flex-col bg-white">
+      {/* Drawing toolbar */}
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-200 bg-gray-50 shrink-0">
+        <button onClick={() => setTool('pen')}
+          className={`p-1.5 rounded-lg transition-colors ${tool === 'pen' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>
+          <PenTool className="h-3.5 w-3.5" />
+        </button>
+        <button onClick={() => setTool('eraser')}
+          className={`p-1.5 rounded-lg transition-colors ${tool === 'eraser' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>
+          <span className="text-[10px] font-mono">⌫</span>
+        </button>
+        <div className="w-px h-4 bg-gray-200 mx-1" />
+        {DRAW_COLORS.map(c => (
+          <button key={c} onClick={() => { setColor(c); setTool('pen'); }}
+            className={`w-5 h-5 rounded-full border-2 transition-all ${color === c && tool === 'pen' ? 'border-gray-800 scale-110' : 'border-transparent hover:scale-105'}`}
+            style={{ backgroundColor: c }} />
+        ))}
+        <div className="w-px h-4 bg-gray-200 mx-1" />
+        <input type="range" min="1" max="8" value={lineWidth} onChange={e => setLineWidth(Number(e.target.value))}
+          className="w-16 h-1 accent-gray-600" />
+        <span className="text-[9px] text-gray-400 w-4">{lineWidth}px</span>
+        <div className="flex-1" />
+        <button onClick={clearCanvas} className="text-[10px] text-gray-400 hover:text-red-400 transition-colors">Clear</button>
+      </div>
+      {/* Canvas */}
+      <canvas ref={canvasRef}
+        className="flex-1 cursor-crosshair"
+        onMouseDown={startDraw}
+        onMouseMove={draw}
+        onMouseUp={stopDraw}
+        onMouseLeave={stopDraw} />
     </div>
   );
 }
