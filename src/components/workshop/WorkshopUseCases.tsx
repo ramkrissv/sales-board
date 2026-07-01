@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import {
   Plus, Trash2, Sparkles, Loader2, Star, Target, Zap,
-  ChevronDown, ChevronUp, Edit2, Check, X,
+  ChevronDown, ChevronUp, Edit2, Check, X, Upload,
 } from 'lucide-react';
 
 interface WorkshopUseCasesProps {
@@ -40,6 +40,48 @@ export default function WorkshopUseCases({ workshop, onRefresh }: WorkshopUseCas
   const addMutation = trpc.workshop.addUseCase.useMutation({ onSuccess: onRefresh });
   const updateMutation = trpc.workshop.updateUseCase.useMutation({ onSuccess: onRefresh });
   const deleteMutation = trpc.workshop.deleteUseCase.useMutation({ onSuccess: onRefresh });
+  const chatMutation = trpc.ai.chat.useMutation();
+  const [extracting, setExtracting] = useState(false);
+
+  // Upload docs → AI extracts use cases with smart prioritization
+  const handleDocUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setExtracting(true);
+    const fileNames = Array.from(files).map(f => f.name).join(', ');
+    // Read text content from text-based files
+    let content = '';
+    for (const file of Array.from(files)) {
+      if (file.type.startsWith('text/') || file.name.match(/\.(txt|md|csv|json)$/i)) {
+        const text = await file.text();
+        content += `\n[${file.name}]:\n${text.slice(0, 2000)}\n`;
+      } else {
+        content += `\n[${file.name}]: ${(file.size/1024).toFixed(0)}KB ${file.name.split('.').pop()?.toUpperCase()} document\n`;
+      }
+    }
+    try {
+      const result = await chatMutation.mutateAsync({
+        message: `Extract use cases from these documents for ${workshop.customerName}. Return JSON array of use cases with AI-driven prioritization:\n\nDocuments: ${fileNames}\n${content}\n\nReturn ONLY JSON: [{"name":"<use case>","sponsor":"<if mentioned>","problem":"<problem statement>","tower":"<Business Operations|IT Operations|Engineering|Customer Experience|Data & Analytics|Security>","value":1-5,"feasibility":1-5,"isPilot":false}]\n\nPrioritize: high value + high feasibility first. Set value/feasibility based on business impact and technical complexity. Mark top 2-3 as isPilot=true.`,
+        context: { page: 'workshop-create' },
+      });
+      const match = result.response.match(/\[[\s\S]*\]/);
+      if (match) {
+        const items = JSON.parse(match[0]);
+        for (const item of items) {
+          addMutation.mutate({
+            workshopId: workshop.id,
+            name: item.name || 'Untitled',
+            sponsor: item.sponsor || undefined,
+            problem: item.problem || undefined,
+            tower: TOWERS.includes(item.tower) ? item.tower : 'Business Operations',
+            value: Math.min(5, Math.max(1, item.value || 3)),
+            feasibility: Math.min(5, Math.max(1, item.feasibility || 3)),
+            isPilot: !!item.isPilot,
+          });
+        }
+      }
+    } catch {}
+    setExtracting(false);
+  };
 
   // Group by tower
   const grouped = useMemo(() => {
@@ -106,6 +148,13 @@ export default function WorkshopUseCases({ workshop, onRefresh }: WorkshopUseCas
               AI: Recommend Pilots
             </button>
           )}
+          {/* Upload docs → AI extracts use cases */}
+          <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] cursor-pointer transition-colors ${extracting ? 'text-[#7c3aed]' : 'text-muted-foreground hover:text-foreground'}`}>
+            {extracting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+            {extracting ? 'Extracting...' : 'Upload Docs'}
+            <input type="file" className="hidden" multiple accept=".pdf,.doc,.docx,.pptx,.txt,.md,.csv,.json,.xlsx"
+              onChange={e => handleDocUpload(e.target.files)} />
+          </label>
           <button onClick={() => setShowAdd(!showAdd)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0A867F] text-white text-[10px] font-medium hover:bg-[#0A867F]/90">
             <Plus className="h-3 w-3" /> Add Use Case
