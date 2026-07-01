@@ -104,7 +104,9 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
 
   // --- State ---
   const [stickies, setStickies] = useState<Sticky[]>(saved?.stickies || []);
-  const [sections, setSections] = useState<SectionItem[]>(saved?.sections || buildInitialSections());
+  const [sections, setSections] = useState<SectionItem[]>(
+    (saved?.sections || buildInitialSections()).map((s: any) => ({ ...s, children: s.children || [] }))
+  );
   const [mediaItems, setMediaItems] = useState<MediaItem[]>(saved?.mediaItems || []);
   const [canvasData, setCanvasData] = useState<string>(saved?.canvasData || '');
 
@@ -457,12 +459,12 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
     ? sections.map(s => ({
         ...s,
         children: s.children.filter(c => c.text.toLowerCase().includes(q)),
-      })).filter(s => s.title.toLowerCase().includes(q) || s.children.length > 0)
+      })).filter(s => s.title.toLowerCase().includes(q) || (s.children?.length || 0) > 0)
     : sections;
   const filteredMedia = q ? mediaItems.filter(m => m.name.toLowerCase().includes(q)) : mediaItems;
 
   // --- Stats ---
-  const totalNotes = sections.reduce((sum, s) => sum + s.children.length, 0);
+  const totalNotes = sections.reduce((sum, s) => sum + (s.children?.length || 0), 0);
 
   // --- File type icon ---
   const fileIcon = (name: string) => {
