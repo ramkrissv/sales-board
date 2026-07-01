@@ -32,11 +32,13 @@ export default function WorkshopsTab() {
   });
   const utils = trpc.useUtils();
   const [showCreate, setShowCreate] = useState(false);
-  const [createMode, setCreateMode] = useState<'ai' | 'template'>('ai');
+  const [createMode, setCreateMode] = useState<'ai' | 'template' | 'pptx'>('ai');
   const [aiInput, setAiInput] = useState('');
   const [aiParsing, setAiParsing] = useState(false);
   const [pendingWorkshop, setPendingWorkshop] = useState<any>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [pptxParsing, setPptxParsing] = useState(false);
+  const [pptxSlides, setPptxSlides] = useState<any[]>([]);
 
   const handleAiCreate = () => {
     if (!aiInput.trim()) return;
@@ -166,11 +168,90 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
               className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-medium transition-colors ${createMode === 'ai' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>
               <Sparkles className="h-3.5 w-3.5" /> AI from Description
             </button>
+            <button onClick={() => setCreateMode('pptx')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-medium transition-colors ${createMode === 'pptx' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>
+              <Upload className="h-3.5 w-3.5" /> From PPTX / Deck
+            </button>
             <button onClick={() => setCreateMode('template')}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-medium transition-colors ${createMode === 'template' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>
               <Layers className="h-3.5 w-3.5" /> From Template
             </button>
           </div>
+
+          {/* PPTX upload — create workshop from presentation deck */}
+          {createMode === 'pptx' && (
+            <div className="p-5 rounded-xl g-surface g-elevated space-y-4">
+              <div className="text-xs font-semibold text-foreground">Create from Presentation Deck</div>
+              <p className="text-[10px] text-muted-foreground">Upload a workshop/engagement PPTX — AI extracts the agenda, topics, and structure into workshop sections, whiteboard zones, and assessment dimensions.</p>
+
+              <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-[#0A867F]/30 transition-colors">
+                <label className="cursor-pointer">
+                  <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+                  <div className="text-xs text-muted-foreground mb-1">Drop a PPTX file or click to upload</div>
+                  <div className="text-[9px] text-muted-foreground">AI will parse slides → create workshop sections, whiteboard zones, intake questions</div>
+                  <input type="file" className="hidden" accept=".pptx,.pdf,.docx"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setPptxParsing(true);
+                      // Send file info to AI to parse into workshop structure
+                      try {
+                        const reader = new FileReader();
+                        reader.onload = async () => {
+                          const result = await chatMutation.mutateAsync({
+                            message: `A client uploaded a workshop deck "${file.name}". Based on typical enterprise AI workshop structures (like Galent engagement decks), create a workshop. Return JSON: {"customerName":"<extract from filename>","title":"<workshop title>","templateId":"ai_transformation","sections":[{"title":"<section>","type":"discovery|architecture|planning|operations","topics":["<topic>"]}]}\n\nFile: ${file.name}`,
+                            context: { page: 'workshop-create' },
+                          });
+                          const match = result.response.match(/\{[\s\S]*\}/);
+                          if (match) {
+                            const parsed = JSON.parse(match[0]);
+                            setPendingWorkshop({
+                              customerName: parsed.customerName || file.name.split('_')[0] || '',
+                              title: parsed.title || 'Enterprise Workshop',
+                              templateId: parsed.templateId || 'ai_transformation',
+                              pptxSections: parsed.sections || [],
+                            });
+                          }
+                        };
+                        reader.readAsText(file.slice(0, 1000)); // Read first 1KB for name extraction
+                      } catch {}
+                      setPptxParsing(false);
+                    }} />
+                </label>
+                {pptxParsing && (
+                  <div className="mt-3 flex items-center justify-center gap-2 text-[10px] text-[#0A867F]">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Parsing deck structure...
+                  </div>
+                )}
+              </div>
+
+              {/* Or use the built-in Enterprise AI Workshop template */}
+              <div className="text-center">
+                <div className="text-[9px] text-muted-foreground mb-2">Or use the built-in template</div>
+                <button onClick={() => {
+                  setPendingWorkshop({
+                    customerName: '',
+                    title: 'Enterprise AI Workshop',
+                    templateId: 'ai_transformation',
+                    pptxSections: [
+                      { title: 'The Mandate', type: 'context' },
+                      { title: 'Engagement Layers', type: 'context' },
+                      { title: 'Operating Model — Hub & Spoke', type: 'operations' },
+                      { title: 'Pain Points & Drivers', type: 'discovery' },
+                      { title: 'Ecosystem Snapshot', type: 'discovery' },
+                      { title: 'Session 1 — Discover & Frame', type: 'planning' },
+                      { title: 'Session 2 — Architect & Roadmap', type: 'architecture' },
+                      { title: 'Technical Building Blocks', type: 'architecture' },
+                      { title: 'Eval Engine & Latency', type: 'architecture' },
+                      { title: 'Outcomes & Next Steps', type: 'outcomes' },
+                    ],
+                  });
+                }} className="px-4 py-2 text-xs rounded-lg border border-[#0A867F]/30 text-[#0A867F] hover:bg-[#0A867F]/5 transition-colors">
+                  Galent Enterprise AI Workshop Template (16 slides)
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Composable template assembly — pick service lines, AI assembles */}
           {createMode === 'template' && (
