@@ -295,6 +295,84 @@ export class GraphService {
   }
 
   /**
+   * Sync a document into the knowledge graph — creates a document node linked to the entity
+   */
+  static async syncDocumentToGraph(doc: {
+    name: string;
+    content: string;
+    entityType: 'opportunity' | 'workshop' | 'account';
+    entityId: string;
+    entityName: string;
+  }) {
+    const docNodeId = `doc:${doc.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now().toString(36)}`;
+    await this.upsertNode(docNodeId, 'document', doc.name, {
+      content: doc.content.slice(0, 5000),
+      contentLength: doc.content.length,
+      entityType: doc.entityType,
+      entityId: doc.entityId,
+      uploadedAt: new Date().toISOString(),
+    });
+
+    // Link to the entity
+    const entityNodeId = `${doc.entityType === 'opportunity' ? 'opp' : doc.entityType}:${doc.entityId}`;
+    await this.addEdge(entityNodeId, docNodeId, 'HAS_DOCUMENT', { context: doc.name });
+
+    return docNodeId;
+  }
+
+  /**
+   * Sync workshop data into the knowledge graph
+   */
+  static async syncWorkshopToGraph(workshop: any) {
+    const wsNodeId = `workshop:${workshop.id}`;
+    const levels = workshop.framework?.levels || [];
+    const allDims = levels.flatMap((l: any) => l.dimensions || []);
+    const scored = allDims.filter((d: any) => d.currentScore != null);
+
+    await this.upsertNode(wsNodeId, 'workshop', workshop.title, {
+      customerName: workshop.customerName,
+      status: workshop.status,
+      readinessIndex: scored.length > 0 ? Math.round(scored.reduce((s: number, d: any) => s + d.currentScore, 0) / scored.length / 4 * 100) : 0,
+      dimensionsScored: scored.length,
+      totalDimensions: allDims.length,
+      gapCount: allDims.filter((d: any) => d.currentScore != null && d.targetScore != null && d.targetScore > d.currentScore).length,
+      useCaseCount: (workshop.useCases || []).length,
+    });
+
+    // Link to opportunity if exists
+    if (workshop.opportunityId) {
+      await this.addEdge(`opp:${workshop.opportunityId}`, wsNodeId, 'HAS_WORKSHOP');
+    }
+
+    // Link use cases
+    for (const uc of (workshop.useCases || [])) {
+      const ucNodeId = `use_case:${uc.id}`;
+      await this.upsertNode(ucNodeId, 'use_case', uc.name, {
+        value: uc.value, feasibility: uc.feasibility, isPilot: uc.isPilot,
+        sponsor: uc.sponsor, problem: uc.problem,
+      });
+      await this.addEdge(wsNodeId, ucNodeId, 'HAS_USE_CASE');
+    }
+
+    return wsNodeId;
+  }
+
+  /**
+   * Get all documents for an entity (for AI context)
+   */
+  static async getDocumentsForEntity(entityType: string, entityId: string): Promise<string[]> {
+    await connectDB();
+    const entityNodeId = `${entityType === 'opportunity' ? 'opp' : entityType}:${entityId}`;
+    const node = await KnowledgeNode.findOne({ nodeId: entityNodeId }).lean();
+    if (!node) return [];
+
+    const docEdges = (node.edges as any[]).filter((e: any) => e.relationship === 'HAS_DOCUMENT');
+    const docIds = docEdges.map((e: any) => e.targetNodeId);
+    const docs = await KnowledgeNode.find({ nodeId: { $in: docIds } }).lean();
+    return docs.map((d: any) => `[${d.label}]: ${(d.properties as any)?.content || ''}`);
+  }
+
+  /**
    * Sync stakeholder data into the knowledge graph
    */
   static async syncStakeholderToGraph(stakeholder: any, opportunityId: string) {

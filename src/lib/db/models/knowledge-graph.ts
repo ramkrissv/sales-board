@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IKnowledgeNode extends Document {
   nodeId: string;
-  nodeType: 'account' | 'person' | 'opportunity' | 'product' | 'service_line' | 'competitor' | 'team' | 'user';
+  nodeType: 'account' | 'person' | 'opportunity' | 'product' | 'service_line' | 'competitor' | 'team' | 'user' | 'document' | 'workshop' | 'use_case';
   label: string;
   properties: Record<string, any>;
   edges: {
@@ -43,6 +43,11 @@ const EdgeSchema = new Schema({
       'MANAGES',
       'PARTNERS_WITH',
       'REFERRED_BY',
+      'HAS_DOCUMENT',
+      'REFERENCES',
+      'HAS_WORKSHOP',
+      'HAS_USE_CASE',
+      'DERIVED_FROM',
     ]
   },
   properties: {
@@ -58,7 +63,7 @@ const KnowledgeNodeSchema = new Schema<IKnowledgeNode>({
   nodeType: {
     type: String,
     required: true,
-    enum: ['account', 'person', 'opportunity', 'product', 'service_line', 'competitor', 'team', 'user'],
+    enum: ['account', 'person', 'opportunity', 'product', 'service_line', 'competitor', 'team', 'user', 'document', 'workshop', 'use_case'],
     index: true,
   },
   label: { type: String, required: true },

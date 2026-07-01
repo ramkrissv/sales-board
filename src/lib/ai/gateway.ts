@@ -16,9 +16,12 @@ interface GatewayCallParams {
   messages: { role: 'user' | 'assistant'; content: string }[];
   /** For telemetry — which feature/assist triggered this */
   source: string;
-  /** Optional: workshop or opportunity ID for trace linking */
+  /** Optional: workshop or opportunity ID for trace linking + document context */
   entityId?: string;
+  entityType?: 'opportunity' | 'workshop' | 'account';
   userId?: string;
+  /** If true, auto-fetch documents from knowledge graph for this entity */
+  includeDocumentContext?: boolean;
 }
 
 interface GatewayResult {
@@ -73,6 +76,22 @@ export async function aiGateway(params: GatewayCallParams): Promise<GatewayResul
       error: `Sandbox: ${validation.violation}`,
     });
     throw new Error(`Sandbox violation: ${validation.violation}`);
+  }
+
+  // 2.5. Document context from knowledge graph (if requested)
+  if (params.includeDocumentContext && params.entityId && params.entityType) {
+    try {
+      const { GraphService } = await import('@/lib/graph/graph-service');
+      const docs = await GraphService.getDocumentsForEntity(params.entityType, params.entityId);
+      if (docs.length > 0) {
+        const docContext = `\n\nRELEVANT DOCUMENTS (${docs.length}):\n${docs.slice(0, 3).join('\n\n').slice(0, 3000)}`;
+        // Append to the last user message
+        const lastMsg = params.messages[params.messages.length - 1];
+        if (lastMsg && lastMsg.role === 'user') {
+          lastMsg.content += docContext;
+        }
+      }
+    } catch {} // Non-blocking — document context is best-effort
   }
 
   // 3. Token cap
