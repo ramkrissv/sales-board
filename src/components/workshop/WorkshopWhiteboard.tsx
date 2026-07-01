@@ -125,6 +125,42 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   const [editNoteText, setEditNoteText] = useState('');
   const [addingSection, setAddingSection] = useState(false);
   const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [extractingSections, setExtractingSections] = useState(false);
+
+  // Upload doc → AI extracts sections + subsections
+  const handleDocSectionExtract = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setExtractingSections(true);
+    const fileNames = Array.from(files).map(f => f.name).join(', ');
+    let textContent = '';
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/') && file.size < 500000) {
+        try { textContent += `\n[${file.name}]:\n${(await file.text()).slice(0, 3000)}\n`; } catch {}
+      } else {
+        textContent += `\n[${file.name}]: ${(file.size/1024).toFixed(0)}KB ${file.name.split('.').pop()?.toUpperCase()}\n`;
+      }
+      // Also add to media gallery
+      handleFileUpload(files);
+    }
+    try {
+      const result = await chatMutation.mutateAsync({
+        message: `Extract a structured outline from these documents for ${workshop.customerName}'s workshop. Return JSON array of sections with sub-items:\n\nDocuments: ${fileNames}\n${textContent}\n\nReturn ONLY JSON: [{"title":"<section>","children":["<sub-item 1>","<sub-item 2>"]}]\n\nCreate 5-10 sections covering: mandate, ecosystem, pain points, architecture, strategy, operating model, use cases, outcomes. Each with 2-5 specific sub-items from the actual document content.`,
+        context: { page: 'workshop-create' },
+      });
+      const match = result.response.match(/\[[\s\S]*\]/);
+      if (match) {
+        const extracted = JSON.parse(match[0]);
+        const newSections: SectionItem[] = extracted.map((s: any) => ({
+          id: uid(),
+          title: s.title || 'Untitled',
+          collapsed: false,
+          children: (s.children || []).map((c: string) => ({ id: uid(), text: c })),
+        }));
+        setSections(prev => [...prev, ...newSections]);
+      }
+    } catch {}
+    setExtractingSections(false);
+  };
 
   // Sketch state
   const [penColor, setPenColor] = useState('#0B1120');
@@ -614,6 +650,11 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
               <span className="text-xs font-semibold text-foreground">Notes &amp; Outline</span>
               <span className="text-[9px] text-muted-foreground">{filteredSections.length} sections · {totalNotes} notes</span>
               <div className="flex-1" />
+              <label className={`flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-lg border border-border cursor-pointer transition-colors ${extractingSections ? 'text-[#3B82F6]' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'}`}>
+                {extractingSections ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                {extractingSections ? 'Extracting...' : 'From Doc'}
+                <input type="file" className="hidden" multiple accept={UPLOAD_ACCEPT} onChange={e => { handleDocSectionExtract(e.target.files); e.target.value = ''; }} />
+              </label>
               <button
                 onClick={() => setAddingSection(true)}
                 className="flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors"
