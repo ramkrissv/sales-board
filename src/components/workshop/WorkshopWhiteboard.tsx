@@ -23,9 +23,20 @@ interface Sticky {
   ts: number;
 }
 
+interface NoteAttachment {
+  id: string;
+  type: 'sticky' | 'text' | 'audio' | 'image' | 'file' | 'link';
+  content: string;
+  color?: string;
+  url?: string;
+  fileName?: string;
+}
+
 interface NoteItem {
   id: string;
   text: string;
+  expanded?: boolean;
+  attachments?: NoteAttachment[];
 }
 
 interface SectionItem {
@@ -258,6 +269,32 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   };
 
   const deleteSection = (id: string) => setSections(prev => prev.filter(s => s.id !== id));
+
+  // Toggle note expanded
+  const toggleNoteExpand = (sectionId: string, noteId: string) => setSections(prev =>
+    prev.map(s => s.id === sectionId ? { ...s, children: s.children.map(n => n.id === noteId ? { ...n, expanded: !n.expanded } : n) } : s));
+
+  // Add attachment to a note
+  const addAttachment = (sectionId: string, noteId: string, att: NoteAttachment) => setSections(prev =>
+    prev.map(s => s.id === sectionId ? { ...s, children: s.children.map(n => n.id === noteId ? { ...n, attachments: [...(n.attachments || []), att] } : n) } : s));
+
+  const deleteAttachment = (sectionId: string, noteId: string, attId: string) => setSections(prev =>
+    prev.map(s => s.id === sectionId ? { ...s, children: s.children.map(n => n.id === noteId ? { ...n, attachments: (n.attachments || []).filter(a => a.id !== attId) } : n) } : s));
+
+  // File upload into a specific note
+  const handleNoteFileUpload = (files: FileList | null, sectionId: string, noteId: string) => {
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      const isImage = file.type.startsWith('image/');
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = () => addAttachment(sectionId, noteId, { id: uid(), type: 'image', content: file.name, url: reader.result as string, fileName: file.name });
+        reader.readAsDataURL(file);
+      } else {
+        addAttachment(sectionId, noteId, { id: uid(), type: 'file', content: `${file.name} (${(file.size/1024).toFixed(0)} KB)`, fileName: file.name });
+      }
+    });
+  };
 
   // --- Canvas drawing ---
   const initCanvas = useCallback(() => {
@@ -700,35 +737,116 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
                     </div>
                   </div>
 
-                  {/* Children notes */}
+                  {/* Children — each is an expandable area */}
                   {!section.collapsed && (
-                    <div className="ml-6 border-l border-border/40 pl-2 space-y-0">
-                      {section.children.map(note => (
-                        <div key={note.id} className="group/note flex items-start gap-1.5 px-2 py-1 rounded hover:bg-muted/10 transition-colors">
-                          <span className="w-1 h-1 rounded-full bg-muted-foreground/30 mt-1.5 shrink-0" />
-                          {editingNoteId === note.id ? (
-                            <div className="flex-1 flex gap-1">
-                              <input
-                                value={editNoteText}
-                                onChange={e => setEditNoteText(e.target.value)}
-                                autoFocus
-                                className="flex-1 px-2 py-0.5 text-[10px] bg-card border border-border rounded text-foreground focus:outline-none"
-                                onKeyDown={e => { if (e.key === 'Enter') saveEditNote(section.id, note.id); if (e.key === 'Escape') setEditingNoteId(null); }}
-                              />
-                              <button onClick={() => saveEditNote(section.id, note.id)} className="p-0.5 text-emerald-400"><Check className="h-3 w-3" /></button>
-                              <button onClick={() => setEditingNoteId(null)} className="p-0.5 text-muted-foreground"><X className="h-3 w-3" /></button>
-                            </div>
-                          ) : (
-                            <>
-                              <span className="text-[10px] text-foreground leading-relaxed flex-1 cursor-text" onClick={() => { setEditingNoteId(note.id); setEditNoteText(note.text); }}>{note.text}</span>
-                              <div className="flex items-center gap-0.5 opacity-0 group-hover/note:opacity-100 transition-opacity shrink-0">
-                                <button onClick={() => { setEditingNoteId(note.id); setEditNoteText(note.text); }} className="p-0.5 text-muted-foreground hover:text-foreground"><Pencil className="h-2.5 w-2.5" /></button>
-                                <button onClick={() => deleteNote(section.id, note.id)} className="p-0.5 text-muted-foreground hover:text-red-400"><Trash2 className="h-2.5 w-2.5" /></button>
+                    <div className="ml-4 border-l-2 border-border/30 pl-2 space-y-0.5 mt-1">
+                      {(section.children || []).map(note => {
+                        const atts = note.attachments || [];
+                        const isExpanded = note.expanded;
+                        return (
+                        <div key={note.id} className="group/note rounded-lg hover:bg-muted/5 transition-colors">
+                          {/* Note header — click to expand */}
+                          <div className="flex items-center gap-1.5 px-2 py-1.5">
+                            <button onClick={() => toggleNoteExpand(section.id, note.id)} className="p-0.5 shrink-0">
+                              {isExpanded ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                            </button>
+                            {editingNoteId === note.id ? (
+                              <div className="flex-1 flex gap-1">
+                                <input value={editNoteText} onChange={e => setEditNoteText(e.target.value)} autoFocus
+                                  className="flex-1 px-2 py-0.5 text-[10px] bg-card border border-border rounded text-foreground focus:outline-none"
+                                  onKeyDown={e => { if (e.key === 'Enter') saveEditNote(section.id, note.id); if (e.key === 'Escape') setEditingNoteId(null); }} />
+                                <button onClick={() => saveEditNote(section.id, note.id)} className="p-0.5 text-emerald-400"><Check className="h-3 w-3" /></button>
+                                <button onClick={() => setEditingNoteId(null)} className="p-0.5 text-muted-foreground"><X className="h-3 w-3" /></button>
                               </div>
-                            </>
+                            ) : (
+                              <span className="text-[10px] text-foreground leading-relaxed flex-1 cursor-pointer"
+                                onClick={() => toggleNoteExpand(section.id, note.id)}>{note.text}</span>
+                            )}
+                            {atts.length > 0 && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#f59e0b]/10 text-[#f59e0b]">{atts.length}</span>}
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover/note:opacity-100 transition-opacity shrink-0">
+                              <button onClick={() => { setEditingNoteId(note.id); setEditNoteText(note.text); }} className="p-0.5 text-muted-foreground hover:text-foreground"><Pencil className="h-2.5 w-2.5" /></button>
+                              <button onClick={() => deleteNote(section.id, note.id)} className="p-0.5 text-muted-foreground hover:text-red-400"><Trash2 className="h-2.5 w-2.5" /></button>
+                            </div>
+                          </div>
+
+                          {/* Expanded area — rich content canvas */}
+                          {isExpanded && (
+                            <div className="ml-7 mb-2 p-3 rounded-lg border border-border/50 bg-muted/5 space-y-2">
+                              {/* Inline actions */}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <button onClick={() => addAttachment(section.id, note.id, { id: uid(), type: 'sticky', content: 'New sticky', color: STICKY_COLORS[Math.floor(Math.random()*6)].bg })}
+                                  className="flex items-center gap-1 px-2 py-1 text-[9px] rounded border border-border text-muted-foreground hover:text-[#f59e0b] hover:border-[#f59e0b]/30 transition-colors">
+                                  <StickyNote className="h-2.5 w-2.5" /> Sticky
+                                </button>
+                                <button onClick={() => addAttachment(section.id, note.id, { id: uid(), type: 'text', content: '' })}
+                                  className="flex items-center gap-1 px-2 py-1 text-[9px] rounded border border-border text-muted-foreground hover:text-[#3B82F6] hover:border-[#3B82F6]/30 transition-colors">
+                                  <FileText className="h-2.5 w-2.5" /> Note
+                                </button>
+                                <label className="flex items-center gap-1 px-2 py-1 text-[9px] rounded border border-border text-muted-foreground hover:text-[#10B981] hover:border-[#10B981]/30 cursor-pointer transition-colors">
+                                  <Upload className="h-2.5 w-2.5" /> Upload
+                                  <input type="file" className="hidden" multiple accept={UPLOAD_ACCEPT} onChange={e => handleNoteFileUpload(e.target.files, section.id, note.id)} />
+                                </label>
+                                <label className="flex items-center gap-1 px-2 py-1 text-[9px] rounded border border-border text-muted-foreground hover:text-[#8B5CF6] hover:border-[#8B5CF6]/30 cursor-pointer transition-colors">
+                                  <Camera className="h-2.5 w-2.5" /> Photo
+                                  <input type="file" className="hidden" accept="image/*" capture="environment" onChange={e => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onload = () => addAttachment(section.id, note.id, { id: uid(), type: 'image', content: f.name, url: r.result as string }); r.readAsDataURL(f); } }} />
+                                </label>
+                                <button onClick={() => addAttachment(section.id, note.id, { id: uid(), type: 'link', content: '' })}
+                                  className="flex items-center gap-1 px-2 py-1 text-[9px] rounded border border-border text-muted-foreground hover:text-foreground transition-colors">
+                                  <Search className="h-2.5 w-2.5" /> Link
+                                </button>
+                              </div>
+
+                              {/* Attachments grid */}
+                              {atts.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {atts.map(att => (
+                                    <div key={att.id} className="group/att relative">
+                                      {att.type === 'sticky' ? (
+                                        <div className="w-[140px] min-h-[70px] p-2 rounded cursor-default"
+                                          style={{ backgroundColor: att.color || '#FEF3C7', boxShadow: '1px 2px 4px rgba(0,0,0,0.1)', transform: `rotate(${(parseInt(att.id, 36) % 5 - 2) * 0.5}deg)` }}>
+                                          <p className="text-[9px] text-gray-800 leading-relaxed whitespace-pre-wrap" contentEditable suppressContentEditableWarning
+                                            onBlur={e => { const t = e.currentTarget.textContent || ''; setSections(prev => prev.map(s => s.id === section.id ? { ...s, children: s.children.map(n => n.id === note.id ? { ...n, attachments: (n.attachments || []).map(a => a.id === att.id ? { ...a, content: t } : a) } : n) } : s)); }}>
+                                            {att.content}
+                                          </p>
+                                        </div>
+                                      ) : att.type === 'image' && att.url ? (
+                                        <img src={att.url} alt={att.content} className="h-20 rounded border border-border object-cover" />
+                                      ) : att.type === 'text' ? (
+                                        <div className="w-[200px] p-2 rounded border border-border bg-card">
+                                          <div className="text-[9px] text-foreground" contentEditable suppressContentEditableWarning
+                                            onBlur={e => { const t = e.currentTarget.textContent || ''; setSections(prev => prev.map(s => s.id === section.id ? { ...s, children: s.children.map(n => n.id === note.id ? { ...n, attachments: (n.attachments || []).map(a => a.id === att.id ? { ...a, content: t } : a) } : n) } : s)); }}>
+                                            {att.content || 'Click to type...'}
+                                          </div>
+                                        </div>
+                                      ) : att.type === 'file' ? (
+                                        <div className="px-2 py-1.5 rounded border border-border bg-card flex items-center gap-1.5">
+                                          <FileText className="h-3 w-3 text-[#3B82F6]" />
+                                          <span className="text-[9px] text-foreground">{att.content}</span>
+                                        </div>
+                                      ) : att.type === 'link' ? (
+                                        <div className="px-2 py-1.5 rounded border border-border bg-card">
+                                          <input defaultValue={att.content} placeholder="Paste URL..."
+                                            className="text-[9px] text-[#3B82F6] bg-transparent border-none outline-none w-32"
+                                            onBlur={e => { setSections(prev => prev.map(s => s.id === section.id ? { ...s, children: s.children.map(n => n.id === note.id ? { ...n, attachments: (n.attachments || []).map(a => a.id === att.id ? { ...a, content: e.target.value } : a) } : n) } : s)); }} />
+                                        </div>
+                                      ) : null}
+                                      <button onClick={() => deleteAttachment(section.id, note.id, att.id)}
+                                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/att:opacity-100 transition-opacity">
+                                        <X className="h-2 w-2" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {atts.length === 0 && (
+                                <p className="text-[9px] text-muted-foreground italic">Click buttons above to add stickies, notes, images, or documents to this area</p>
+                              )}
+                            </div>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
 
                       {/* Add note form */}
                       {addingNoteTo === section.id && (
