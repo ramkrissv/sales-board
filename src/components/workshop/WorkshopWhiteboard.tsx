@@ -921,12 +921,29 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
           {/* ═══ RICH TEXT EDITOR MODAL ═══ */}
           {expandedEditor && (
             <div className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-sm flex items-center justify-center p-8">
-              <div className="w-full max-w-4xl bg-card rounded-2xl border border-border shadow-2xl flex flex-col max-h-[85vh]">
+              <div className={`w-full bg-card rounded-2xl border border-border shadow-2xl flex flex-col ${(expandedEditor as any)?._fullWidth ? 'max-w-none max-h-[95vh]' : 'max-w-4xl max-h-[85vh]'} transition-all`}>
                 {/* Toolbar */}
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
                   <FileText className="h-4 w-4 text-[#3B82F6]" />
                   <span className="text-sm font-semibold text-foreground">Rich Text Editor</span>
+                  {/* Expand/shrink toggle */}
+                  <button onClick={() => setExpandedEditor(prev => prev ? { ...prev, content: document.getElementById('rich-editor')?.innerHTML || prev.content, _fullWidth: !(prev as any)._fullWidth } : null)}
+                    className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground" title="Toggle width">
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  </button>
                   <div className="flex-1" />
+                  {/* Voice recording → transcription */}
+                  {isRecording ? (
+                    <button onClick={() => { stopRecording(); const editor = document.getElementById('rich-editor'); if (editor) { editor.innerHTML += `<p>🎙 Voice note (${Math.floor(recordTime/60)}:${String(recordTime%60).padStart(2,'0')})</p>`; } }}
+                      className="flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-lg bg-red-500 text-white">
+                      <Square className="h-3 w-3" /> {Math.floor(recordTime/60)}:{String(recordTime%60).padStart(2,'0')}
+                    </button>
+                  ) : (
+                    <button onClick={() => startRecording()}
+                      className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-red-400" title="Record audio and add to editor">
+                      <Mic className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                   {/* Formatting toolbar */}
                   <div className="flex items-center gap-0.5 px-2 py-1 rounded-lg bg-secondary/30 border border-border">
                     <button onClick={() => document.execCommand('bold')} className="px-2 py-1 text-xs font-bold text-muted-foreground hover:text-foreground rounded hover:bg-muted/30" title="Bold">B</button>
