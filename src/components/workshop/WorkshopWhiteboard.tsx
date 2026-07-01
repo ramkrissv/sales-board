@@ -93,7 +93,28 @@ interface Props { workshop: any; onRefresh: () => void; }
 
 export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   const levels = workshop.framework?.levels || [];
-  const saved: WhiteboardState | null = workshop.whiteboard as WhiteboardState | null;
+
+  // Load saved state — may be in workshop.whiteboard directly or encoded in notes[0].text
+  const loadSaved = (): WhiteboardState | null => {
+    const wb = workshop.whiteboard;
+    if (!wb) return null;
+    // Try direct properties first
+    if (wb.stickies && Array.isArray(wb.stickies)) return wb;
+    // Try parsing from notes[0].text (save format)
+    if (wb.notes && Array.isArray(wb.notes) && wb.notes.length > 0) {
+      const firstNote = wb.notes[0];
+      const text = firstNote?.text || firstNote?.content || '';
+      if (text && text.startsWith('{')) {
+        try { return JSON.parse(text); } catch {}
+      }
+    }
+    // Try sections array directly (old format)
+    if (wb.sections && Array.isArray(wb.sections) && wb.sections.length > 0) {
+      return { stickies: [], sections: wb.sections.map((s: any) => ({ id: s.id || uid(), title: s.title || '', collapsed: s.collapsed ?? false, children: (s.children || []).map((c: any) => ({ id: c.id || uid(), text: c.text || c.content || '' })) })), mediaItems: [], canvasData: '' };
+    }
+    return null;
+  };
+  const saved = loadSaved();
 
   // --- Build initial state ---
   const buildInitialSections = useCallback((): SectionItem[] => {
