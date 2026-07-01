@@ -565,6 +565,12 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
         <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] font-medium">
           {stickies.length} stickies · {totalNotes} notes · {mediaItems.length} files
         </span>
+        {/* Save button + status */}
+        <button onClick={() => persist()}
+          className={`flex items-center gap-1 px-3 py-1 text-[10px] rounded-lg transition-colors ${saveWb.isPending ? 'bg-[#0FB5AD]/10 text-[#0FB5AD]' : saveWb.isSuccess ? 'bg-emerald-500/10 text-emerald-400' : 'border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/30'}`}>
+          {saveWb.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : saveWb.isSuccess ? <Check className="h-3 w-3" /> : null}
+          {saveWb.isPending ? 'Saving...' : saveWb.isSuccess ? 'Saved' : 'Save'}
+        </button>
         <div className="flex-1" />
         <div className="relative">
           <Search className="h-3 w-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
