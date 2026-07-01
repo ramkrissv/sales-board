@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import {
   Sparkles, Loader2, Layers, Upload, CheckCircle2,
@@ -39,6 +39,91 @@ export default function WorkshopsTab() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [pptxParsing, setPptxParsing] = useState(false);
   const [pptxSlides, setPptxSlides] = useState<any[]>([]);
+
+  // Conversational onboarding state
+  const [onboardStep, setOnboardStep] = useState(0);
+  const [onboardChat, setOnboardChat] = useState<{ role: 'ai' | 'user'; text: string }[]>([]);
+  const [onboardInput, setOnboardInput] = useState('');
+  const [onboardThinking, setOnboardThinking] = useState(false);
+  const [onboardData, setOnboardData] = useState<any>({ customerName: '', engagementType: '', context: '', sections: [], dimensions: [], workstreams: [] });
+  const onboardRef = useRef<HTMLDivElement>(null);
+
+  // Start conversational onboarding
+  const startOnboarding = () => {
+    setOnboardStep(1);
+    setOnboardChat([{
+      role: 'ai',
+      text: `Let's set up your workshop. I'll ask a few questions to build the right structure.\n\nFirst — who is the client? And what type of engagement is this?\n\nExamples: "Hughes Networks — Enterprise AI Strategy", "JPMC — App Modernization", "Acme Corp — SRE & Platform Assessment"`,
+    }]);
+    setOnboardData({ customerName: '', engagementType: '', context: '', sections: [], dimensions: [], workstreams: [] });
+  };
+
+  const handleOnboardSend = async () => {
+    if (!onboardInput.trim() || onboardThinking) return;
+    const msg = onboardInput.trim();
+    setOnboardInput('');
+    setOnboardChat(prev => [...prev, { role: 'user', text: msg }]);
+    setOnboardThinking(true);
+    setTimeout(() => onboardRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+
+    try {
+      const history = onboardChat.map(m => `${m.role === 'user' ? 'User' : 'AI'}: ${m.text}`).join('\n');
+      const result = await chatMutation.mutateAsync({
+        message: `You are a workshop setup assistant. You're helping create an assessment workshop step by step.
+
+CONVERSATION SO FAR:
+${history}
+User: ${msg}
+
+CURRENT STATE:
+Step: ${onboardStep}
+Data collected: ${JSON.stringify(onboardData)}
+
+INSTRUCTIONS:
+Step 1: Extract client name + engagement type. Ask about the client's industry, size, and what they're trying to achieve.
+Step 2: Ask about key focus areas, pain points, and what sections the workshop should cover. Suggest 5-8 sections based on the engagement type.
+Step 3: Ask about stakeholders, timeline, and any specific dimensions to assess. Offer to add/remove suggested sections.
+Step 4: Present a summary and ask for confirmation.
+
+IMPORTANT: After each response, include this JSON at the end (the user won't see it):
+[ONBOARD_DATA: ${JSON.stringify({ step: 'next_step_number', customerName: '', title: '', engagementType: '', sections: ['section names'], dimensions: ['dim names'], workstreams: ['ws names'], ready: false })}]
+
+Set ready=true only when the user confirms in step 4.
+Be conversational, not robotic. Suggest smart defaults. Always offer to customize.`,
+        context: { page: 'workshop-create' },
+      });
+
+      const response = result.response;
+      // Extract onboard data
+      const dataMatch = response.match(/\[ONBOARD_DATA:\s*(\{[\s\S]*?\})\s*\]/);
+      if (dataMatch) {
+        try {
+          const parsed = JSON.parse(dataMatch[1]);
+          setOnboardData((prev: any) => ({ ...prev, ...parsed }));
+          if (parsed.step) setOnboardStep(parseInt(parsed.step) || onboardStep);
+          if (parsed.ready) {
+            // Create the workshop
+            setPendingWorkshop({
+              customerName: parsed.customerName || onboardData.customerName,
+              title: parsed.title || `${parsed.customerName || onboardData.customerName} — ${parsed.engagementType || 'Assessment'}`,
+              assessmentType: parsed.engagementType || 'Custom',
+              context: onboardData.context,
+              suggestedLevels: (parsed.sections || []).map((s: string, i: number) => ({ name: s, weight: 1 / (parsed.sections?.length || 3), dimensions: (parsed.dimensions || []).slice(i * 3, i * 3 + 3).map((d: string) => ({ name: d, probe: '' })) })),
+              suggestedWorkstreams: (parsed.workstreams || []).map((w: string, i: number) => ({ code: `WS${i + 1}`, name: w, objective: '' })),
+            });
+          }
+        } catch {}
+      }
+      const cleanResponse = response.replace(/\[ONBOARD_DATA:[^\]]+\]/g, '').trim();
+      setOnboardChat(prev => [...prev, { role: 'ai', text: cleanResponse }]);
+    } catch {
+      setOnboardChat(prev => [...prev, { role: 'ai', text: 'Something went wrong — please try again.' }]);
+    }
+    setOnboardThinking(false);
+  };
+
+  const onboardRef2 = useRef<HTMLDivElement>(null);
+  useEffect(() => { onboardRef2.current?.scrollIntoView({ behavior: 'smooth' }); }, [onboardChat]);
 
   const handleAiCreate = () => {
     if (!aiInput.trim()) return;
@@ -385,6 +470,66 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
             </div>
           </div>
 
+          {/* Conversational onboarding */}
+          {onboardStep > 0 && !pendingWorkshop && (
+            <div className="rounded-xl border border-[#0A867F]/30 overflow-hidden">
+              <div className="px-4 py-3 bg-[#0B1120] text-white flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-[#0FB5AD]" />
+                <span className="text-xs font-semibold">Workshop Setup — Step {onboardStep} of 4</span>
+                <div className="flex-1" />
+                <div className="flex gap-1">
+                  {[1,2,3,4].map(s => (
+                    <div key={s} className={`w-6 h-1 rounded-full ${s <= onboardStep ? 'bg-[#0FB5AD]' : 'bg-white/10'}`} />
+                  ))}
+                </div>
+              </div>
+              <div className="max-h-[350px] overflow-y-auto p-3 space-y-2">
+                {onboardChat.map((m, i) => (
+                  <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-line ${
+                      m.role === 'user' ? 'bg-[#0A867F] text-white rounded-tr-sm' : 'bg-secondary/50 text-foreground rounded-tl-sm'
+                    }`}>{m.text}</div>
+                  </div>
+                ))}
+                {onboardThinking && (
+                  <div className="flex justify-start">
+                    <div className="px-3 py-2 rounded-xl bg-secondary/50 text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Loader2 className="h-3 w-3 animate-spin text-[#0A867F]" /> Building structure...
+                    </div>
+                  </div>
+                )}
+                <div ref={onboardRef2} />
+              </div>
+              <div className="px-3 py-2 border-t border-border flex gap-2">
+                <input value={onboardInput} onChange={e => setOnboardInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleOnboardSend()}
+                  placeholder="Describe your engagement, client, or answer the question above..."
+                  className="flex-1 px-3 py-2 text-xs bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#0A867F]/40" />
+                <label className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground cursor-pointer">
+                  <Upload className="h-3.5 w-3.5" />
+                  <input type="file" className="hidden" accept=".pdf,.docx,.pptx,.txt"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) { setOnboardInput(p => p + ` [Uploaded: ${f.name}]`); } }} />
+                </label>
+                <button onClick={handleOnboardSend} disabled={!onboardInput.trim() || onboardThinking}
+                  className="px-3 py-2 rounded-lg bg-[#0A867F] text-white text-xs disabled:opacity-40">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Or start guided setup */}
+          {onboardStep === 0 && !pendingWorkshop && createMode === 'ai' && (
+            <div className="text-center py-3">
+              <button onClick={startOnboarding}
+                className="px-4 py-2 text-xs rounded-lg border border-[#7c3aed]/30 text-[#7c3aed] hover:bg-[#7c3aed]/5 transition-colors">
+                <Sparkles className="h-3 w-3 inline mr-1.5" /> Start Guided Setup (AI interviews you)
+              </button>
+            </div>
+          )}
+
+          </>)}
+
           {/* AI-generated confirmation card */}
           {pendingWorkshop && (
             <div className="p-5 rounded-xl border-2 border-[#0A867F]/30 space-y-4 animate-flow-in"
@@ -499,7 +644,6 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
               </div>
             </div>
           )}
-        </>)}
         </div>
       )}
 
