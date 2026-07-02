@@ -17,6 +17,7 @@ import WorkshopIntake from '@/components/workshop/WorkshopIntake';
 import WorkshopFindings from '@/components/workshop/WorkshopFindings';
 import StageGate from '@/components/workshop/StageGate';
 import WorkshopWhiteboard from '@/components/workshop/WorkshopWhiteboard';
+import StageSummary from '@/components/workshop/StageSummary';
 import { Wrench, ClipboardList, Award, LayoutGrid, Maximize2, Minimize2 } from 'lucide-react';
 
 type WorkshopTab = 'overview' | 'intake' | 'whiteboard' | 'assess' | 'usecases' | 'scope' | 'findings' | 'proposal' | 'builder' | 'settings';
@@ -239,7 +240,8 @@ export default function WorkshopPage() {
 
       {/* ── WHITEBOARD TAB ── */}
       {activeTab === 'whiteboard' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
+          <StageSummary workshop={ws} currentStage="whiteboard" />
           <StageGate stage="Discovery Whiteboard" entry={[
             { label: 'Intake completed', met: !!(ws as any).intake },
           ]} output={['Observations captured', 'Pain points identified', 'Themes synthesized', 'Ready for structured assessment']} />
@@ -249,7 +251,8 @@ export default function WorkshopPage() {
 
       {/* ── ASSESS TAB ── */}
       {activeTab === 'assess' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
+          <StageSummary workshop={ws} currentStage="assess" />
           <StageGate stage="Assessment" entry={[
             { label: 'Framework defined', met: levels.length > 0 },
             { label: 'Intake complete', met: !!ws.description },
@@ -366,7 +369,8 @@ export default function WorkshopPage() {
 
       {/* ── USE CASES TAB ── */}
       {activeTab === 'usecases' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
+          <StageSummary workshop={ws} currentStage="usecases" />
           <StageGate stage="Use Cases" entry={[
             { label: 'Assessment started', met: levels.flatMap((l: any) => l.dimensions || []).some((d: any) => d.currentScore != null) },
           ]} output={['Prioritized use case backlog', 'Value/feasibility ranking', 'Funded pilot selection']} />
@@ -376,7 +380,8 @@ export default function WorkshopPage() {
 
       {/* ── SCOPE TAB ── */}
       {activeTab === 'scope' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
+          <StageSummary workshop={ws} currentStage="scope" />
           <StageGate stage="Scope" entry={[
             { label: 'Gaps identified', met: (ws.framework?.levels || []).flatMap((l: any) => (l.dimensions || []).filter((d: any) => d.currentScore != null && d.targetScore != null && d.targetScore > d.currentScore)).length > 0 },
             { label: 'Workstreams defined', met: (ws.framework?.workstreams || []).length > 0 },
@@ -387,7 +392,8 @@ export default function WorkshopPage() {
 
       {/* ── FINDINGS TAB ── */}
       {activeTab === 'findings' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
+          <StageSummary workshop={ws} currentStage="findings" />
           <StageGate stage="Findings" entry={[
             { label: 'Dimensions scored', met: levels.flatMap((l: any) => l.dimensions || []).filter((d: any) => d.currentScore != null).length >= 3 },
             { label: 'Findings captured', met: levels.flatMap((l: any) => l.dimensions || []).filter((d: any) => d.finding?.body).length >= 2 },
@@ -398,7 +404,8 @@ export default function WorkshopPage() {
 
       {/* ── PROPOSAL TAB ── */}
       {activeTab === 'proposal' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
+          <StageSummary workshop={ws} currentStage="proposal" />
           <StageGate stage="Proposal" entry={[
             { label: 'Scope built', met: (ws.scopeItems || []).length > 0 },
             { label: 'Findings complete', met: levels.flatMap((l: any) => l.dimensions || []).filter((d: any) => d.finding?.body).length >= 3 },
