@@ -192,8 +192,29 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
           collapsed: false,
           children: (s.children || []).map((c: string) => ({ id: uid(), text: c })),
         }));
-        // REPLACE default sections with extracted ones (not append)
-        setSections(newSections);
+        // Smart merge: check if extracted sections match existing ones
+        const existingSectionTitles = sections.map(s => s.title.toLowerCase());
+        const hasOverlap = newSections.some(ns => existingSectionTitles.some(et => et.includes(ns.title.toLowerCase().split(' ')[0])));
+
+        if (hasOverlap && sections.length > 0) {
+          // Merge: add new children to matching sections, create new for non-matching
+          setSections(prev => {
+            const updated = [...prev];
+            newSections.forEach(ns => {
+              const match = updated.find(s => s.title.toLowerCase().includes(ns.title.toLowerCase().split(' ')[0]) || ns.title.toLowerCase().includes(s.title.toLowerCase().split(' ')[0]));
+              if (match) {
+                match.children = [...(match.children || []), ...(ns.children || [])];
+                match.collapsed = false;
+              } else {
+                updated.push(ns);
+              }
+            });
+            return updated;
+          });
+        } else {
+          // Replace: no existing content worth keeping
+          setSections(newSections);
+        }
       }
     } catch {}
     setExtractingSections(false);
@@ -566,11 +587,15 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
         <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] font-medium">
           {stickies.length} stickies · {totalNotes} notes · {mediaItems.length} files
         </span>
-        {/* Save button + status */}
+        {/* Save button — always visible, prominent */}
         <button onClick={() => persist()}
-          className={`flex items-center gap-1 px-3 py-1 text-[10px] rounded-lg transition-colors ${saveWb.isPending ? 'bg-[#0FB5AD]/10 text-[#0FB5AD]' : saveWb.isSuccess ? 'bg-emerald-500/10 text-emerald-400' : 'border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/30'}`}>
-          {saveWb.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : saveWb.isSuccess ? <Check className="h-3 w-3" /> : null}
-          {saveWb.isPending ? 'Saving...' : saveWb.isSuccess ? 'Saved' : 'Save'}
+          className={`flex items-center gap-1.5 px-4 py-1.5 text-[10px] font-medium rounded-lg transition-colors ${
+            saveWb.isPending ? 'bg-[#0FB5AD]/20 text-[#0FB5AD] border border-[#0FB5AD]/30' :
+            saveWb.isSuccess ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+            'bg-[#0FB5AD] text-white hover:bg-[#0a867f]'
+          }`}>
+          {saveWb.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : saveWb.isSuccess ? <Check className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+          {saveWb.isPending ? 'Saving...' : saveWb.isSuccess ? 'Saved' : 'Save All'}
         </button>
         <div className="flex-1" />
         <div className="relative">
@@ -1013,6 +1038,22 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
                       <Upload className="h-3 w-3" /> Upload
                       <input type="file" className="hidden" multiple accept={UPLOAD_ACCEPT} onChange={e => handleFileUpload(e.target.files)} />
                     </label>
+                    {/* Mic */}
+                    {isRecording ? (
+                      <button onClick={stopRecording} className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-500 text-white">
+                        <Square className="h-3 w-3" /> {Math.floor(recordTime/60)}:{String(recordTime%60).padStart(2,'0')}
+                      </button>
+                    ) : (
+                      <button onClick={() => startRecording()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-red-400">
+                        <Mic className="h-3 w-3" /> Record
+                      </button>
+                    )}
+                    {/* Save */}
+                    <button onClick={() => persist()}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg ${saveWb.isPending ? 'bg-[#0FB5AD]/10 text-[#0FB5AD]' : saveWb.isSuccess ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[#0FB5AD] text-white hover:bg-[#0a867f]'}`}>
+                      {saveWb.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : saveWb.isSuccess ? <Check className="h-3 w-3" /> : null}
+                      {saveWb.isPending ? 'Saving...' : saveWb.isSuccess ? 'Saved' : 'Save'}
+                    </button>
                     <button onClick={() => setFullscreenSectionId(null)}
                       className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground"><Minimize2 className="h-4 w-4" /></button>
                   </div>
@@ -1102,11 +1143,37 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
                                       ) : att.type === 'image' && att.url ? (
                                         <img src={att.url} alt={att.content} className="h-32 rounded-lg border border-border object-cover" />
                                       ) : att.type === 'text' ? (
-                                        <div className="w-[280px] p-3 rounded-lg border border-border bg-card">
-                                          <div className="text-sm text-foreground leading-relaxed outline-none min-h-[40px]" contentEditable suppressContentEditableWarning
-                                            onBlur={e => { const t = e.currentTarget.textContent || ''; setSections(prev => prev.map(s => s.id === fSection.id ? { ...s, children: (s.children || []).map(n => n.id === note.id ? { ...n, attachments: (n.attachments || []).map(a => a.id === att.id ? { ...a, content: t } : a) } : n) } : s)); }}>
-                                            {att.content || 'Click to type...'}
+                                        <div className="w-[360px] rounded-xl border border-border bg-card overflow-hidden group/ftxt">
+                                          {/* Rich formatting toolbar */}
+                                          <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border/50 bg-muted/20">
+                                            <button onClick={() => document.execCommand('bold')} className="px-2 py-0.5 text-[9px] font-bold text-muted-foreground hover:text-foreground rounded hover:bg-muted/50">B</button>
+                                            <button onClick={() => document.execCommand('italic')} className="px-2 py-0.5 text-[9px] italic text-muted-foreground hover:text-foreground rounded hover:bg-muted/50">I</button>
+                                            <button onClick={() => document.execCommand('underline')} className="px-2 py-0.5 text-[9px] underline text-muted-foreground hover:text-foreground rounded hover:bg-muted/50">U</button>
+                                            <div className="w-px h-3 bg-border mx-0.5" />
+                                            <button onClick={() => document.execCommand('insertUnorderedList')} className="px-2 py-0.5 text-[9px] text-muted-foreground hover:text-foreground rounded hover:bg-muted/50">• List</button>
+                                            <button onClick={() => document.execCommand('insertOrderedList')} className="px-2 py-0.5 text-[9px] text-muted-foreground hover:text-foreground rounded hover:bg-muted/50">1.</button>
+                                            <button onClick={() => document.execCommand('formatBlock', false, 'h3')} className="px-2 py-0.5 text-[9px] font-semibold text-muted-foreground hover:text-foreground rounded hover:bg-muted/50">H</button>
+                                            <div className="flex-1" />
+                                            {/* Mic */}
+                                            {isRecording ? (
+                                              <button onClick={() => { stopRecording(); }} className="px-2 py-0.5 text-[9px] text-red-400"><Square className="h-3 w-3 inline" /> {recordTime}s</button>
+                                            ) : (
+                                              <button onClick={() => startRecording()} className="p-0.5 text-muted-foreground hover:text-red-400" title="Record audio"><Mic className="h-3 w-3" /></button>
+                                            )}
+                                            {/* Expand */}
+                                            <button onClick={() => setExpandedEditor({ sectionId: fSection.id, noteId: note.id, attId: att.id, content: att.content })}
+                                              className="p-0.5 text-muted-foreground hover:text-foreground" title="Full screen editor">
+                                              <Maximize2 className="h-3 w-3" />
+                                            </button>
                                           </div>
+                                          <div className="p-3 text-sm text-foreground leading-relaxed outline-none min-h-[80px]
+                                            [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1
+                                            [&_b]:font-semibold [&_i]:italic [&_u]:underline
+                                            [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5
+                                            [&_blockquote]:border-l-2 [&_blockquote]:border-[#3B82F6] [&_blockquote]:pl-3 [&_blockquote]:italic"
+                                            contentEditable suppressContentEditableWarning
+                                            onBlur={e => { const t = e.currentTarget.innerHTML || ''; setSections(prev => prev.map(s => s.id === fSection.id ? { ...s, children: (s.children || []).map(n => n.id === note.id ? { ...n, attachments: (n.attachments || []).map(a => a.id === att.id ? { ...a, content: t } : a) } : n) } : s)); }}
+                                            dangerouslySetInnerHTML={{ __html: att.content || 'Click to type — use toolbar above for formatting...' }} />
                                         </div>
                                       ) : att.type === 'file' ? (
                                         <div className="px-3 py-2 rounded-lg border border-border bg-card flex items-center gap-2">
