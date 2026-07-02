@@ -170,17 +170,36 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
     const fileNames = Array.from(files).map(f => f.name).join(', ');
     let textContent = '';
     for (const file of Array.from(files)) {
-      if (!file.type.startsWith('image/') && file.size < 500000) {
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const isText = ['txt', 'md', 'csv', 'html', 'json', 'xml', 'rtf'].includes(ext);
+      if (isText && file.size < 500000) {
+        // Only read actual text files — NOT binary (pptx/docx/pdf are binary!)
         try { textContent += `\n[${file.name}]:\n${(await file.text()).slice(0, 3000)}\n`; } catch {}
       } else {
-        textContent += `\n[${file.name}]: ${(file.size/1024).toFixed(0)}KB ${file.name.split('.').pop()?.toUpperCase()}\n`;
+        textContent += `\n[${file.name}]: ${(file.size/1024).toFixed(0)}KB ${ext.toUpperCase()} document\n`;
       }
-      // Also add to media gallery
+      // Upload to S3 + media gallery
       handleFileUpload(files);
     }
+
+    // Build context from workshop info
+    const wsContext = `Client: ${workshop.customerName}\nWorkshop: ${workshop.title}\nLevels: ${levels.map((l: any) => l.name).join(', ')}\nWorkstreams: ${(workshop.framework?.workstreams || []).map((w: any) => w.name).join(', ')}`;
+
     try {
       const result = await chatMutation.mutateAsync({
-        message: `Extract a structured outline from these documents for ${workshop.customerName}'s workshop. Return JSON array of sections with sub-items:\n\nDocuments: ${fileNames}\n${textContent}\n\nReturn ONLY JSON: [{"title":"<section>","children":["<sub-item 1>","<sub-item 2>"]}]\n\nCreate 5-10 sections covering: mandate, ecosystem, pain points, architecture, strategy, operating model, use cases, outcomes. Each with 2-5 specific sub-items from the actual document content.`,
+        message: `Create a structured workshop outline based on these uploaded documents and workshop context. Return JSON array of sections with sub-items.
+
+WORKSHOP CONTEXT:
+${wsContext}
+
+UPLOADED DOCUMENTS: ${fileNames}
+${textContent}
+
+IMPORTANT: Base the sections on the DOCUMENT NAMES and the WORKSHOP CONTEXT above — these are specific to ${workshop.customerName}. Do NOT invent unrelated topics.
+
+Return ONLY JSON: [{"title":"<section relevant to the documents>","children":["<specific sub-item>"]}]
+
+Create 5-10 sections that are directly relevant to the uploaded documents and ${workshop.customerName}'s engagement. Each with 2-5 specific sub-items.`,
         context: { page: 'workshop-create' },
       });
       const match = result.response.match(/\[[\s\S]*\]/);
