@@ -75,6 +75,13 @@ export default function WorkshopPage() {
   // Debounced finding update
   const [findingTimers, setFindingTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
+  // Auto-score + enrich states (must be before early returns — React hooks rule)
+  const [autoScoring, setAutoScoring] = useState(false);
+  const [enriching, setEnriching] = useState(false);
+  const chatMutationWs = trpc.ai.chat.useMutation();
+  const addDimMutation = trpc.workshop.addDimension.useMutation({ onSuccess: () => utils.workshop.getById.invalidate({ id: workshopId }) });
+  const addLevelMutation = trpc.workshop.addLevel.useMutation({ onSuccess: () => utils.workshop.getById.invalidate({ id: workshopId }) });
+
   const handleScore = useCallback((dimId: string, field: string, value: any) => {
     const dim = (workshop as any)?.framework?.levels
       ?.flatMap((l: any) => l.dimensions || [])
@@ -129,8 +136,6 @@ export default function WorkshopPage() {
   const workstreams = ws.framework?.workstreams || [];
 
   // Auto-score from whiteboard data
-  const [autoScoring, setAutoScoring] = useState(false);
-  const chatMutationWs = trpc.ai.chat.useMutation();
 
   const handleAutoScoreFromWhiteboard = async () => {
     // Get whiteboard content
@@ -188,9 +193,6 @@ Be specific — reference actual whiteboard observations. If no data exists for 
   const hasWhiteboardData = (ws.whiteboard?.stickies?.length || 0) + (ws.whiteboard?.sections || []).reduce((s: number, sec: any) => s + (sec.children?.length || 0), 0) > 0;
 
   // Enrich assessment with new dimensions from whiteboard + intake
-  const addDimMutation = trpc.workshop.addDimension.useMutation({ onSuccess: () => utils.workshop.getById.invalidate({ id: workshopId }) });
-  const addLevelMutation = trpc.workshop.addLevel.useMutation({ onSuccess: () => utils.workshop.getById.invalidate({ id: workshopId }) });
-  const [enriching, setEnriching] = useState(false);
 
   const handleEnrichFromWhiteboard = async () => {
     setEnriching(true);
