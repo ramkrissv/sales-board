@@ -147,6 +147,85 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
 
   // Sticky state
   const [addingSticky, setAddingSticky] = useState(false);
+  const [arranging, setArranging] = useState(false);
+
+  // Arrange stickies into sections via AI
+  const handleArrangeStickies = async () => {
+    if (stickies.length === 0) return;
+    setArranging(true);
+    try {
+      const stickyList = stickies.map(s => `[${s.id}] ${s.text}`).join('\n');
+      const sectionList = sections.map(s => `[${s.id}] ${s.title}`).join('\n');
+
+      const result = await chatMutation.mutateAsync({
+        message: `Organize these sticky notes into the appropriate sections. If a sticky doesn't fit any existing section, suggest a NEW section to create.
+
+STICKIES:
+${stickyList}
+
+EXISTING SECTIONS:
+${sectionList}
+
+Return ONLY JSON:
+{
+  "moves": [{"stickyId":"<id>","toSectionId":"<existing section id>","noteText":"<sticky text>"}],
+  "newSections": [{"title":"<new section name>","stickyIds":["<id1>","<id2>"]}],
+  "keepOnWall": ["<sticky id that doesn't fit anywhere>"]
+}
+
+Be precise — only move stickies that clearly belong to a section. Keep ambiguous ones on the wall.`,
+        context: { page: 'workshop-whiteboard' },
+      });
+
+      const match = result.response.match(/\{[\s\S]*\}/);
+      if (match) {
+        const plan = JSON.parse(match[0]);
+        const moves = plan.moves || [];
+        const newSecs = plan.newSections || [];
+        const keepIds = new Set(plan.keepOnWall || []);
+
+        // Show confirmation
+        const moveCount = moves.length;
+        const newSecCount = newSecs.length;
+        const keepCount = keepIds.size;
+        const msg = `AI suggests:\n• Move ${moveCount} stickies to existing sections\n• Create ${newSecCount} new section${newSecCount !== 1 ? 's' : ''}\n• Keep ${keepCount} on the wall\n\nProceed?`;
+
+        if (confirm(msg)) {
+          // Create new sections first
+          const newSectionMap: Record<string, string> = {};
+          for (const ns of newSecs) {
+            const newId = uid();
+            newSectionMap[ns.title] = newId;
+            const childNotes = (ns.stickyIds || []).map((sid: string) => {
+              const sticky = stickies.find(s => s.id === sid);
+              return sticky ? { id: uid(), text: sticky.text } : null;
+            }).filter(Boolean);
+            setSections(prev => [...prev, { id: newId, title: ns.title, collapsed: false, children: childNotes }]);
+          }
+
+          // Move stickies to existing sections
+          for (const mv of moves) {
+            setSections(prev => prev.map(s =>
+              s.id === mv.toSectionId
+                ? { ...s, children: [...(s.children || []), { id: uid(), text: mv.noteText }] }
+                : s
+            ));
+          }
+
+          // Remove moved stickies from wall (keep ones in keepOnWall)
+          const movedIds = new Set([
+            ...moves.map((m: any) => m.stickyId),
+            ...newSecs.flatMap((ns: any) => ns.stickyIds || []),
+          ]);
+          setStickies(prev => prev.filter(s => keepIds.has(s.id) || !movedIds.has(s.id)));
+
+          // Auto-save
+          setTimeout(() => persist(), 500);
+        }
+      }
+    } catch {}
+    setArranging(false);
+  };
   const [newStickyText, setNewStickyText] = useState('');
   const [newStickyColor, setNewStickyColor] = useState(0);
   const [editingStickyId, setEditingStickyId] = useState<string | null>(null);
@@ -806,6 +885,13 @@ Always execute the user's request. If they ask to create content, create it. If 
               <span className="text-xs font-semibold text-foreground">Sticky Wall</span>
               <span className="text-[9px] text-muted-foreground">{filteredStickies.length} notes</span>
               <div className="flex-1" />
+              {stickies.length >= 2 && (
+                <button onClick={handleArrangeStickies} disabled={arranging}
+                  className={`flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-lg border transition-colors ${arranging ? 'border-[#7c3aed]/30 text-[#7c3aed]' : 'border-border text-muted-foreground hover:text-[#7c3aed] hover:border-[#7c3aed]/30'}`}>
+                  {arranging ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                  {arranging ? 'Arranging...' : 'Arrange into Sections'}
+                </button>
+              )}
               <button
                 onClick={() => setAddingSticky(true)}
                 className="flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-lg bg-[#f59e0b] text-white hover:bg-[#d97706] transition-colors"
