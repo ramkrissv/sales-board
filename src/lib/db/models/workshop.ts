@@ -197,11 +197,8 @@ const WorkshopSchema = new Schema({
   // AI interaction log
   aiInteractions: [AIInteractionSchema],
 
-  // Whiteboard — freeform discovery notes (persisted, feeds into Assess AI context)
-  whiteboard: {
-    sections: [{ id: String, title: String, icon: String, color: String, collapsed: Boolean, source: String }],
-    notes: [{ id: String, text: String, color: String, sectionId: String, votes: Number, type: String, fileName: String, timestamp: Number }],
-  },
+  // Whiteboard — full workspace state (Schema.Types.Mixed allows any nested structure)
+  whiteboard: { type: Schema.Types.Mixed, default: {} },
 
   createdBy: String,
   updatedBy: String,
