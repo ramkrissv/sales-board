@@ -18,7 +18,7 @@ import WorkshopFindings from '@/components/workshop/WorkshopFindings';
 import StageGate from '@/components/workshop/StageGate';
 import WorkshopWhiteboard from '@/components/workshop/WorkshopWhiteboard';
 import StageSummary from '@/components/workshop/StageSummary';
-import { Wrench, ClipboardList, Award, LayoutGrid, Maximize2, Minimize2 } from 'lucide-react';
+import { Wrench, ClipboardList, Award, LayoutGrid, Maximize2, Minimize2, Plus } from 'lucide-react';
 
 type WorkshopTab = 'overview' | 'intake' | 'whiteboard' | 'assess' | 'usecases' | 'scope' | 'findings' | 'proposal' | 'builder' | 'settings';
 
@@ -187,6 +187,57 @@ Be specific — reference actual whiteboard observations. If no data exists for 
   // Check if whiteboard has data
   const hasWhiteboardData = (ws.whiteboard?.stickies?.length || 0) + (ws.whiteboard?.sections || []).reduce((s: number, sec: any) => s + (sec.children?.length || 0), 0) > 0;
 
+  // Enrich assessment with new dimensions from whiteboard + intake
+  const addDimMutation = trpc.workshop.addDimension.useMutation({ onSuccess: () => utils.workshop.getById.invalidate({ id: workshopId }) });
+  const addLevelMutation = trpc.workshop.addLevel.useMutation({ onSuccess: () => utils.workshop.getById.invalidate({ id: workshopId }) });
+  const [enriching, setEnriching] = useState(false);
+
+  const handleEnrichFromWhiteboard = async () => {
+    setEnriching(true);
+    let wbContent = '';
+    if (ws.whiteboard?.stickies?.length) wbContent += ws.whiteboard.stickies.map((s: any) => s.text).join('\n');
+    if (ws.whiteboard?.sections?.length) {
+      wbContent += '\n' + ws.whiteboard.sections.map((s: any) => `${s.title}: ${(s.children || []).map((c: any) => c.text).join('; ')}`).join('\n');
+    }
+    const existingDims = levels.flatMap((l: any) => (l.dimensions || []).map((d: any) => d.name)).join(', ');
+
+    try {
+      const result = await chatMutationWs.mutateAsync({
+        message: `Based on whiteboard discovery notes for ${ws.customerName}, suggest NEW assessment dimensions that are NOT already in the framework. These should come from topics discussed in the whiteboard.
+
+EXISTING DIMENSIONS (DO NOT DUPLICATE):
+${existingDims}
+
+WHITEBOARD CONTENT:
+${wbContent.slice(0, 3000)}
+
+EXISTING LEVELS: ${levels.map((l: any) => `${l.id}: ${l.name}`).join(', ')}
+
+Return ONLY JSON: [{"levelId":"<which existing level to add to>","name":"<new dimension name>","probe":"<diagnostic question>"}]
+
+Suggest 3-8 NEW dimensions that emerged from the whiteboard but aren't in the current framework. Each must have a clear diagnostic probe question.`,
+        context: { page: 'workshop-create' },
+      });
+      const match = result.response.match(/\[[\s\S]*\]/);
+      if (match) {
+        const newDims = JSON.parse(match[0]);
+        if (newDims.length > 0 && confirm(`AI suggests ${newDims.length} new dimensions from whiteboard:\n\n${newDims.map((d: any) => `• ${d.name}`).join('\n')}\n\nAdd them to the assessment?`)) {
+          for (const dim of newDims) {
+            const level = levels.find((l: any) => l.id === dim.levelId) || levels[0];
+            const dimNum = (level?.dimensions?.length || 0) + 1;
+            const levelNum = (dim.levelId || 'L1').replace('L', '');
+            addDimMutation.mutate({
+              workshopId, levelId: dim.levelId || levels[0]?.id,
+              id: `${levelNum}.${dimNum}`, name: dim.name, probe: dim.probe || '',
+              order: dimNum - 1,
+            });
+          }
+        }
+      }
+    } catch {}
+    setEnriching(false);
+  };
+
   return (
     <div className={`max-w-6xl mx-auto space-y-6 ${isFullscreen ? 'g-fullscreen' : ''}`}>
       {/* Header */}
@@ -319,11 +370,18 @@ Be specific — reference actual whiteboard observations. If no data exists for 
           {/* Level selector + auto-score */}
           <div className="flex items-center gap-2 flex-wrap">
             {hasWhiteboardData && (
-              <button onClick={handleAutoScoreFromWhiteboard} disabled={autoScoring}
-                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium transition-all ${autoScoring ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : 'bg-[#7c3aed] text-white hover:bg-[#6d28d9]'}`}>
-                {autoScoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                {autoScoring ? 'Scoring from Whiteboard...' : 'Auto-Score from Whiteboard'}
-              </button>
+              <>
+                <button onClick={handleAutoScoreFromWhiteboard} disabled={autoScoring}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium transition-all ${autoScoring ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : 'bg-[#7c3aed] text-white hover:bg-[#6d28d9]'}`}>
+                  {autoScoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  {autoScoring ? 'Scoring...' : 'Auto-Score'}
+                </button>
+                <button onClick={handleEnrichFromWhiteboard} disabled={enriching}
+                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all border ${enriching ? 'border-[#0FB5AD]/30 text-[#0FB5AD]' : 'border-border text-muted-foreground hover:text-[#0FB5AD] hover:border-[#0FB5AD]/30'}`}>
+                  {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  {enriching ? 'Adding...' : '+ Dimensions from Whiteboard'}
+                </button>
+              </>
             )}
             {levels.map((level: any) => {
               const isActive = level.id === activeLevel;
