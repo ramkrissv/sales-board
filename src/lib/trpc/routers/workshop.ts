@@ -507,15 +507,32 @@ export const workshopRouter = router({
   saveWhiteboard: protectedProcedure
     .input(z.object({
       workshopId: z.string(),
-      sections: z.array(z.any()),
-      notes: z.array(z.any()),
+      sections: z.array(z.any()).optional(),
+      notes: z.array(z.any()).optional(),
+      // Direct state fields
+      stickies: z.array(z.any()).optional(),
+      mediaItems: z.array(z.any()).optional(),
+      canvasData: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       await connectDB();
       const WS = getWorkshopModel();
+      // Store whiteboard state directly — no wrapping in notes array
+      const wbData: any = {};
+      if (input.stickies !== undefined) wbData.stickies = input.stickies;
+      if (input.sections !== undefined) wbData.sections = input.sections;
+      if (input.mediaItems !== undefined) wbData.mediaItems = input.mediaItems;
+      if (input.canvasData !== undefined) wbData.canvasData = input.canvasData;
+      // Backwards compat: if notes array has JSON state in text, extract it
+      if (input.notes?.length && input.notes[0]?.text?.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(input.notes[0].text);
+          Object.assign(wbData, parsed);
+        } catch {}
+      }
       return WS.findOneAndUpdate(
         { id: input.workshopId },
-        { $set: { whiteboard: { sections: input.sections, notes: input.notes } } },
+        { $set: { whiteboard: wbData } },
         { new: true }
       ).lean();
     }),

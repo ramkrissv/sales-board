@@ -262,11 +262,10 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
       const cData = canvas ? canvas.toDataURL() : canvasData;
       saveWb.mutate({
         workshopId: workshop.id,
-        sections: [] as any,
-        notes: [{
-          id: 'wb-state', text: JSON.stringify({ stickies: stickiesRef.current, sections: sectionsRef.current, mediaItems: mediaRef2.current, canvasData: cData }),
-          color: '', sectionId: '', groupId: '', votes: 0, type: 'note' as const, timestamp: Date.now(),
-        }] as any,
+        stickies: stickiesRef.current as any,
+        sections: sectionsRef.current as any,
+        mediaItems: mediaRef2.current as any,
+        canvasData: cData,
       });
     }, 2000);
   }, [workshop.id, stickies, sections, mediaItems, canvasData]);
