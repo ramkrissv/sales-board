@@ -163,43 +163,46 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [extractingSections, setExtractingSections] = useState(false);
 
-  // Upload doc → AI extracts sections + subsections
+  // Upload doc → server-side parse → AI structures into sections
   const handleDocSectionExtract = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setExtractingSections(true);
-    const fileNames = Array.from(files).map(f => f.name).join(', ');
-    let textContent = '';
+
+    let allExtractedText = '';
+    const fileNames: string[] = [];
+
+    // Parse each file server-side (handles PPTX, DOCX, PDF properly)
     for (const file of Array.from(files)) {
-      const ext = file.name.split('.').pop()?.toLowerCase() || '';
-      const isText = ['txt', 'md', 'csv', 'html', 'json', 'xml', 'rtf'].includes(ext);
-      if (isText && file.size < 500000) {
-        // Only read actual text files — NOT binary (pptx/docx/pdf are binary!)
-        try { textContent += `\n[${file.name}]:\n${(await file.text()).slice(0, 3000)}\n`; } catch {}
-      } else {
-        textContent += `\n[${file.name}]: ${(file.size/1024).toFixed(0)}KB ${ext.toUpperCase()} document\n`;
+      fileNames.push(file.name);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const parseRes = await fetch('/api/parse-doc', { method: 'POST', body: formData });
+        if (parseRes.ok) {
+          const parsed = await parseRes.json();
+          allExtractedText += `\n\n[${parsed.fileName}]${parsed.slideCount ? ` (${parsed.slideCount} slides)` : ''}:\n${parsed.text}\n`;
+        } else {
+          allExtractedText += `\n[${file.name}]: Could not parse\n`;
+        }
+      } catch {
+        allExtractedText += `\n[${file.name}]: Parse error\n`;
       }
-      // Upload to S3 + media gallery
+      // Also upload to S3 + media gallery
       handleFileUpload(files);
     }
 
-    // Build context from workshop info
-    const wsContext = `Client: ${workshop.customerName}\nWorkshop: ${workshop.title}\nLevels: ${levels.map((l: any) => l.name).join(', ')}\nWorkstreams: ${(workshop.framework?.workstreams || []).map((w: any) => w.name).join(', ')}`;
-
     try {
       const result = await chatMutation.mutateAsync({
-        message: `Create a structured workshop outline based on these uploaded documents and workshop context. Return JSON array of sections with sub-items.
+        message: `Create a structured workshop outline from this ACTUAL DOCUMENT CONTENT for ${workshop.customerName}. Return JSON array of sections with sub-items.
 
-WORKSHOP CONTEXT:
-${wsContext}
+EXTRACTED DOCUMENT CONTENT:
+${allExtractedText.slice(0, 6000)}
 
-UPLOADED DOCUMENTS: ${fileNames}
-${textContent}
+IMPORTANT: Use the ACTUAL TEXT from the documents above. Create sections that reflect what's IN the documents — slide titles, agenda items, key topics, pain points, architecture elements, etc.
 
-IMPORTANT: Base the sections on the DOCUMENT NAMES and the WORKSHOP CONTEXT above — these are specific to ${workshop.customerName}. Do NOT invent unrelated topics.
+Return ONLY JSON: [{"title":"<section from document>","children":["<specific item from document content>"]}]
 
-Return ONLY JSON: [{"title":"<section relevant to the documents>","children":["<specific sub-item>"]}]
-
-Create 5-10 sections that are directly relevant to the uploaded documents and ${workshop.customerName}'s engagement. Each with 2-5 specific sub-items.`,
+Create 5-10 sections based on the actual document structure and content.`,
         context: { page: 'workshop-create' },
       });
       const match = result.response.match(/\[[\s\S]*\]/);
