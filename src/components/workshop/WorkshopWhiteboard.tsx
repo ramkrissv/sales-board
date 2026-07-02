@@ -428,32 +428,56 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
     persist();
   };
 
-  // --- Media / upload ---
+  // --- Media / upload (S3-backed) ---
+  const uploadToS3 = async (file: File): Promise<{ url: string; key: string } | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('entityType', 'workshop');
+      formData.append('entityId', workshop.id);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        return { url: data.url, key: data.key };
+      }
+    } catch {}
+    return null;
+  };
+
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return;
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach(async (file) => {
       const isImage = file.type.startsWith('image/');
       const sizeStr = file.size < 1024 * 1024
         ? `${(file.size / 1024).toFixed(0)} KB`
         : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+      // Upload to S3
+      const s3Result = await uploadToS3(file);
+
       if (isImage) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setMediaItems(prev => [...prev, {
-            id: uid(), name: file.name, type: 'image',
-            url: reader.result as string, size: sizeStr, ts: Date.now(),
-          }]);
-        };
-        reader.readAsDataURL(file);
+        if (s3Result) {
+          // Use S3 URL (persistent)
+          setMediaItems(prev => [...prev, { id: uid(), name: file.name, type: 'image', url: s3Result.url, size: sizeStr, ts: Date.now() }]);
+        } else {
+          // Fallback to base64 data URL (works offline but bloats MongoDB)
+          const reader = new FileReader();
+          reader.onload = () => { setMediaItems(prev => [...prev, { id: uid(), name: file.name, type: 'image', url: reader.result as string, size: sizeStr, ts: Date.now() }]); };
+          reader.readAsDataURL(file);
+        }
       } else {
-        setMediaItems(prev => [...prev, {
-          id: uid(), name: file.name, type: 'file', size: sizeStr, ts: Date.now(),
-        }]);
+        setMediaItems(prev => [...prev, { id: uid(), name: file.name, type: 'file', url: s3Result?.url, size: sizeStr, ts: Date.now() }]);
       }
     });
   };
 
   const handleCamera = async (file: File) => {
+    const s3Result = await uploadToS3(file);
+    if (s3Result) {
+      setMediaItems(prev => [...prev, { id: uid(), name: file.name, type: 'image', url: s3Result.url, size: `${(file.size/1024).toFixed(0)} KB`, ts: Date.now() }]);
+      return;
+    }
+    // Fallback
     const reader = new FileReader();
     reader.onload = () => {
       setMediaItems(prev => [...prev, {
@@ -466,16 +490,27 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
 
   const deleteMedia = (id: string) => setMediaItems(prev => prev.filter(m => m.id !== id));
 
-  // --- Audio recording ---
+  // --- Audio recording (uploads to S3) ---
+  const audioChunksRef = useRef<Blob[]>([]);
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
       const rec = new MediaRecorder(stream);
-      rec.onstop = () => {
+      rec.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      rec.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
+        const duration = `${Math.floor(recordTime / 60)}:${String(recordTime % 60).padStart(2, '0')}`;
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const fileName = `voice-${Date.now().toString(36)}.webm`;
+
+        // Upload audio to S3
+        const audioFile = new window.File([audioBlob], fileName, { type: 'audio/webm' });
+        const s3Result = await uploadToS3(audioFile);
+
         setMediaItems(prev => [...prev, {
-          id: uid(), name: `Voice note (${Math.floor(recordTime / 60)}:${String(recordTime % 60).padStart(2, '0')})`,
-          type: 'audio', ts: Date.now(),
+          id: uid(), name: `Voice note (${duration})`,
+          type: 'audio', url: s3Result?.url, size: `${(audioBlob.size / 1024).toFixed(0)} KB`, ts: Date.now(),
         }]);
       };
       rec.start();
