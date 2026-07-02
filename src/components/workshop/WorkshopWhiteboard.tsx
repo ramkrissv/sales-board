@@ -583,42 +583,134 @@ Create 5-10 sections based on the actual document structure and content.`,
     setChatInput('');
     setChatMessages(prev => [...prev, { role: 'user', text: msg }]);
     setChatThinking(true);
+    let actionsPerformed = 0;
     try {
-      const stickyTexts = stickies.map(s => s.text).join('\n- ');
+      const stickyTexts = stickies.map(s => `[${s.id}] ${s.text}`).join('\n- ');
       const sectionSummary = sections.map(s =>
-        `${s.title}: ${s.children.map(c => c.text).join('; ')}`
+        `[${s.id}] ${s.title}: ${(s.children || []).map(c => `[${c.id}] ${c.text}`).join('; ')}`
       ).join('\n');
       const result = await chatMutation.mutateAsync({
-        message: `Workshop whiteboard copilot for ${workshop.customerName}.\n\nStickies:\n- ${stickyTexts || '(none)'}\n\nSections:\n${sectionSummary || '(empty)'}\n\nUser: ${msg}\n\nHelp analyze and organize. To create stickies use: [STICKY: color=yellow text=...]\nTo create notes use: [NOTE: section=<title> text=...]`,
+        message: `Workshop whiteboard copilot for ${workshop.customerName}. You can perform ALL actions.
+
+CURRENT STATE:
+Stickies (${stickies.length}):
+- ${stickyTexts || '(none)'}
+
+Sections (${sections.length}):
+${sectionSummary || '(empty)'}
+
+USER REQUEST: ${msg}
+
+AVAILABLE ACTIONS (use these tags in your response — multiple actions allowed):
+
+[STICKY: color=yellow|blue|green|pink|purple|orange text=<content>] — Create a sticky note
+[NOTE: section=<section title> text=<content>] — Add note to a section (creates section if not found)
+[SECTION: title=<new section title>] — Create a new section
+[MOVE: noteId=<id> toSection=<section title>] — Move a note to a different section
+[DELETE_STICKY: id=<sticky id>] — Delete a sticky
+[DELETE_NOTE: sectionId=<section id> noteId=<note id>] — Delete a note from a section
+[DELETE_SECTION: id=<section id>] — Delete an entire section
+[ORGANIZE] — Reorganize all stickies into appropriate sections based on content
+
+Always execute the user's request. If they ask to create content, create it. If they ask to organize, organize. If they ask to delete, delete. Respond with a brief confirmation of what you did.`,
         context: { page: 'workshop-whiteboard' },
       });
       const resp = result.response;
-      // Parse sticky commands
-      const stickyMatches = resp.matchAll(/\[STICKY:\s*color=(\w+)\s+text=([^\]]+)\]/g);
-      for (const m of stickyMatches) {
+
+      // Parse and execute ALL action tags
+      // 1. Create stickies
+      for (const m of resp.matchAll(/\[STICKY:\s*color=(\w+)\s+text=([^\]]+)\]/g)) {
         const colorMap: Record<string, number> = { yellow: 0, blue: 1, green: 2, pink: 3, purple: 4, orange: 5 };
-        const cIdx = colorMap[m[1].toLowerCase()] ?? 0;
-        setStickies(prev => [...prev, {
-          id: uid(), text: m[2].trim(), color: STICKY_COLORS[cIdx].bg, votes: 0, ts: Date.now(),
-        }]);
+        setStickies(prev => [...prev, { id: uid(), text: m[2].trim(), color: STICKY_COLORS[colorMap[m[1].toLowerCase()] ?? 0].bg, votes: 0, ts: Date.now() }]);
+        actionsPerformed++;
       }
-      // Parse note commands
-      const noteMatches = resp.matchAll(/\[NOTE:\s*section=([^\s]+(?:\s[^\s]+)*?)\s+text=([^\]]+)\]/g);
-      for (const m of noteMatches) {
+
+      // 2. Create notes in sections
+      for (const m of resp.matchAll(/\[NOTE:\s*section=([^\]]*?)\s+text=([^\]]+)\]/g)) {
         const secTitle = m[1].trim();
         const noteText = m[2].trim();
         setSections(prev => {
           const target = prev.find(s => s.title.toLowerCase().includes(secTitle.toLowerCase()));
-          if (target) {
-            return prev.map(s => s.id === target.id
-              ? { ...s, children: [...s.children, { id: uid(), text: noteText }] }
-              : s);
-          }
+          if (target) return prev.map(s => s.id === target.id ? { ...s, children: [...(s.children || []), { id: uid(), text: noteText }] } : s);
           return [...prev, { id: uid(), title: secTitle, collapsed: false, children: [{ id: uid(), text: noteText }] }];
         });
+        actionsPerformed++;
       }
-      const clean = resp.replace(/\[STICKY:[^\]]+\]/g, '').replace(/\[NOTE:[^\]]+\]/g, '').trim();
-      if (clean) setChatMessages(prev => [...prev, { role: 'ai', text: clean }]);
+
+      // 3. Create sections
+      for (const m of resp.matchAll(/\[SECTION:\s*title=([^\]]+)\]/g)) {
+        setSections(prev => [...prev, { id: uid(), title: m[1].trim(), collapsed: false, children: [] }]);
+        actionsPerformed++;
+      }
+
+      // 4. Move notes between sections
+      for (const m of resp.matchAll(/\[MOVE:\s*noteId=(\S+)\s+toSection=([^\]]+)\]/g)) {
+        const noteId = m[1].trim();
+        const toSecTitle = m[2].trim();
+        setSections(prev => {
+          let noteObj: NoteItem | null = null;
+          const withoutNote = prev.map(s => {
+            const found = (s.children || []).find(c => c.id === noteId);
+            if (found) noteObj = found;
+            return { ...s, children: (s.children || []).filter(c => c.id !== noteId) };
+          });
+          if (!noteObj) return prev;
+          const target = withoutNote.find(s => s.title.toLowerCase().includes(toSecTitle.toLowerCase()));
+          if (target) return withoutNote.map(s => s.id === target.id ? { ...s, children: [...(s.children || []), noteObj!] } : s);
+          return withoutNote;
+        });
+        actionsPerformed++;
+      }
+
+      // 5. Delete stickies
+      for (const m of resp.matchAll(/\[DELETE_STICKY:\s*id=(\S+)\]/g)) {
+        setStickies(prev => prev.filter(s => s.id !== m[1].trim()));
+        actionsPerformed++;
+      }
+
+      // 6. Delete notes
+      for (const m of resp.matchAll(/\[DELETE_NOTE:\s*sectionId=(\S+)\s+noteId=(\S+)\]/g)) {
+        setSections(prev => prev.map(s => s.id === m[1].trim() ? { ...s, children: (s.children || []).filter(c => c.id !== m[2].trim()) } : s));
+        actionsPerformed++;
+      }
+
+      // 7. Delete sections
+      for (const m of resp.matchAll(/\[DELETE_SECTION:\s*id=(\S+)\]/g)) {
+        setSections(prev => prev.filter(s => s.id !== m[1].trim()));
+        actionsPerformed++;
+      }
+
+      // 8. Organize — move stickies into matching sections
+      if (resp.includes('[ORGANIZE]')) {
+        // Move each sticky into the best-matching section based on content
+        const stickyToMove = [...stickies];
+        for (const sticky of stickyToMove) {
+          const bestSection = sections.find(s =>
+            sticky.text.toLowerCase().includes(s.title.toLowerCase().split(' ')[0]) ||
+            s.title.toLowerCase().includes(sticky.text.toLowerCase().split(' ')[0])
+          );
+          if (bestSection) {
+            setSections(prev => prev.map(s => s.id === bestSection.id ? { ...s, children: [...(s.children || []), { id: uid(), text: sticky.text }] } : s));
+            setStickies(prev => prev.filter(s => s.id !== sticky.id));
+            actionsPerformed++;
+          }
+        }
+      }
+
+      // Auto-save after actions
+      if (actionsPerformed > 0) {
+        setTimeout(() => persist(), 500);
+      }
+
+      // Clean response text (remove action tags)
+      const clean = resp
+        .replace(/\[STICKY:[^\]]+\]/g, '').replace(/\[NOTE:[^\]]+\]/g, '')
+        .replace(/\[SECTION:[^\]]+\]/g, '').replace(/\[MOVE:[^\]]+\]/g, '')
+        .replace(/\[DELETE_STICKY:[^\]]+\]/g, '').replace(/\[DELETE_NOTE:[^\]]+\]/g, '')
+        .replace(/\[DELETE_SECTION:[^\]]+\]/g, '').replace(/\[ORGANIZE\]/g, '')
+        .trim();
+      const actionMsg = actionsPerformed > 0 ? `(${actionsPerformed} action${actionsPerformed > 1 ? 's' : ''} performed)\n\n` : '';
+      if (clean || actionsPerformed > 0) setChatMessages(prev => [...prev, { role: 'ai', text: actionMsg + clean }]);
     } catch {
       setChatMessages(prev => [...prev, { role: 'ai', text: 'Error processing request. Please try again.' }]);
     }
