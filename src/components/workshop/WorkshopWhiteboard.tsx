@@ -192,16 +192,25 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
           collapsed: false,
           children: (s.children || []).map((c: string) => ({ id: uid(), text: c })),
         }));
-        // Smart merge: check if extracted sections match existing ones
-        const existingSectionTitles = sections.map(s => s.title.toLowerCase());
-        const hasOverlap = newSections.some(ns => existingSectionTitles.some(et => et.includes(ns.title.toLowerCase().split(' ')[0])));
+        // Ask user: Replace, Merge, or Add alongside?
+        const hasContent = sections.some(s => (s.children?.length || 0) > 0);
+        let action: 'replace' | 'merge' | 'add' = 'replace';
 
-        if (hasOverlap && sections.length > 0) {
-          // Merge: add new children to matching sections, create new for non-matching
+        if (hasContent) {
+          const choice = window.confirm(
+            `You have existing sections with content.\n\nClick OK to MERGE (add extracted items into matching sections).\nClick Cancel to REPLACE all sections with the new ones.`
+          );
+          action = choice ? 'merge' : 'replace';
+        }
+
+        if (action === 'merge') {
           setSections(prev => {
             const updated = [...prev];
             newSections.forEach(ns => {
-              const match = updated.find(s => s.title.toLowerCase().includes(ns.title.toLowerCase().split(' ')[0]) || ns.title.toLowerCase().includes(s.title.toLowerCase().split(' ')[0]));
+              const match = updated.find(s =>
+                s.title.toLowerCase().includes(ns.title.toLowerCase().split(' ')[0]) ||
+                ns.title.toLowerCase().includes(s.title.toLowerCase().split(' ')[0])
+              );
               if (match) {
                 match.children = [...(match.children || []), ...(ns.children || [])];
                 match.collapsed = false;
@@ -212,7 +221,6 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
             return updated;
           });
         } else {
-          // Replace: no existing content worth keeping
           setSections(newSections);
         }
       }
