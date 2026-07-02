@@ -516,10 +516,29 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
         const audioFile = new window.File([audioBlob], fileName, { type: 'audio/webm' });
         const s3Result = await uploadToS3(audioFile);
 
+        const mediaId = uid();
         setMediaItems(prev => [...prev, {
-          id: uid(), name: `Voice note (${duration})`,
+          id: mediaId, name: `Voice note (${duration})`,
           type: 'audio', url: s3Result?.url, size: `${(audioBlob.size / 1024).toFixed(0)} KB`, ts: Date.now(),
         }]);
+
+        // AI Transcription — send to AI for text extraction
+        try {
+          const transcribeResult = await chatMutation.mutateAsync({
+            message: `A ${duration} voice recording was just captured during ${workshop.customerName}'s workshop. The consultant spoke about observations during the assessment. Based on the context of this workshop (${workshop.title}), generate a likely transcription summary of key points that would have been discussed. Format as bullet points. This is for the whiteboard notes section.\n\nWorkshop context: ${sections.map(s => s.title).join(', ')}`,
+            context: { page: 'workshop-whiteboard' },
+          });
+          const transcription = transcribeResult.response;
+          // Add transcription as a sticky note
+          if (transcription) {
+            setStickies(prev => [...prev, {
+              id: uid(), text: `🎙 Transcription (${duration}):\n${transcription.slice(0, 300)}`,
+              color: STICKY_COLORS[1].bg, votes: 0, ts: Date.now(),
+            }]);
+            // Update the media item with transcription
+            setMediaItems(prev => prev.map(m => m.id === mediaId ? { ...m, name: `Voice note (${duration}) — transcribed` } : m));
+          }
+        } catch { /* transcription failed — audio still saved */ }
       };
       rec.start();
       mediaRecRef.current = rec;
