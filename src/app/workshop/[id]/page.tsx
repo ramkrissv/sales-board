@@ -128,6 +128,65 @@ export default function WorkshopPage() {
   const currentLevel = levels.find((l: any) => l.id === activeLevel) || levels[0];
   const workstreams = ws.framework?.workstreams || [];
 
+  // Auto-score from whiteboard data
+  const [autoScoring, setAutoScoring] = useState(false);
+  const chatMutationWs = trpc.ai.chat.useMutation();
+
+  const handleAutoScoreFromWhiteboard = async () => {
+    // Get whiteboard content
+    const wb = ws.whiteboard;
+    let wbContent = '';
+    if (wb?.stickies?.length) wbContent += 'Stickies:\n' + wb.stickies.map((s: any) => `- ${s.text}`).join('\n') + '\n\n';
+    if (wb?.sections?.length) {
+      wbContent += wb.sections.map((s: any) => `${s.title}:\n${(s.children || []).map((c: any) => `  - ${c.text}`).join('\n')}`).join('\n\n');
+    }
+    if (!wbContent.trim()) { alert('No whiteboard data found. Add notes in the Whiteboard tab first.'); return; }
+
+    setAutoScoring(true);
+    const allDims = levels.flatMap((l: any) => (l.dimensions || []).map((d: any) => ({ ...d, levelId: l.id, levelName: l.name })));
+
+    try {
+      const result = await chatMutationWs.mutateAsync({
+        message: `You are assessing ${ws.customerName}'s maturity based on whiteboard discovery notes. Score each dimension 0-4 (0=Absent, 1=Ad hoc, 2=Repeatable, 3=Governed, 4=Optimized) with a target score and a finding.
+
+WHITEBOARD NOTES:
+${wbContent.slice(0, 4000)}
+
+DIMENSIONS TO SCORE:
+${allDims.map((d: any) => `${d.levelId}/${d.id}: ${d.name} — ${d.probe || 'assess this'}`).join('\n')}
+
+Return ONLY JSON array: [{"dimensionId":"<id>","levelId":"<levelId>","currentScore":0-4,"targetScore":0-4,"finding":"<1-2 sentence finding based on whiteboard notes>","priority":false}]
+
+Be specific — reference actual whiteboard observations. If no data exists for a dimension, skip it (don't guess).`,
+        context: { page: 'workshop-create' },
+      });
+
+      const match = result.response.match(/\[[\s\S]*\]/);
+      if (match) {
+        const scores = JSON.parse(match[0]);
+        for (const score of scores) {
+          if (score.dimensionId && score.levelId && score.currentScore != null) {
+            scoreMutation.mutate({
+              workshopId, levelId: score.levelId, dimensionId: score.dimensionId,
+              currentScore: score.currentScore, targetScore: score.targetScore,
+              priority: score.priority,
+            });
+            if (score.finding) {
+              findingMutation.mutate({
+                workshopId, levelId: score.levelId, dimensionId: score.dimensionId,
+                body: score.finding,
+              });
+            }
+          }
+        }
+      }
+    } catch {}
+    setAutoScoring(false);
+  };
+
+  // Check if whiteboard has data
+  const hasWhiteboardData = (ws.whiteboard?.stickies?.length || 0) + (ws.whiteboard?.sections || []).reduce((s: number, sec: any) => s + (sec.children?.length || 0), 0) > 0;
+
   return (
     <div className={`max-w-6xl mx-auto space-y-6 ${isFullscreen ? 'g-fullscreen' : ''}`}>
       {/* Header */}
@@ -257,8 +316,15 @@ export default function WorkshopPage() {
             { label: 'Framework defined', met: levels.length > 0 },
             { label: 'Intake complete', met: !!ws.description },
           ]} output={['Maturity scores (current + target)', 'Findings per dimension', 'Gap identification', 'Priority flags']} />
-          {/* Level selector */}
-          <div className="flex items-center gap-2">
+          {/* Level selector + auto-score */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {hasWhiteboardData && (
+              <button onClick={handleAutoScoreFromWhiteboard} disabled={autoScoring}
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium transition-all ${autoScoring ? 'bg-[#7c3aed]/10 text-[#7c3aed]' : 'bg-[#7c3aed] text-white hover:bg-[#6d28d9]'}`}>
+                {autoScoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                {autoScoring ? 'Scoring from Whiteboard...' : 'Auto-Score from Whiteboard'}
+              </button>
+            )}
             {levels.map((level: any) => {
               const isActive = level.id === activeLevel;
               const scored = (level.dimensions || []).filter((d: any) => d.currentScore != null).length;
