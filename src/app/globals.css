@@ -84,14 +84,14 @@
 
 @layer base {
   html {
-    font-size: 110%; /* 10% larger across entire platform — all rem units scale */
+    font-size: 120%; /* 20% larger across entire platform — all rem units scale proportionally */
   }
-  /* Scale pixel-based Tailwind arbitrary sizes too (+10%) */
-  .text-\[7px\] { font-size: 7.7px !important; }
-  .text-\[8px\] { font-size: 8.8px !important; }
-  .text-\[9px\] { font-size: 9.9px !important; }
-  .text-\[10px\] { font-size: 11px !important; }
-  .text-\[11px\] { font-size: 12.1px !important; }
+  /* Scale pixel-based Tailwind arbitrary sizes too (+20%) */
+  .text-\[7px\] { font-size: 8.4px !important; }
+  .text-\[8px\] { font-size: 9.6px !important; }
+  .text-\[9px\] { font-size: 10.8px !important; }
+  .text-\[10px\] { font-size: 12px !important; }
+  .text-\[11px\] { font-size: 13.2px !important; }
   * { @apply border-border; }
   body {
     @apply font-sans antialiased;
