@@ -38,6 +38,76 @@ export const workshopRouter = router({
     return WT.find().sort({ isDefault: -1, createdAt: -1 }).lean();
   }),
 
+  // ── Workshop Analytics ──
+  analytics: protectedProcedure.query(async () => {
+    await connectDB();
+    const WS = getWorkshopModel();
+    const workshops = await WS.find().lean();
+
+    const total = workshops.length;
+    const withScores = workshops.filter((w: any) => {
+      const dims = (w.framework?.levels || []).flatMap((l: any) => l.dimensions || []);
+      return dims.some((d: any) => d.currentScore != null);
+    }).length;
+
+    // Aggregate stats
+    let totalDims = 0, totalScored = 0, totalGaps = 0;
+    const levelScores: Record<string, number[]> = {};
+    const statusCounts: Record<string, number> = {};
+    const monthlyCreated: Record<string, number> = {};
+
+    workshops.forEach((w: any) => {
+      // Status
+      statusCounts[w.status || 'Active'] = (statusCounts[w.status || 'Active'] || 0) + 1;
+
+      // Monthly
+      const month = w.createdAt ? new Date(w.createdAt).toISOString().slice(0, 7) : 'Unknown';
+      monthlyCreated[month] = (monthlyCreated[month] || 0) + 1;
+
+      // Dimensions
+      const levels = w.framework?.levels || [];
+      levels.forEach((l: any) => {
+        const dims = l.dimensions || [];
+        totalDims += dims.length;
+        dims.forEach((d: any) => {
+          if (d.currentScore != null) {
+            totalScored++;
+            if (!levelScores[l.name]) levelScores[l.name] = [];
+            levelScores[l.name].push(d.currentScore);
+            if (d.targetScore != null && d.targetScore > d.currentScore) totalGaps++;
+          }
+        });
+      });
+    });
+
+    // Avg scores per level
+    const levelAvg = Object.entries(levelScores).map(([name, scores]) => ({
+      name, avg: scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 25) : 0, count: scores.length,
+    }));
+
+    return {
+      total, withScores, totalDims, totalScored, totalGaps,
+      avgReadiness: totalScored > 0 ? Math.round((workshops.reduce((s: number, w: any) => {
+        const levels = w.framework?.levels || [];
+        const dims = levels.flatMap((l: any) => l.dimensions || []);
+        const scored = dims.filter((d: any) => d.currentScore != null);
+        return s + (scored.length > 0 ? scored.reduce((a: number, d: any) => a + d.currentScore, 0) / scored.length / 4 * 100 : 0);
+      }, 0) / Math.max(1, withScores))) : 0,
+      statusCounts, monthlyCreated, levelAvg,
+      workshops: workshops.map((w: any) => {
+        const dims = (w.framework?.levels || []).flatMap((l: any) => l.dimensions || []);
+        const scored = dims.filter((d: any) => d.currentScore != null);
+        const gaps = dims.filter((d: any) => d.currentScore != null && d.targetScore != null && d.targetScore > d.currentScore);
+        return {
+          id: w.id, title: w.title, customerName: w.customerName, status: w.status,
+          readiness: scored.length > 0 ? Math.round(scored.reduce((a: number, d: any) => a + d.currentScore, 0) / scored.length / 4 * 100) : 0,
+          scored: scored.length, total: dims.length, gaps: gaps.length,
+          useCases: (w.useCases || []).length, createdAt: w.createdAt,
+        };
+      }),
+    };
+  }),
+
   // ── Create workshop (clones template + optionally auto-creates opportunity) ──
   create: protectedProcedure
     .input(z.object({

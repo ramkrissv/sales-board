@@ -623,21 +623,34 @@ Create 5-10 sections based on the actual document structure and content.`,
           type: 'audio', url: s3Result?.url, size: `${(audioBlob.size / 1024).toFixed(0)} KB`, ts: Date.now(),
         }]);
 
-        // AI Transcription — send to AI for text extraction
+        // Real transcription via Whisper/Deepgram, fallback to AI summary
         try {
-          const transcribeResult = await chatMutation.mutateAsync({
-            message: `A ${duration} voice recording was just captured during ${workshop.customerName}'s workshop. The consultant spoke about observations during the assessment. Based on the context of this workshop (${workshop.title}), generate a likely transcription summary of key points that would have been discussed. Format as bullet points. This is for the whiteboard notes section.\n\nWorkshop context: ${sections.map(s => s.title).join(', ')}`,
-            context: { page: 'workshop-whiteboard' },
-          });
-          const transcription = transcribeResult.response;
-          // Add transcription as a sticky note
+          const transcribeForm = new FormData();
+          const audioFileForSTT = new window.File([audioBlob], fileName, { type: 'audio/webm' });
+          transcribeForm.append('file', audioFileForSTT);
+          transcribeForm.append('context', `${workshop.customerName} workshop: ${sections.map(s => s.title).join(', ')}`);
+
+          const sttRes = await fetch('/api/transcribe', { method: 'POST', body: transcribeForm });
+          const sttData = await sttRes.json();
+
+          let transcription = sttData.text;
+          const source = sttData.source;
+
+          // If no real STT, use AI to generate summary
+          if (!transcription && source === 'none') {
+            const aiResult = await chatMutation.mutateAsync({
+              message: `A ${duration} voice recording was captured during ${workshop.customerName}'s workshop. Generate likely key points as bullet points.\n\nContext: ${sections.map(s => s.title).join(', ')}`,
+              context: { page: 'workshop-whiteboard' },
+            });
+            transcription = aiResult.response;
+          }
+
           if (transcription) {
             setStickies(prev => [...prev, {
-              id: uid(), text: `🎙 Transcription (${duration}):\n${transcription.slice(0, 300)}`,
+              id: uid(), text: `🎙 ${source === 'whisper' || source === 'deepgram' ? 'Transcription' : 'AI Summary'} (${duration}):\n${transcription.slice(0, 500)}`,
               color: STICKY_COLORS[1].bg, votes: 0, ts: Date.now(),
             }]);
-            // Update the media item with transcription
-            setMediaItems(prev => prev.map(m => m.id === mediaId ? { ...m, name: `Voice note (${duration}) — transcribed` } : m));
+            setMediaItems(prev => prev.map(m => m.id === mediaId ? { ...m, name: `Voice (${duration}) — ${source === 'none' ? 'AI summary' : 'transcribed'}` } : m));
           }
         } catch { /* transcription failed — audio still saved */ }
       };
