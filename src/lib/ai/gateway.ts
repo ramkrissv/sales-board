@@ -78,20 +78,26 @@ export async function aiGateway(params: GatewayCallParams): Promise<GatewayResul
     throw new Error(`Sandbox violation: ${validation.violation}`);
   }
 
-  // 2.5. Document context from knowledge graph (if requested)
+  // 2.5. RAG — semantic search for relevant document chunks
   if (params.includeDocumentContext && params.entityId && params.entityType) {
     try {
-      const { GraphService } = await import('@/lib/graph/graph-service');
-      const docs = await GraphService.getDocumentsForEntity(params.entityType, params.entityId);
-      if (docs.length > 0) {
-        const docContext = `\n\nRELEVANT DOCUMENTS (${docs.length}):\n${docs.slice(0, 3).join('\n\n').slice(0, 3000)}`;
-        // Append to the last user message
+      const { searchDocuments } = await import('@/lib/rag/embeddings');
+      // Use the user's question as the search query
+      const query = params.messages[params.messages.length - 1]?.content || '';
+      const results = await searchDocuments({
+        query: query.slice(0, 200),
+        entityType: params.entityType,
+        entityId: params.entityId,
+        limit: 5,
+      });
+      if (results.length > 0) {
+        const docContext = `\n\nRELEVANT DOCUMENT CONTEXT (${results.length} chunks, RAG retrieval):\n${results.map(r => `[${r.documentName}] (relevance: ${Math.round(r.score * 100)}%):\n${r.content}`).join('\n\n---\n\n').slice(0, 3000)}`;
         const lastMsg = params.messages[params.messages.length - 1];
         if (lastMsg && lastMsg.role === 'user') {
           lastMsg.content += docContext;
         }
       }
-    } catch {} // Non-blocking — document context is best-effort
+    } catch {} // Non-blocking — RAG is best-effort
   }
 
   // 3. Token cap

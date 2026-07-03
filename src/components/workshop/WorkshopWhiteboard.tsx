@@ -256,6 +256,8 @@ Be precise — only move stickies that clearly belong to a section. Keep ambiguo
       try {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('entityType', 'workshop');
+        formData.append('entityId', workshop.id);
         const parseRes = await fetch('/api/parse-doc', { method: 'POST', body: formData });
         if (parseRes.ok) {
           const parsed = await parseRes.json();

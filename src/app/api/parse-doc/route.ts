@@ -98,6 +98,23 @@ print(json.dumps({"text": "\\n".join(paragraphs)}))
       try { unlinkSync(tmpPath); } catch {}
     }
 
+    // Auto-index document for RAG search
+    const entityType = (formData.get('entityType') as string) || 'workshop';
+    const entityId = (formData.get('entityId') as string) || '';
+    let chunksIndexed = 0;
+    if (extractedText.length > 50 && entityId) {
+      try {
+        const { indexDocument } = await import('@/lib/rag/embeddings');
+        chunksIndexed = await indexDocument({
+          documentId: `${file.name}-${Date.now().toString(36)}`,
+          documentName: file.name,
+          text: extractedText,
+          entityType: entityType as 'workshop' | 'opportunity' | 'account',
+          entityId,
+        });
+      } catch (e) { console.error('RAG indexing error:', e); }
+    }
+
     return NextResponse.json({
       success: true,
       fileName: file.name,
@@ -105,6 +122,7 @@ print(json.dumps({"text": "\\n".join(paragraphs)}))
       slides: slides.length > 0 ? slides : undefined,
       text: extractedText.slice(0, 10000),
       slideCount: slides.length,
+      chunksIndexed,
     });
   } catch (error: any) {
     console.error('Parse error:', error);
