@@ -148,6 +148,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   // Sticky state
   const [addingSticky, setAddingSticky] = useState(false);
   const [arranging, setArranging] = useState(false);
+  const [arrangePlan, setArrangePlan] = useState<any>(null); // { moves, newSections, keepOnWall }
 
   // Arrange stickies into sections via AI
   const handleArrangeStickies = async () => {
@@ -184,47 +185,46 @@ Be precise — only move stickies that clearly belong to a section. Keep ambiguo
         const newSecs = plan.newSections || [];
         const keepIds = new Set(plan.keepOnWall || []);
 
-        // Show confirmation
-        const moveCount = moves.length;
-        const newSecCount = newSecs.length;
-        const keepCount = keepIds.size;
-        const msg = `AI suggests:\n• Move ${moveCount} stickies to existing sections\n• Create ${newSecCount} new section${newSecCount !== 1 ? 's' : ''}\n• Keep ${keepCount} on the wall\n\nProceed?`;
-
-        if (confirm(msg)) {
-          // Create new sections first
-          const newSectionMap: Record<string, string> = {};
-          for (const ns of newSecs) {
-            const newId = uid();
-            newSectionMap[ns.title] = newId;
-            const childNotes = (ns.stickyIds || []).map((sid: string) => {
-              const sticky = stickies.find(s => s.id === sid);
-              return sticky ? { id: uid(), text: sticky.text } : null;
-            }).filter(Boolean);
-            setSections(prev => [...prev, { id: newId, title: ns.title, collapsed: false, children: childNotes }]);
-          }
-
-          // Move stickies to existing sections
-          for (const mv of moves) {
-            setSections(prev => prev.map(s =>
-              s.id === mv.toSectionId
-                ? { ...s, children: [...(s.children || []), { id: uid(), text: mv.noteText }] }
-                : s
-            ));
-          }
-
-          // Remove moved stickies from wall (keep ones in keepOnWall)
-          const movedIds = new Set([
-            ...moves.map((m: any) => m.stickyId),
-            ...newSecs.flatMap((ns: any) => ns.stickyIds || []),
-          ]);
-          setStickies(prev => prev.filter(s => keepIds.has(s.id) || !movedIds.has(s.id)));
-
-          // Auto-save
-          setTimeout(() => persist(), 500);
-        }
+        // Show in-app plan (not browser confirm)
+        setArrangePlan({ moves, newSections: newSecs, keepOnWall: [...keepIds] });
       }
     } catch {}
     setArranging(false);
+  };
+
+  // Execute the arrange plan (called from in-app confirmation)
+  const executeArrangePlan = () => {
+    if (!arrangePlan) return;
+    const { moves, newSections: newSecs, keepOnWall } = arrangePlan;
+    const keepIds = new Set(keepOnWall || []);
+
+    // Create new sections
+    for (const ns of (newSecs || [])) {
+      const childNotes = (ns.stickyIds || []).map((sid: string) => {
+        const sticky = stickies.find(s => s.id === sid);
+        return sticky ? { id: uid(), text: sticky.text } : null;
+      }).filter(Boolean);
+      setSections(prev => [...prev, { id: uid(), title: ns.title, collapsed: false, children: childNotes }]);
+    }
+
+    // Move stickies to existing sections
+    for (const mv of (moves || [])) {
+      setSections(prev => prev.map(s =>
+        s.id === mv.toSectionId
+          ? { ...s, children: [...(s.children || []), { id: uid(), text: mv.noteText }] }
+          : s
+      ));
+    }
+
+    // Remove moved stickies from wall
+    const movedIds = new Set([
+      ...(moves || []).map((m: any) => m.stickyId),
+      ...(newSecs || []).flatMap((ns: any) => ns.stickyIds || []),
+    ]);
+    setStickies(prev => prev.filter(s => keepIds.has(s.id) || !movedIds.has(s.id)));
+
+    setArrangePlan(null);
+    setTimeout(() => persist(), 500);
   };
   const [newStickyText, setNewStickyText] = useState('');
   const [newStickyColor, setNewStickyColor] = useState(0);
@@ -1002,6 +1002,67 @@ Always execute the user's request. If they ask to create content, create it. If 
                 </div>
               )}
             </div>
+
+            {/* Arrange plan confirmation — in-app, not browser popup */}
+            {arrangePlan && (
+              <div className="mt-3 p-4 rounded-xl border-2 border-[#7c3aed]/30 bg-[#7c3aed]/5 space-y-3 animate-flow-in">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-[#7c3aed]" />
+                  <span className="text-xs font-semibold text-foreground">AI Arrangement Plan</span>
+                </div>
+
+                {/* Moves to existing sections */}
+                {(arrangePlan.moves || []).length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-medium text-[#0FB5AD] mb-1">Move to existing sections ({arrangePlan.moves.length})</div>
+                    <div className="space-y-1">
+                      {arrangePlan.moves.map((mv: any, i: number) => {
+                        const targetSec = sections.find(s => s.id === mv.toSectionId);
+                        return (
+                          <div key={i} className="flex items-center gap-2 text-[10px] px-2 py-1 rounded bg-card border border-border">
+                            <span className="text-foreground truncate flex-1">{mv.noteText}</span>
+                            <span className="text-muted-foreground">→</span>
+                            <span className="text-[#0FB5AD] font-medium truncate">{targetSec?.title || mv.toSectionId}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* New sections to create */}
+                {(arrangePlan.newSections || []).length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-medium text-[#f59e0b] mb-1">Create new sections ({arrangePlan.newSections.length})</div>
+                    {arrangePlan.newSections.map((ns: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-[10px] px-2 py-1 rounded bg-[#f59e0b]/5 border border-[#f59e0b]/20">
+                        <Plus className="h-3 w-3 text-[#f59e0b]" />
+                        <span className="font-medium text-foreground">{ns.title}</span>
+                        <span className="text-muted-foreground">({(ns.stickyIds || []).length} stickies)</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Keep on wall */}
+                {(arrangePlan.keepOnWall || []).length > 0 && (
+                  <div className="text-[10px] text-muted-foreground">
+                    {arrangePlan.keepOnWall.length} sticky{arrangePlan.keepOnWall.length > 1 ? ' notes' : ''} will stay on the wall (no matching section)
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <button onClick={executeArrangePlan}
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-lg bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors">
+                    <Check className="h-3.5 w-3.5" /> Apply
+                  </button>
+                  <button onClick={() => setArrangePlan(null)}
+                    className="px-4 py-2 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ╔══════════════════════════════════════╗
@@ -1013,6 +1074,12 @@ Always execute the user's request. If they ask to create content, create it. If 
               <span className="text-xs font-semibold text-foreground">Notes &amp; Outline</span>
               <span className="text-[9px] text-muted-foreground">{filteredSections.length} sections · {totalNotes} notes</span>
               <div className="flex-1" />
+              {/* Expand All / Collapse All */}
+              <button onClick={() => setSections(prev => prev.map(s => ({ ...s, collapsed: false })))}
+                className="text-[9px] text-muted-foreground hover:text-foreground transition-colors">Expand All</button>
+              <span className="text-[9px] text-muted-foreground">|</span>
+              <button onClick={() => setSections(prev => prev.map(s => ({ ...s, collapsed: true })))}
+                className="text-[9px] text-muted-foreground hover:text-foreground transition-colors">Collapse All</button>
               <label className={`flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-lg border border-border cursor-pointer transition-colors ${extractingSections ? 'text-[#3B82F6]' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'}`}>
                 {extractingSections ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                 {extractingSections ? 'Extracting...' : 'From Doc'}
