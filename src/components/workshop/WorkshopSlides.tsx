@@ -335,15 +335,98 @@ Return each insight as a separate line starting with "- ".`,
   };
 
   // --- Empty state ---
+  // Upload PPTX → parse → create slides
+  const [uploading, setUploading] = useState(false);
+  const handlePptxUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('entityType', 'workshop');
+      formData.append('entityId', workshop.id);
+      const res = await fetch('/api/parse-doc', { method: 'POST', body: formData });
+      if (res.ok) {
+        const parsed = await res.json();
+        if (parsed.slides && parsed.slides.length > 0) {
+          // PPTX with slide-by-slide parsing
+          const newSlides: WorkshopSlide[] = parsed.slides.map((s: any, i: number) => ({
+            id: uid(), number: i + 1, title: s.title || `Slide ${i + 1}`,
+            subtitle: '', content: s.content || '', formats: detectFormats(s.content || ''),
+            stickies: [], notes: [], canvasData: '', uploads: [],
+          }));
+          setSlides(newSlides);
+          slidesRef.current = newSlides;
+          setTimeout(() => persist(), 100);
+        } else if (parsed.text) {
+          // Non-PPTX: split text into sections as slides
+          const chunks = parsed.text.split(/\n{2,}/).filter((c: string) => c.trim().length > 20);
+          const newSlides: WorkshopSlide[] = chunks.slice(0, 25).map((chunk: string, i: number) => ({
+            id: uid(), number: i + 1, title: chunk.split('\n')[0]?.slice(0, 60) || `Section ${i + 1}`,
+            subtitle: '', content: chunk, formats: [],
+            stickies: [], notes: [], canvasData: '', uploads: [],
+          }));
+          setSlides(newSlides);
+          slidesRef.current = newSlides;
+          setTimeout(() => persist(), 100);
+        }
+      }
+    } catch (e) { console.error('Slide upload error:', e); }
+    setUploading(false);
+  };
+
+  // Auto-populate from Board sections if no slides but sections exist
+  const handleCreateFromSections = () => {
+    const wb = workshop.whiteboard;
+    const sections = wb?.sections || [];
+    if (sections.length === 0) return;
+    const newSlides: WorkshopSlide[] = sections.map((s: any, i: number) => ({
+      id: uid(), number: i + 1, title: s.title || `Section ${i + 1}`,
+      subtitle: '', content: (s.children || []).map((c: any) => c.text || '').join('\n\n'),
+      formats: [], stickies: [], notes: [], canvasData: '', uploads: [],
+    }));
+    setSlides(newSlides);
+    persist();
+  };
+
+  // Detect format tags from content
+  function detectFormats(text: string): string[] {
+    const formats: string[] = [];
+    const t = text.toUpperCase();
+    if (t.includes('WHITEBOARD')) formats.push('WHITEBOARD');
+    if (t.includes('STICKIES') || t.includes('STICKY')) formats.push('STICKIES');
+    if (t.includes('DISCUSS')) formats.push('DISCUSS');
+    if (t.includes('PRESENT')) formats.push('PRESENT');
+    if (t.includes('PRIORITIZE')) formats.push('PRIORITIZE');
+    if (t.includes('DOC INPUT')) formats.push('DOC INPUT');
+    if (t.includes('READOUT')) formats.push('READOUT');
+    if (t.includes('ALIGN')) formats.push('ALIGN');
+    if (t.includes('SCORE')) formats.push('SCORE');
+    return formats;
+  }
+
+  const hasBoardSections = (workshop.whiteboard?.sections || []).length > 0;
+
   if (slides.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-        <FileText className="w-16 h-16 text-muted-foreground/30 mb-4" />
+      <div className="flex flex-col items-center justify-center h-full py-16 text-center">
+        <FileText className="w-14 h-14 text-muted-foreground/30 mb-4" />
         <h3 className="text-lg font-semibold text-foreground mb-2">No slides loaded</h3>
-        <p className="text-sm text-muted-foreground max-w-md">
-          Upload a PPTX file from the Whiteboard tab to populate slides here.
-          Slides are parsed automatically and become interactive facilitation canvases.
+        <p className="text-sm text-muted-foreground max-w-md mb-6">
+          Upload a PPTX to create interactive facilitation slides, or generate from your Board sections.
         </p>
+        <div className="flex gap-3">
+          <label className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors ${uploading ? 'bg-[#0FB5AD]/10 text-[#0FB5AD]' : 'bg-[#0FB5AD] text-white hover:bg-[#0a867f]'}`}>
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {uploading ? 'Parsing...' : 'Upload PPTX'}
+            <input type="file" className="hidden" accept=".pptx,.ppt,.pdf,.docx" onChange={e => { const f = e.target.files?.[0]; if (f) handlePptxUpload(f); e.target.value = ''; }} />
+          </label>
+          {hasBoardSections && (
+            <button onClick={handleCreateFromSections}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium border border-border text-foreground hover:bg-muted/30 transition-colors">
+              <Layers className="h-4 w-4" /> Create from Board Sections
+            </button>
+          )}
+        </div>
       </div>
     );
   }
