@@ -279,27 +279,39 @@ Return this exact JSON structure with real values (3 levels, 3-5 dims each, 3-5 
                       const file = e.target.files?.[0];
                       if (!file) return;
                       setPptxParsing(true);
-                      // Send file info to AI to parse into workshop structure
                       try {
-                        const reader = new FileReader();
-                        reader.onload = async () => {
-                          const result = await chatMutation.mutateAsync({
-                            message: `A client uploaded a workshop deck "${file.name}". Based on typical enterprise AI workshop structures (like Galent engagement decks), create a workshop. Return JSON: {"customerName":"<extract from filename>","title":"<workshop title>","templateId":"ai_transformation","sections":[{"title":"<section>","type":"discovery|architecture|planning|operations","topics":["<topic>"]}]}\n\nFile: ${file.name}`,
-                            context: { page: 'workshop-create' },
+                        // Step 1: Server-side parse (handles PPTX/DOCX/PDF binary)
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const parseRes = await fetch('/api/parse-doc', { method: 'POST', body: formData });
+                        let extractedText = '';
+                        if (parseRes.ok) {
+                          const parsed = await parseRes.json();
+                          extractedText = parsed.text || '';
+                        }
+
+                        // Step 2: AI structures the extracted content into workshop
+                        const result = await chatMutation.mutateAsync({
+                          message: `Create a workshop from this document content. Return JSON: {"customerName":"<company>","title":"<workshop title>","templateId":"ai_transformation","sections":[{"title":"<section>","type":"discovery|architecture|planning|operations","topics":["<topic>"]}]}
+
+DOCUMENT: ${file.name}
+EXTRACTED CONTENT:
+${extractedText.slice(0, 4000) || `(Binary file: ${file.name})`}
+
+Base sections on ACTUAL content above. Extract company name from the content.`,
+                          context: { page: 'workshop-create' },
+                        });
+                        const match = result.response.match(/\{[\s\S]*\}/);
+                        if (match) {
+                          const parsed = JSON.parse(match[0]);
+                          setPendingWorkshop({
+                            customerName: parsed.customerName || file.name.split('_')[0]?.replace(/[-_]/g, ' ') || '',
+                            title: parsed.title || 'Enterprise Workshop',
+                            templateId: parsed.templateId || 'ai_transformation',
+                            pptxSections: parsed.sections || [],
                           });
-                          const match = result.response.match(/\{[\s\S]*\}/);
-                          if (match) {
-                            const parsed = JSON.parse(match[0]);
-                            setPendingWorkshop({
-                              customerName: parsed.customerName || file.name.split('_')[0] || '',
-                              title: parsed.title || 'Enterprise Workshop',
-                              templateId: parsed.templateId || 'ai_transformation',
-                              pptxSections: parsed.sections || [],
-                            });
-                          }
-                        };
-                        reader.readAsText(file.slice(0, 1000)); // Read first 1KB for name extraction
-                      } catch {}
+                        }
+                      } catch (err) { console.error('PPTX parse error:', err); }
                       setPptxParsing(false);
                     }} />
                 </label>
