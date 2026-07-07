@@ -284,9 +284,14 @@ Be precise — only move stickies that clearly belong to a section. Keep ambiguo
               canvasData: '',
               uploads: [],
             }));
-            // Save slides to whiteboard state
+            // Save slides to whiteboard state and refresh
             const currentWb = workshop.whiteboard || {};
-            saveWb.mutate({ workshopId: workshop.id, stickies: stickiesRef.current as any, sections: sectionsRef.current as any, mediaItems: mediaRef2.current as any, canvasData: currentWb.canvasData || '', slides: showSlides as any });
+            saveWb.mutate({ workshopId: workshop.id, stickies: stickiesRef.current as any, sections: sectionsRef.current as any, mediaItems: mediaRef2.current as any, canvasData: currentWb.canvasData || '', slides: showSlides as any }, {
+              onSuccess: () => {
+                onRefresh(); // Refresh workshop data so Show tab picks up slides
+                setTimeout(() => setWbView('show'), 500); // Auto-switch to Show tab
+              },
+            });
           }
         } else {
           allExtractedText += `\n[${file.name}]: Could not parse\n`;
