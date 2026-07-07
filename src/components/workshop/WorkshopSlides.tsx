@@ -99,6 +99,13 @@ export default function WorkshopSlides({ workshop, onRefresh }: Props) {
   const [aiLoading, setAiLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
 
+  // Copilot
+  const [copilotOpen, setCopilotOpen] = useState(true);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
+  const [chatThinking, setChatThinking] = useState(false);
+  const copilotEndRef = useRef<HTMLDivElement>(null);
+
   // Refs
   const mediaRecRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -160,6 +167,39 @@ export default function WorkshopSlides({ workshop, onRefresh }: Props) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [activeSlide, isPresenterMode, slides.length]);
+
+  useEffect(() => { copilotEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
+
+  // Copilot chat handler
+  const handleCopilotChat = async () => {
+    if (!chatInput.trim() || chatThinking) return;
+    const msg = chatInput.trim(); setChatInput('');
+    setChatMessages(prev => [...prev, { role: 'user', text: msg }]);
+    setChatThinking(true);
+    try {
+      const slide = slides[activeSlide];
+      const slideCtx = slide ? `Current slide ${slide.number}: "${slide.title}"\nContent: ${slide.content?.slice(0, 500)}\nFormats: ${slide.formats?.join(', ')}\nStickies: ${slide.stickies?.map(s => s.text).join('; ') || 'none'}\nNotes: ${slide.notes?.map(n => n.text).join('; ') || 'none'}` : 'No slide selected';
+      const allSlides = slides.map(s => `Slide ${s.number}: ${s.title}`).join('\n');
+
+      const result = await chatMutation.mutateAsync({
+        message: `Workshop slide copilot for ${workshop.customerName}.\n\n${slideCtx}\n\nAll slides:\n${allSlides}\n\nUser: ${msg}\n\nHelp with the current slide. To add stickies: [STICKY: color=yellow text=...]\nTo add notes: [NOTE: text=...]\nBe concise.`,
+        context: { page: 'workshop-whiteboard' },
+      });
+      const resp = result.response;
+      // Parse stickies
+      for (const m of resp.matchAll(/\[STICKY:\s*color=(\w+)\s+text=([^\]]+)\]/g)) {
+        const colors: Record<string, string> = { yellow: '#FEF3C7', blue: '#DBEAFE', green: '#D1FAE5', pink: '#FCE7F3', purple: '#EDE9FE', orange: '#FFEDD5' };
+        updateSlide(activeSlide, { stickies: [...(slides[activeSlide]?.stickies || []), { id: uid(), text: m[2].trim(), color: colors[m[1]] || '#FEF3C7', votes: 0 }] });
+      }
+      // Parse notes
+      for (const m of resp.matchAll(/\[NOTE:\s*text=([^\]]+)\]/g)) {
+        updateSlide(activeSlide, { notes: [...(slides[activeSlide]?.notes || []), { id: uid(), text: m[2].trim() }] });
+      }
+      const clean = resp.replace(/\[STICKY:[^\]]+\]/g, '').replace(/\[NOTE:[^\]]+\]/g, '').trim();
+      if (clean) setChatMessages(prev => [...prev, { role: 'ai', text: clean }]);
+    } catch { setChatMessages(prev => [...prev, { role: 'ai', text: 'Error. Try again.' }]); }
+    setChatThinking(false);
+  };
 
   // --- Slide mutation helpers ---
   const updateSlide = (idx: number, patch: Partial<WorkshopSlide>) => {
@@ -417,7 +457,7 @@ Return each insight as a separate line starting with "- ".`,
 
   // --- Standard layout ---
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background relative">
       {/* Nav bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
         <button onClick={() => goTo(activeSlide - 1)} disabled={activeSlide === 0}
@@ -742,11 +782,62 @@ Return each insight as a separate line starting with "- ".`,
         )}
       </div>
 
+      {/* Copilot sidebar */}
+      {copilotOpen && !isPresenterMode && (
+        <div className="w-[280px] border-l border-border flex flex-col shrink-0 bg-card absolute right-0 top-0 bottom-0 z-20">
+          <div className="px-3 py-2.5 bg-[#0B1120] text-white flex items-center gap-2 shrink-0">
+            <Sparkles className="h-3 w-3 text-[#0FB5AD]" />
+            <span className="text-[10px] font-semibold">Slide Copilot</span>
+            <span className="text-[8px] text-white/40 ml-auto">Slide {activeSlide + 1}</span>
+            <button onClick={() => setCopilotOpen(false)} className="p-0.5 text-white/40 hover:text-white"><X className="h-3 w-3" /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
+            {chatMessages.length === 0 && (
+              <div className="space-y-1.5 py-2">
+                <p className="text-[9px] text-muted-foreground text-center">Ask about this slide or add content</p>
+                {[
+                  'Add stickies for key observations',
+                  'Summarize this slide\'s discussion points',
+                  'What questions should we ask here?',
+                  `Suggest action items for ${workshop.customerName}`,
+                ].map((q, i) => (
+                  <button key={i} onClick={() => setChatInput(q)}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg bg-secondary/30 text-[9px] text-foreground hover:bg-secondary/50">{q}</button>
+                ))}
+              </div>
+            )}
+            {chatMessages.map((m, i) => (
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[90%] px-2.5 py-1.5 rounded-xl text-[10px] leading-relaxed ${
+                  m.role === 'user' ? 'bg-[#0FB5AD] text-white rounded-tr-sm' : 'bg-secondary/50 text-foreground rounded-tl-sm'
+                }`}>{m.text}</div>
+              </div>
+            ))}
+            {chatThinking && (
+              <div className="flex justify-start">
+                <div className="px-2.5 py-1.5 rounded-xl bg-secondary/50 text-[9px] text-muted-foreground flex items-center gap-1">
+                  <Loader2 className="h-2.5 w-2.5 animate-spin text-[#0FB5AD]" /> Thinking...
+                </div>
+              </div>
+            )}
+            <div ref={copilotEndRef} />
+          </div>
+          <div className="px-2.5 py-2 border-t border-border shrink-0 flex gap-1">
+            <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleCopilotChat()}
+              placeholder="Ask about this slide..."
+              className="flex-1 px-2.5 py-1 text-[9px] bg-secondary/30 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#0FB5AD]/40" />
+            <button onClick={handleCopilotChat} disabled={!chatInput.trim() || chatThinking}
+              className="p-1.5 rounded bg-[#0FB5AD] text-white disabled:opacity-40"><Send className="h-3 w-3" /></button>
+          </div>
+        </div>
+      )}
+
       {/* Bottom bar */}
       <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-card text-xs">
         <button onClick={() => goTo(activeSlide - 1)} disabled={activeSlide === 0}
           className="flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
-          <ChevronLeft className="w-4 h-4" /> Previous
+          <ChevronLeft className="w-4 h-4" /> Prev
         </button>
         <div className="flex items-center gap-3">
           <span className="font-mono text-muted-foreground">
@@ -761,10 +852,16 @@ Return each insight as a separate line starting with "- ".`,
             ))}
           </div>
         </div>
-        <button onClick={() => goTo(activeSlide + 1)} disabled={activeSlide === slides.length - 1}
-          className="flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
-          Next <ChevronRight className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setCopilotOpen(o => !o)}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border transition-colors ${copilotOpen ? 'border-[#0FB5AD]/30 text-[#0FB5AD] bg-[#0FB5AD]/10' : 'border-border text-muted-foreground hover:text-foreground'}`}>
+            <MessageSquare className="h-3 w-3" /> Copilot
+          </button>
+          <button onClick={() => goTo(activeSlide + 1)} disabled={activeSlide === slides.length - 1}
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
+            Next <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
