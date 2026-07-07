@@ -31,6 +31,8 @@ interface WorkshopSlide {
   title: string;
   subtitle: string;
   content: string;
+  contentBlocks?: string[];
+  slideLabel?: string;
   formats: string[];
   stickies: SlideSticky[];
   notes: SlideNote[];
@@ -348,10 +350,15 @@ Return each insight as a separate line starting with "- ".`,
       if (res.ok) {
         const parsed = await res.json();
         if (parsed.slides && parsed.slides.length > 0) {
-          // PPTX with slide-by-slide parsing
-          const newSlides: WorkshopSlide[] = parsed.slides.map((s: any, i: number) => ({
-            id: uid(), number: i + 1, title: s.title || `Slide ${i + 1}`,
-            subtitle: '', content: s.content || '', formats: detectFormats(s.content || ''),
+          // PPTX with slide-by-slide parsing — ALL slides
+          const newSlides: WorkshopSlide[] = parsed.slides.map((s: any) => ({
+            id: uid(), number: s.slideNumber || 1,
+            title: s.title || `Slide ${s.slideNumber}`,
+            subtitle: s.subtitle || '',
+            content: s.content || '',
+            contentBlocks: s.contentBlocks || [],
+            formats: s.formats || [],
+            slideLabel: s.slideLabel || '',
             stickies: [], notes: [], canvasData: '', uploads: [],
           }));
           setSlides(newSlides);
@@ -630,28 +637,51 @@ Return each insight as a separate line starting with "- ".`,
                 </div>
               )}
 
-              {/* Content blocks */}
-              <div className="mb-6">
-                {current.content.split('\n').filter(Boolean).map((block, i) => (
-                  <div key={i} className="bg-card border border-border rounded-lg p-3 mb-2
-                    border-l-4 border-l-teal-500/30">
-                    <div
-                      contentEditable
-                      suppressContentEditableWarning
-                      ref={i === 0 ? contentEditRef : undefined}
-                      onBlur={(e) => {
-                        const lines = current.content.split('\n');
-                        const nonEmpty = lines.filter(Boolean);
-                        nonEmpty[i] = (e.target as HTMLElement).innerText;
-                        updateSlide(activeSlide, { content: nonEmpty.join('\n') });
-                      }}
-                      className="text-sm text-foreground outline-none focus:ring-1 focus:ring-teal-500/20
-                        rounded px-1 -mx-1"
-                    >
-                      {block}
+              {/* Subtitle */}
+              {current.subtitle && (
+                <p className="text-sm text-muted-foreground mb-4 italic">{current.subtitle}</p>
+              )}
+
+              {/* Content blocks — structured like the PPT */}
+              <div className="mb-6 space-y-2">
+                {(current.contentBlocks && current.contentBlocks.length > 0
+                  ? current.contentBlocks
+                  : current.content.split('\n\n').filter(Boolean)
+                ).map((block: string, i: number) => {
+                  // Detect if block is a numbered point (01, 02, etc.)
+                  const numMatch = block.match(/^(\d{1,2})\s+(.+)/);
+                  // Detect if block is a heading-like short text
+                  const isHeading = block.length < 60 && !block.includes('\n');
+                  // Detect multi-line blocks (bullet points)
+                  const lines = block.split('\n').filter(Boolean);
+                  const isMultiLine = lines.length > 1;
+
+                  return (
+                    <div key={i} className="rounded-lg overflow-hidden border border-border/50 hover:border-border transition-colors">
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        ref={i === 0 ? contentEditRef : undefined}
+                        onBlur={(e) => {
+                          const blocks = current.contentBlocks && current.contentBlocks.length > 0
+                            ? [...current.contentBlocks]
+                            : current.content.split('\n\n').filter(Boolean);
+                          blocks[i] = (e.target as HTMLElement).innerText;
+                          updateSlide(activeSlide, {
+                            content: blocks.join('\n\n'),
+                            contentBlocks: blocks,
+                          });
+                        }}
+                        className={`outline-none focus:ring-1 focus:ring-teal-500/20 rounded
+                          ${numMatch ? 'px-4 py-3 bg-[#0B1120] text-white border-l-4 border-l-[#0FB5AD]' :
+                            isMultiLine ? 'px-4 py-3 bg-card text-foreground text-sm leading-relaxed' :
+                            'px-4 py-2.5 bg-muted/20 text-foreground text-sm font-medium'}`}
+                      >
+                        {block}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="border-t border-border my-4" />

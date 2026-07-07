@@ -33,24 +33,65 @@ export async function POST(req: NextRequest) {
 
     try {
       if (ext === 'pptx' || ext === 'ppt') {
-        // Parse PPTX with python-pptx
+        // Parse PPTX with python-pptx — extract full slide structure
         const pythonScript = `
 import json, sys
 from pptx import Presentation
 
+SKIP_HEADERS = ['galent', 'enterprise ai workshop']
+FORMAT_TAGS = ['WHITEBOARD', 'STICKIES', 'PRESENT', 'DISCUSS', 'DOC INPUT', 'READOUT', 'PRIORITIZE', 'ALIGN', 'BUILD', 'SCORE']
+
 prs = Presentation("${tmpPath}")
 slides = []
 for i, slide in enumerate(prs.slides):
-    texts = []
-    title = ''
+    all_texts = []
     for shape in slide.shapes:
         if hasattr(shape, 'text') and shape.text.strip():
-            text = shape.text.strip()
-            if not title and len(text) < 100:
-                title = text
-            texts.append(text)
-    if texts:
-        slides.append({"slideNumber": i+1, "title": title, "content": "\\n".join(texts)})
+            all_texts.append(shape.text.strip())
+
+    # Skip empty slides
+    if not all_texts:
+        continue
+
+    # Filter out repeated headers
+    meaningful = [t for t in all_texts if not any(h in t.lower() for h in SKIP_HEADERS)]
+
+    # Extract title (first meaningful text that's short)
+    title = ''
+    subtitle = ''
+    formats = []
+    content_blocks = []
+    slide_number = ''
+
+    for t in meaningful:
+        # Detect format tags
+        if t.upper() in FORMAT_TAGS:
+            formats.append(t.upper())
+            continue
+        # Detect slide numbers (2-digit at end)
+        if len(t) <= 3 and t.isdigit():
+            slide_number = t
+            continue
+        # Detect footer-like text
+        if t.startswith('GALENT') or t.startswith('SESSION FORMAT'):
+            continue
+        # First substantial text is title
+        if not title and len(t) < 120:
+            title = t
+        elif not subtitle and len(t) < 120 and len(content_blocks) == 0:
+            subtitle = t
+        else:
+            content_blocks.append(t)
+
+    slides.append({
+        "slideNumber": i + 1,
+        "title": title or f"Slide {i+1}",
+        "subtitle": subtitle,
+        "formats": formats,
+        "contentBlocks": content_blocks,
+        "content": "\\n\\n".join([title, subtitle] + content_blocks),
+        "slideLabel": slide_number or str(i+1).zfill(2)
+    })
 
 print(json.dumps(slides))
 `;
