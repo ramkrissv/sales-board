@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { trpc } from '@/lib/trpc/client';
+
+const WorkshopSlides = dynamic(() => import('./WorkshopSlides'), { ssr: false });
 import {
   Plus, Trash2, Pencil, Check, X, LayoutGrid,
   Sparkles, Loader2, ChevronDown, ChevronRight,
@@ -143,6 +146,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   const [canvasData, setCanvasData] = useState<string>(saved?.canvasData || '');
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [wbView, setWbView] = useState<'board' | 'slides'>('board');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Sticky state
@@ -853,6 +857,17 @@ Always execute the user's request. If they ask to create content, create it. If 
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-card rounded-t-xl flex-wrap shrink-0">
         <LayoutGrid className="h-4 w-4 text-[#f59e0b]" />
         <span className="text-xs font-semibold text-foreground">Discovery Workspace</span>
+        {/* Board / Slides toggle */}
+        <div className="flex gap-0.5 p-0.5 rounded-lg bg-secondary border border-border">
+          <button onClick={() => setWbView('board')}
+            className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${wbView === 'board' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>
+            Board
+          </button>
+          <button onClick={() => setWbView('slides')}
+            className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${wbView === 'slides' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>
+            Slides
+          </button>
+        </div>
         <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] font-medium">
           {stickies.length} stickies · {totalNotes} notes · {mediaItems.length} files
         </span>
@@ -888,6 +903,11 @@ Always execute the user's request. If they ask to create content, create it. If 
       </div>
 
       {/* ── Main layout ── */}
+      {wbView === 'slides' ? (
+        <div className="flex-1 overflow-hidden">
+          <WorkshopSlides workshop={workshop} onRefresh={onRefresh} />
+        </div>
+      ) : (
       <div className="flex flex-1 overflow-hidden">
         {/* ── Left: 4 zones stacked ── */}
         <div className="flex-1 overflow-y-auto">
@@ -1778,6 +1798,7 @@ Always execute the user's request. If they ask to create content, create it. If 
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

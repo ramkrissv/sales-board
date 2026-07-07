@@ -583,6 +583,7 @@ export const workshopRouter = router({
       stickies: z.array(z.any()).optional(),
       mediaItems: z.array(z.any()).optional(),
       canvasData: z.string().optional(),
+      slides: z.array(z.any()).optional(),
     }))
     .mutation(async ({ input }) => {
       await connectDB();
@@ -593,6 +594,7 @@ export const workshopRouter = router({
       if (input.sections !== undefined) wbData.sections = input.sections;
       if (input.mediaItems !== undefined) wbData.mediaItems = input.mediaItems;
       if (input.canvasData !== undefined) wbData.canvasData = input.canvasData;
+      if (input.slides !== undefined) wbData.slides = input.slides;
       // Backwards compat: if notes array has JSON state in text, extract it
       if (input.notes?.length && input.notes[0]?.text?.startsWith('{')) {
         try {
