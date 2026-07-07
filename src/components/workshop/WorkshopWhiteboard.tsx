@@ -146,7 +146,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   const [canvasData, setCanvasData] = useState<string>(saved?.canvasData || '');
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [wbView, setWbView] = useState<'board' | 'slides'>('board');
+  const [wbView, setWbView] = useState<'board' | 'show'>('board');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Sticky state
@@ -843,9 +843,9 @@ Always execute the user's request. If they ask to create content, create it. If 
             className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${wbView === 'board' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>
             Board
           </button>
-          <button onClick={() => setWbView('slides')}
-            className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${wbView === 'slides' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>
-            Slides
+          <button onClick={() => setWbView('show')}
+            className={`px-2.5 py-1 text-[10px] rounded-md transition-colors ${wbView === 'show' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>
+            Show
           </button>
         </div>
         <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] font-medium">
@@ -883,7 +883,7 @@ Always execute the user's request. If they ask to create content, create it. If 
       </div>
 
       {/* ── Main layout ── */}
-      {wbView === 'slides' ? (
+      {wbView === 'show' ? (
         <div className="flex-1 overflow-hidden">
           <WorkshopSlides workshop={workshop} onRefresh={onRefresh} />
         </div>

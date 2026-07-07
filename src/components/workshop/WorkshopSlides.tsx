@@ -404,15 +404,18 @@ Return each insight as a separate line starting with "- ".`,
     return formats;
   }
 
-  const hasBoardSections = (workshop.whiteboard?.sections || []).length > 0;
+  // Check for board sections in any format (direct or nested)
+  const wb = workshop.whiteboard || {};
+  const boardSections = wb.sections || [];
+  const hasBoardSections = boardSections.length > 0;
 
   if (slides.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-16 text-center">
         <FileText className="w-14 h-14 text-muted-foreground/30 mb-4" />
-        <h3 className="text-lg font-semibold text-foreground mb-2">No slides loaded</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-2">Show &amp; Tell</h3>
         <p className="text-sm text-muted-foreground max-w-md mb-6">
-          Upload a PPTX to create interactive facilitation slides, or generate from your Board sections.
+          Upload a PPTX to replicate your deck as interactive facilitation canvases, or create from your Board sections.
         </p>
         <div className="flex gap-3">
           <label className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors ${uploading ? 'bg-[#0FB5AD]/10 text-[#0FB5AD]' : 'bg-[#0FB5AD] text-white hover:bg-[#0a867f]'}`}>
