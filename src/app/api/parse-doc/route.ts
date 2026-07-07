@@ -83,14 +83,42 @@ for i, slide in enumerate(prs.slides):
         else:
             content_blocks.append(t)
 
+    # Separate content into cards (heading+body pairs) and KPIs (number+label)
+    cards = []
+    kpis = []
+    misc = []
+    j = 0
+    while j < len(content_blocks):
+        block = content_blocks[j]
+        # KPI: short number followed by a label
+        if len(block) <= 5 and any(c.isdigit() for c in block) and j + 1 < len(content_blocks) and len(content_blocks[j+1]) < 40:
+            kpis.append({"value": block, "label": content_blocks[j+1]})
+            j += 2
+            continue
+        # Card: short heading followed by longer body
+        if len(block) < 50 and j + 1 < len(content_blocks) and len(content_blocks[j+1]) > 40:
+            cards.append({"heading": block, "body": content_blocks[j+1]})
+            j += 2
+            continue
+        # Long block is a standalone paragraph
+        if len(block) > 60:
+            cards.append({"heading": "", "body": block})
+        else:
+            misc.append(block)
+        j += 1
+
     slides.append({
         "slideNumber": i + 1,
         "title": title or f"Slide {i+1}",
         "subtitle": subtitle,
         "formats": formats,
+        "cards": cards,
+        "kpis": kpis,
+        "misc": misc,
         "contentBlocks": content_blocks,
         "content": "\\n\\n".join([title, subtitle] + content_blocks),
-        "slideLabel": slide_number or str(i+1).zfill(2)
+        "slideLabel": slide_number or str(i+1).zfill(2),
+        "sectionName": ""
     })
 
 print(json.dumps(slides))
