@@ -10,7 +10,7 @@ import {
   Sparkles, Loader2, ChevronDown, ChevronRight,
   Mic, Square, Upload, Camera, Send, ThumbsUp,
   Maximize2, Minimize2, StickyNote,
-  FileText, Image, PenTool, Search,
+  FileText, Image, PenTool, Search, Layers,
   Eraser, Palette, MessageSquare, FolderOpen,
   Music, File, Video, Archive,
 } from 'lucide-react';
@@ -152,6 +152,7 @@ export default function WorkshopWhiteboard({ workshop, onRefresh }: Props) {
   // Sticky state
   const [addingSticky, setAddingSticky] = useState(false);
   const [arranging, setArranging] = useState(false);
+  const [docMergePrompt, setDocMergePrompt] = useState<{ newSections: SectionItem[] } | null>(null);
   const [arrangePlan, setArrangePlan] = useState<any>(null); // { moves, newSections, keepOnWall }
 
   // Arrange stickies into sections via AI
@@ -301,33 +302,12 @@ Create 5-10 sections based on the actual document structure and content.`,
         }));
         // Ask user: Replace, Merge, or Add alongside?
         const hasContent = sections.some(s => (s.children?.length || 0) > 0);
-        let action: 'replace' | 'merge' | 'add' = 'replace';
 
         if (hasContent) {
-          const choice = window.confirm(
-            `You have existing sections with content.\n\nClick OK to MERGE (add extracted items into matching sections).\nClick Cancel to REPLACE all sections with the new ones.`
-          );
-          action = choice ? 'merge' : 'replace';
-        }
-
-        if (action === 'merge') {
-          setSections(prev => {
-            const updated = [...prev];
-            newSections.forEach(ns => {
-              const match = updated.find(s =>
-                s.title.toLowerCase().includes(ns.title.toLowerCase().split(' ')[0]) ||
-                ns.title.toLowerCase().includes(s.title.toLowerCase().split(' ')[0])
-              );
-              if (match) {
-                match.children = [...(match.children || []), ...(ns.children || [])];
-                match.collapsed = false;
-              } else {
-                updated.push(ns);
-              }
-            });
-            return updated;
-          });
+          // Show in-app 3-button dialog instead of browser confirm
+          setDocMergePrompt({ newSections });
         } else {
+          // No existing content — replace silently
           setSections(newSections);
         }
       }
@@ -1037,6 +1017,68 @@ Always execute the user's request. If they ask to create content, create it. If 
                 </div>
               )}
             </div>
+
+            {/* Document merge/replace dialog — 3 buttons */}
+            {docMergePrompt && (
+              <div className="mt-3 p-4 rounded-xl border-2 border-[#3B82F6]/30 bg-[#3B82F6]/5 space-y-3 animate-flow-in">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-4 w-4 text-[#3B82F6]" />
+                  <span className="text-xs font-semibold text-foreground">Document Imported — {docMergePrompt.newSections.length} sections extracted</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">You have existing sections with content. How would you like to handle the new sections?</p>
+                <div className="space-y-1.5">
+                  {docMergePrompt.newSections.slice(0, 5).map((ns, i) => (
+                    <div key={i} className="text-[10px] text-foreground px-2 py-1 rounded bg-card border border-border flex items-center gap-2">
+                      <span className="w-4 text-muted-foreground font-mono">{i+1}</span>
+                      <span className="flex-1 truncate">{ns.title}</span>
+                      <span className="text-muted-foreground">{(ns.children?.length || 0)} items</span>
+                    </div>
+                  ))}
+                  {docMergePrompt.newSections.length > 5 && (
+                    <div className="text-[9px] text-muted-foreground px-2">+{docMergePrompt.newSections.length - 5} more sections</div>
+                  )}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => {
+                    // MERGE: add new items into matching sections, create new for non-matching
+                    setSections(prev => {
+                      const updated = [...prev];
+                      docMergePrompt.newSections.forEach(ns => {
+                        const match = updated.find(s =>
+                          s.title.toLowerCase().includes(ns.title.toLowerCase().split(' ')[0]) ||
+                          ns.title.toLowerCase().includes(s.title.toLowerCase().split(' ')[0])
+                        );
+                        if (match) {
+                          match.children = [...(match.children || []), ...(ns.children || [])];
+                          match.collapsed = false;
+                        } else {
+                          updated.push(ns);
+                        }
+                      });
+                      return updated;
+                    });
+                    setDocMergePrompt(null);
+                    setTimeout(() => persist(), 500);
+                  }}
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-lg bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors">
+                    <Layers className="h-3.5 w-3.5" /> Merge
+                  </button>
+                  <button onClick={() => {
+                    // REPLACE: remove all existing, use new
+                    setSections(docMergePrompt.newSections);
+                    setDocMergePrompt(null);
+                    setTimeout(() => persist(), 500);
+                  }}
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-lg border border-[#f59e0b]/40 text-[#f59e0b] hover:bg-[#f59e0b]/10 transition-colors">
+                    <Trash2 className="h-3.5 w-3.5" /> Replace
+                  </button>
+                  <button onClick={() => setDocMergePrompt(null)}
+                    className="px-4 py-2 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Arrange plan confirmation — in-app, not browser popup */}
             {arrangePlan && (
