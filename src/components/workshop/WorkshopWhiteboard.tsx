@@ -267,6 +267,28 @@ Be precise — only move stickies that clearly belong to a section. Keep ambiguo
         if (parseRes.ok) {
           const parsed = await parseRes.json();
           allExtractedText += `\n\n[${parsed.fileName}]${parsed.slideCount ? ` (${parsed.slideCount} slides)` : ''}:\n${parsed.text}\n`;
+
+          // Also create Show slides from parsed PPTX slides
+          if (parsed.slides && parsed.slides.length > 0) {
+            const showSlides = parsed.slides.map((s: any, i: number) => {
+              const content = s.content || '';
+              const formats: string[] = [];
+              const upper = content.toUpperCase();
+              if (upper.includes('WHITEBOARD')) formats.push('WHITEBOARD');
+              if (upper.includes('STICKIES') || upper.includes('STICKY')) formats.push('STICKIES');
+              if (upper.includes('DISCUSS')) formats.push('DISCUSS');
+              if (upper.includes('PRESENT')) formats.push('PRESENT');
+              if (upper.includes('PRIORITIZE')) formats.push('PRIORITIZE');
+              if (upper.includes('DOC INPUT')) formats.push('DOC INPUT');
+              if (upper.includes('READOUT')) formats.push('READOUT');
+              if (upper.includes('ALIGN')) formats.push('ALIGN');
+              if (upper.includes('SCORE')) formats.push('SCORE');
+              return { id: uid(), number: i + 1, title: s.title || `Slide ${i + 1}`, subtitle: '', content, formats, stickies: [], notes: [], canvasData: '', uploads: [] };
+            });
+            // Save slides to whiteboard state
+            const currentWb = workshop.whiteboard || {};
+            saveWb.mutate({ workshopId: workshop.id, stickies: stickiesRef.current as any, sections: sectionsRef.current as any, mediaItems: mediaRef2.current as any, canvasData: currentWb.canvasData || '', slides: showSlides as any });
+          }
         } else {
           allExtractedText += `\n[${file.name}]: Could not parse\n`;
         }
