@@ -613,78 +613,137 @@ Return each insight as a separate line starting with "- ".`,
           ))}
         </div>
 
-        {/* Slide content */}
+        {/* Slide content — PPT-style visual layout */}
         {current && (
-          <div className="flex-1 overflow-y-auto px-6 py-4">
-            <div className="max-w-3xl mx-auto">
-              {/* Title */}
-              <h2 className="text-xl font-semibold text-foreground mb-1">{current.title}</h2>
-              {current.subtitle && (
-                <p className="text-sm text-muted-foreground mb-3">{current.subtitle}</p>
-              )}
-
-              {/* Format badges */}
-              {current.formats.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {current.formats.map(f => {
-                    const badge = FORMAT_BADGES[f] || { bg: 'bg-gray-100 text-gray-600', text: f };
-                    return (
-                      <span key={f} className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${badge.bg}`}>
-                        {badge.text}
-                      </span>
-                    );
-                  })}
+          <div className="flex-1 overflow-y-auto">
+            {/* Dark header band — like actual PPT */}
+            <div className="bg-[#0B1120] px-8 py-5" style={{ backgroundImage: 'radial-gradient(80% 150% at 90% -20%, rgba(15,181,173,0.12), transparent 60%)' }}>
+              <div className="max-w-4xl mx-auto flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="text-[9px] font-mono uppercase tracking-widest text-[#0FB5AD]/40 mb-1">
+                    Slide {current.number} of {slides.length}
+                  </div>
+                  <h2 className="text-xl font-semibold text-white font-display" contentEditable suppressContentEditableWarning
+                    onBlur={e => updateSlide(activeSlide, { title: e.currentTarget.textContent || '' })}>
+                    {current.title}
+                  </h2>
+                  {current.subtitle && (
+                    <p className="text-sm text-white/50 mt-1.5" contentEditable suppressContentEditableWarning
+                      onBlur={e => updateSlide(activeSlide, { subtitle: e.currentTarget.textContent || '' })}>
+                      {current.subtitle}
+                    </p>
+                  )}
                 </div>
-              )}
+                {current.formats.length > 0 && (
+                  <div className="flex flex-col gap-1 shrink-0 ml-4">
+                    <div className="text-[7px] font-mono uppercase tracking-wider text-white/25">Format</div>
+                    {current.formats.map(f => {
+                      const badge = FORMAT_BADGES[f] || { bg: 'bg-gray-700 text-gray-300', text: f };
+                      return <span key={f} className={`text-[8px] font-mono px-2 py-0.5 rounded ${badge.bg}`}>{badge.text}</span>;
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
 
-              {/* Subtitle */}
-              {current.subtitle && (
-                <p className="text-sm text-muted-foreground mb-4 italic">{current.subtitle}</p>
-              )}
+            {/* Slide body */}
+            <div className="px-8 py-6">
+              <div className="max-w-4xl mx-auto">
+                {/* Smart content blocks */}
+                {(() => {
+                  const blocks = current.contentBlocks && current.contentBlocks.length > 0
+                    ? current.contentBlocks
+                    : current.content.split('\n\n').filter(Boolean);
 
-              {/* Content blocks — structured like the PPT */}
-              <div className="mb-6 space-y-2">
-                {(current.contentBlocks && current.contentBlocks.length > 0
-                  ? current.contentBlocks
-                  : current.content.split('\n\n').filter(Boolean)
-                ).map((block: string, i: number) => {
-                  // Detect if block is a numbered point (01, 02, etc.)
-                  const numMatch = block.match(/^(\d{1,2})\s+(.+)/);
-                  // Detect if block is a heading-like short text
-                  const isHeading = block.length < 60 && !block.includes('\n');
-                  // Detect multi-line blocks (bullet points)
-                  const lines = block.split('\n').filter(Boolean);
-                  const isMultiLine = lines.length > 1;
+                  // Detect cards (heading + body pairs)
+                  const items: { type: 'card' | 'kpi' | 'text' | 'heading'; heading?: string; body?: string; value?: string; label?: string; idx: number }[] = [];
+                  let bi = 0;
+                  while (bi < blocks.length) {
+                    const b = blocks[bi];
+                    const next = blocks[bi + 1];
+                    // KPI: short with digit + short label
+                    if (b.length <= 6 && /\d/.test(b) && next && next.length < 50) {
+                      items.push({ type: 'kpi', value: b, label: next, idx: bi }); bi += 2; continue;
+                    }
+                    // Card: short heading + longer body
+                    if (b.length < 55 && !b.includes('\n') && next && next.length > 40) {
+                      items.push({ type: 'card', heading: b, body: next, idx: bi }); bi += 2; continue;
+                    }
+                    // Heading: short, no period
+                    if (b.length < 55 && !b.includes('\n') && !b.endsWith('.')) {
+                      items.push({ type: 'heading', heading: b, idx: bi }); bi++; continue;
+                    }
+                    items.push({ type: 'text', body: b, idx: bi }); bi++;
+                  }
+
+                  const cards = items.filter(i => i.type === 'card');
+                  const kpis = items.filter(i => i.type === 'kpi');
+                  const rest = items.filter(i => i.type !== 'kpi');
+
+                  const updateBlock = (idx: number, text: string) => {
+                    const b = [...blocks]; b[idx] = text;
+                    updateSlide(activeSlide, { content: b.join('\n\n'), contentBlocks: b });
+                  };
 
                   return (
-                    <div key={i} className="rounded-lg overflow-hidden border border-border/50 hover:border-border transition-colors">
-                      <div
-                        contentEditable
-                        suppressContentEditableWarning
-                        ref={i === 0 ? contentEditRef : undefined}
-                        onBlur={(e) => {
-                          const blocks = current.contentBlocks && current.contentBlocks.length > 0
-                            ? [...current.contentBlocks]
-                            : current.content.split('\n\n').filter(Boolean);
-                          blocks[i] = (e.target as HTMLElement).innerText;
-                          updateSlide(activeSlide, {
-                            content: blocks.join('\n\n'),
-                            contentBlocks: blocks,
-                          });
-                        }}
-                        className={`outline-none focus:ring-1 focus:ring-teal-500/20 rounded
-                          ${numMatch ? 'px-4 py-3 bg-[#0B1120] text-white border-l-4 border-l-[#0FB5AD]' :
-                            isMultiLine ? 'px-4 py-3 bg-card text-foreground text-sm leading-relaxed' :
-                            'px-4 py-2.5 bg-muted/20 text-foreground text-sm font-medium'}`}
-                      >
-                        {block}
+                    <div className="space-y-4">
+                      {/* Content in grid if cards detected */}
+                      <div className={cards.length >= 2 ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3' : 'space-y-3'}>
+                        {rest.map((item, idx) => {
+                          if (item.type === 'card') return (
+                            <div key={idx} className="rounded-xl border border-border bg-card overflow-hidden hover:border-[#0FB5AD]/30 transition-colors">
+                              <div className="px-4 py-2.5 bg-[#0B1120]">
+                                <div className="text-sm font-semibold text-white" contentEditable suppressContentEditableWarning
+                                  onBlur={e => updateBlock(item.idx, e.currentTarget.textContent || '')}>{item.heading}</div>
+                              </div>
+                              <div className="px-4 py-3 text-xs text-foreground leading-relaxed" contentEditable suppressContentEditableWarning
+                                onBlur={e => updateBlock(item.idx + 1, e.currentTarget.textContent || '')}>{item.body}</div>
+                            </div>
+                          );
+                          if (item.type === 'heading') return (
+                            <div key={idx} className={cards.length >= 2 ? 'col-span-full' : ''}>
+                              <div className="flex items-center gap-3">
+                                <div className="h-px flex-1 bg-gradient-to-r from-[#0FB5AD]/30 to-transparent" />
+                                <h3 className="text-sm font-semibold text-foreground" contentEditable suppressContentEditableWarning
+                                  onBlur={e => updateBlock(item.idx, e.currentTarget.textContent || '')}>{item.heading}</h3>
+                                <div className="h-px flex-1 bg-gradient-to-l from-[#0FB5AD]/30 to-transparent" />
+                              </div>
+                            </div>
+                          );
+                          return (
+                            <div key={idx} className={`rounded-xl border border-border/50 bg-card p-4 ${cards.length >= 2 ? 'col-span-full' : ''}`}>
+                              <div className="text-xs text-foreground leading-relaxed whitespace-pre-wrap" contentEditable suppressContentEditableWarning
+                                ref={idx === 0 ? contentEditRef : undefined}
+                                onBlur={e => updateBlock(item.idx, e.currentTarget.textContent || '')}>{item.body}</div>
+                            </div>
+                          );
+                        })}
                       </div>
+                      {/* KPI band */}
+                      {kpis.length > 0 && (
+                        <div className="rounded-xl bg-[#0B1120] p-5" style={{ backgroundImage: 'radial-gradient(50% 100% at 50% 0%, rgba(15,181,173,0.08), transparent)' }}>
+                          <div className={`grid gap-4 ${kpis.length <= 2 ? 'grid-cols-2' : kpis.length <= 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
+                            {kpis.map((kpi, ki) => (
+                              <div key={ki} className="text-center">
+                                <div className="text-2xl font-bold text-[#0FB5AD] font-display" contentEditable suppressContentEditableWarning
+                                  onBlur={e => updateBlock(kpi.idx, e.currentTarget.textContent || '')}>{kpi.value}</div>
+                                <div className="text-[10px] text-white/50 mt-1" contentEditable suppressContentEditableWarning
+                                  onBlur={e => updateBlock(kpi.idx + 1, e.currentTarget.textContent || '')}>{kpi.label}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
-                })}
+                })()}
               </div>
+            </div>
 
-              <div className="border-t border-border my-4" />
+            {/* Interaction zones below content */}
+            <div className="px-8 pb-6">
+              <div className="max-w-4xl mx-auto">
+                <div className="border-t border-border my-4" />
 
               {/* ── SCORE zone (shown when SCORE format) ── */}
               {current.formats.includes('SCORE') && (
@@ -894,6 +953,7 @@ Return each insight as a separate line starting with "- ".`,
                 </div>
               </div>
             </div>
+          </div>
           </div>
         )}
       </div>
