@@ -40,6 +40,8 @@ RUN apk add --no-cache python3 py3-pip poppler-utils \
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+# LibreOffice needs a writable home + config dir
+RUN mkdir -p /tmp/.config/libreoffice && chown -R 1001:1001 /tmp/.config
 
 COPY --from=builder /app/public ./public
 
