@@ -25,6 +25,46 @@ interface SlideNote {
   author?: string;
 }
 
+interface SlideCard {
+  heading: string;
+  body: string;
+}
+
+interface SlideKpi {
+  value: string;
+  label: string;
+}
+
+interface SlideTextRun {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  size?: number | null;
+  color?: string | null;
+  name?: string | null;
+}
+
+interface SlideParagraph {
+  text: string;
+  align?: string;
+  runs?: SlideTextRun[];
+}
+
+interface SlideShape {
+  left: number;    // % of slide width
+  top: number;     // % of slide height
+  width: number;   // % of slide width
+  height: number;  // % of slide height
+  text: string;
+  fill: string | null;
+  border: string | null;
+  borderWidth: number;
+  cornerRadius: number;
+  rotation: number;
+  type: string;    // rect | auto | text | image | group | table
+  paragraphs: SlideParagraph[];
+}
+
 interface WorkshopSlide {
   id: string;
   number: number;
@@ -32,8 +72,13 @@ interface WorkshopSlide {
   subtitle: string;
   content: string;
   contentBlocks?: string[];
+  cards?: SlideCard[];
+  kpis?: SlideKpi[];
+  misc?: string[];
   slideLabel?: string;
   formats: string[];
+  shapes?: SlideShape[];
+  bgColor?: string | null;
   stickies: SlideSticky[];
   notes: SlideNote[];
   canvasData: string;
@@ -41,6 +86,16 @@ interface WorkshopSlide {
 }
 
 const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+/** Check if a hex color is light (for text contrast) */
+function isLightColor(hex: string): boolean {
+  const c = hex.replace('#', '');
+  if (c.length < 6) return false;
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 140;
+}
 
 const STICKY_COLORS = [
   { bg: '#FEF3C7', border: '#F59E0B', label: 'Yellow' },
@@ -357,7 +412,12 @@ Return each insight as a separate line starting with "- ".`,
             subtitle: s.subtitle || '',
             content: s.content || '',
             contentBlocks: s.contentBlocks || [],
+            cards: s.cards || [],
+            kpis: s.kpis || [],
+            misc: s.misc || [],
             formats: s.formats || [],
+            shapes: s.shapes || [],
+            bgColor: s.bgColor || null,
             slideLabel: s.slideLabel || '',
             stickies: [], notes: [], canvasData: '', uploads: [],
           }));
@@ -469,74 +529,104 @@ Return each insight as a separate line starting with "- ".`,
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto flex justify-center px-6 py-8">
-          <div className="max-w-4xl w-full">
-            <h1 className="text-3xl font-bold text-white mb-2">{current.title}</h1>
-            {current.subtitle && (
-              <p className="text-lg text-white/60 mb-4">{current.subtitle}</p>
-            )}
-            <div className="flex gap-2 mb-6">
-              {current.formats.map(f => {
-                const badge = FORMAT_BADGES[f];
-                return badge ? (
-                  <span key={f} className={`text-xs px-2 py-0.5 rounded-full ${badge.bg}`}>{badge.text}</span>
-                ) : null;
+        {/* Content — full screen PPT canvas */}
+        <div className="flex-1 overflow-hidden flex items-center justify-center p-6">
+          {current.shapes && current.shapes.length > 0 ? (
+            /* Shape-based PPT canvas — full screen */
+            <div className="relative w-full h-full" style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              aspectRatio: '16 / 9',
+              background: current.bgColor || '#0B1120',
+              borderRadius: '4px',
+              overflow: 'hidden',
+            }}>
+              {current.shapes.map((shape, si) => {
+                const firstRun = shape.paragraphs?.[0]?.runs?.[0];
+                const fontSize = firstRun?.size ? firstRun.size * 1.5 : Math.max(10, Math.min(36, shape.height * 0.4));
+                const textColor = firstRun?.color || (shape.fill && isLightColor(shape.fill) ? '#1a1a2e' : '#ffffff');
+                const isBold = firstRun?.bold || false;
+                const textAlign = shape.paragraphs?.[0]?.align || 'left';
+                if (shape.width < 0.5 && shape.height < 0.5) return null;
+                if (!shape.text && !shape.fill) return null;
+                return (
+                  <div key={si} className="absolute overflow-hidden" style={{
+                    left: `${shape.left}%`, top: `${shape.top}%`,
+                    width: `${shape.width}%`, height: `${shape.height}%`,
+                    backgroundColor: shape.fill || 'transparent',
+                    border: shape.border ? `${Math.max(1, shape.borderWidth)}px solid ${shape.border}` : 'none',
+                    borderRadius: shape.cornerRadius > 0 ? `${shape.cornerRadius * 0.4}px` : '0',
+                    transform: shape.rotation ? `rotate(${shape.rotation}deg)` : undefined,
+                    zIndex: si + 1,
+                  }}>
+                    {shape.paragraphs && shape.paragraphs.length > 0 ? (
+                      <div className="w-full h-full flex flex-col justify-center px-[6%] py-[4%]">
+                        {shape.paragraphs.map((para, pi) => (
+                          <div key={pi} style={{ textAlign: (para.align || textAlign) as any, marginBottom: '3px' }}>
+                            {para.runs && para.runs.length > 0 ? para.runs.map((run, ri) => (
+                              <span key={ri} style={{
+                                color: run.color || textColor,
+                                fontSize: `${Math.max(8, Math.min(56, (run.size || fontSize) * 1.5))}px`,
+                                fontWeight: run.bold ? 700 : 400,
+                                fontStyle: run.italic ? 'italic' : 'normal',
+                                lineHeight: 1.3,
+                              }}>{run.text}</span>
+                            )) : (
+                              <span style={{ color: textColor, fontSize: `${Math.max(8, Math.min(48, fontSize))}px`, fontWeight: isBold ? 700 : 400, lineHeight: 1.3 }}>{para.text}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : shape.text ? (
+                      <div className="w-full h-full flex items-center justify-center px-[6%]">
+                        <span style={{ color: textColor, fontSize: `${Math.max(8, Math.min(48, fontSize))}px`, fontWeight: isBold ? 700 : 400, lineHeight: 1.3 }}>{shape.text}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                );
               })}
             </div>
-
-            {/* Content blocks */}
-            <div
-              ref={contentEditRef}
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={handleContentBlur}
-              onFocus={() => setEditingText(current.id)}
-              className="text-lg text-white/90 leading-relaxed whitespace-pre-wrap outline-none
-                         focus:ring-1 focus:ring-teal-500/30 rounded-lg p-4 -ml-4"
-            >
-              {current.content}
+          ) : (
+            /* Fallback text-based presenter */
+            <div className="max-w-4xl w-full">
+              <h1 className="text-4xl font-bold text-white mb-3">{current.title}</h1>
+              {current.subtitle && <p className="text-xl text-white/60 mb-6">{current.subtitle}</p>}
+              <div className="text-lg text-white/90 leading-relaxed whitespace-pre-wrap">{current.content}</div>
             </div>
-
-            {/* Stickies */}
-            {current.stickies.length > 0 && (
-              <div className="mt-8">
-                <h3 className="text-sm font-mono text-white/40 uppercase tracking-wider mb-3">
-                  Stickies ({current.stickies.length})
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {current.stickies.map(s => (
-                    <div key={s.id} className="rounded-lg p-3 text-sm shadow-md"
-                      style={{ backgroundColor: s.color }}>
-                      <p className="text-gray-800">{s.text}</p>
-                      {s.votes > 0 && (
-                        <span className="text-xs text-gray-600 mt-1 inline-block">
-                          {s.votes} vote{s.votes !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Notes */}
-            {current.notes.length > 0 && (
-              <div className="mt-8">
-                <h3 className="text-sm font-mono text-white/40 uppercase tracking-wider mb-3">
-                  Notes ({current.notes.length})
-                </h3>
-                <div className="space-y-2">
-                  {current.notes.map(n => (
-                    <div key={n.id} className="bg-white/5 border border-white/10 rounded-lg px-4 py-3">
-                      <p className="text-white/80 text-sm">{n.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
+
+        {/* Stickies & Notes overlay */}
+        {(current.stickies.length > 0 || current.notes.length > 0) && (
+          <div className="px-6 pb-4 max-h-[25vh] overflow-y-auto">
+            <div className="max-w-4xl mx-auto flex gap-6">
+              {current.stickies.length > 0 && (
+                <div className="flex-1">
+                  <h3 className="text-[10px] font-mono text-white/30 uppercase tracking-wider mb-2">Stickies</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {current.stickies.map(s => (
+                      <div key={s.id} className="rounded-lg px-3 py-2 text-xs shadow-md" style={{ backgroundColor: s.color }}>
+                        <p className="text-gray-800">{s.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {current.notes.length > 0 && (
+                <div className="flex-1">
+                  <h3 className="text-[10px] font-mono text-white/30 uppercase tracking-wider mb-2">Notes</h3>
+                  <div className="space-y-1">
+                    {current.notes.map(n => (
+                      <div key={n.id} className="bg-white/5 rounded-lg px-3 py-2">
+                        <p className="text-white/70 text-xs">{n.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Bottom nav */}
         <div className="flex items-center justify-center gap-4 px-6 py-3 border-t border-white/10">
@@ -550,216 +640,351 @@ Return each insight as a separate line starting with "- ".`,
 
   // --- Standard layout ---
   return (
-    <div className="flex flex-col h-full bg-background relative">
-      {/* Nav bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
+    <div className="flex flex-col h-full relative" style={{ background: '#0a0f1e' }}>
+      {/* Nav bar — dark chrome */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06]"
+        style={{ background: '#0B1120' }}>
         <button onClick={() => goTo(activeSlide - 1)} disabled={activeSlide === 0}
-          className="p-1.5 rounded hover:bg-muted disabled:opacity-30 transition-colors">
-          <ChevronLeft className="w-5 h-5 text-foreground" />
+          className="p-1.5 rounded hover:bg-white/10 disabled:opacity-20 transition-colors">
+          <ChevronLeft className="w-5 h-5 text-white/60" />
         </button>
         <div className="flex items-center gap-3">
-          <span className="text-sm font-mono text-muted-foreground">
-            Slide {current?.number || 0} of {slides.length}
+          <span className="text-xs font-mono text-white/30">
+            {current?.slideLabel || String(current?.number || 0).padStart(2, '0')} / {slides.length}
           </span>
           {current && (
-            <span className="text-sm font-semibold text-foreground truncate max-w-[400px]">
+            <span className="text-sm font-semibold text-white/80 truncate max-w-[400px]">
               {current.title}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+            <span className="text-[10px] text-white/30 flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin text-[#0FB5AD]" /> Saving
             </span>
           )}
           {saveStatus === 'saved' && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Check className="w-3 h-3 text-teal-600" /> Saved
+            <span className="text-[10px] text-white/30 flex items-center gap-1">
+              <Check className="w-3 h-3 text-[#0FB5AD]" /> Saved
             </span>
           )}
           <button onClick={() => setIsPresenterMode(true)}
-            className="p-1.5 rounded hover:bg-muted transition-colors" title="Presenter mode">
-            <Maximize2 className="w-5 h-5 text-foreground" />
+            className="p-1.5 rounded hover:bg-white/10 transition-colors" title="Presenter mode">
+            <Maximize2 className="w-4 h-4 text-white/50" />
           </button>
           <button onClick={() => goTo(activeSlide + 1)} disabled={activeSlide === slides.length - 1}
-            className="p-1.5 rounded hover:bg-muted disabled:opacity-30 transition-colors">
-            <ChevronRight className="w-5 h-5 text-foreground" />
+            className="p-1.5 rounded hover:bg-white/10 disabled:opacity-20 transition-colors">
+            <ChevronRight className="w-5 h-5 text-white/60" />
           </button>
         </div>
       </div>
 
       {/* Main area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Thumbnail rail */}
-        <div className="w-20 border-r border-border bg-card overflow-y-auto flex-shrink-0">
-          {slides.map((slide, idx) => (
-            <button
-              key={slide.id}
-              onClick={() => goTo(idx)}
-              className={`w-full px-1 py-1.5 border-b border-border transition-colors text-left
-                ${idx === activeSlide
-                  ? 'bg-teal-50 dark:bg-teal-900/20 border-l-2 border-l-teal-500'
-                  : 'hover:bg-muted border-l-2 border-l-transparent'
-                }`}
-            >
-              <div className="text-[10px] font-mono text-muted-foreground leading-none mb-0.5">
-                {slide.number}
-              </div>
-              <div className="text-[9px] text-foreground leading-tight line-clamp-2">
-                {slide.title}
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Slide content — PPT-style visual layout */}
-        {current && (
-          <div className="flex-1 overflow-y-auto">
-            {/* Dark header band — like actual PPT */}
-            <div className="bg-[#0B1120] px-8 py-5" style={{ backgroundImage: 'radial-gradient(80% 150% at 90% -20%, rgba(15,181,173,0.12), transparent 60%)' }}>
-              <div className="max-w-4xl mx-auto flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="text-[9px] font-mono uppercase tracking-widest text-[#0FB5AD]/40 mb-1">
-                    Slide {current.number} of {slides.length}
-                  </div>
-                  <h2 className="text-xl font-semibold text-white font-display" contentEditable suppressContentEditableWarning
-                    onBlur={e => updateSlide(activeSlide, { title: e.currentTarget.textContent || '' })}>
-                    {current.title}
-                  </h2>
-                  {current.subtitle && (
-                    <p className="text-sm text-white/50 mt-1.5" contentEditable suppressContentEditableWarning
-                      onBlur={e => updateSlide(activeSlide, { subtitle: e.currentTarget.textContent || '' })}>
-                      {current.subtitle}
-                    </p>
+        {/* Thumbnail rail — dark PPT-style */}
+        <div className="w-24 border-r border-white/[0.06] overflow-y-auto flex-shrink-0"
+          style={{ background: 'linear-gradient(180deg, #0B1120, #0f1629)' }}>
+          {slides.map((slide, idx) => {
+            const isActive = idx === activeSlide;
+            const hasKpis = (slide.kpis?.length || 0) > 0;
+            const hasCards = (slide.cards?.length || 0) > 0;
+            return (
+              <button
+                key={slide.id}
+                onClick={() => goTo(idx)}
+                className={`w-full px-2 py-2 border-b border-white/[0.04] transition-all text-left relative
+                  ${isActive
+                    ? 'bg-[#0FB5AD]/10'
+                    : 'hover:bg-white/[0.03]'
+                  }`}
+              >
+                {isActive && (
+                  <div className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[#0FB5AD]" />
+                )}
+                {/* Mini slide preview */}
+                <div className={`rounded border mb-1.5 h-[36px] flex items-center justify-center overflow-hidden
+                  ${isActive ? 'border-[#0FB5AD]/30' : 'border-white/[0.08]'}`}
+                  style={{ background: '#0B1120' }}>
+                  {hasKpis && (
+                    <div className="flex gap-1">
+                      {(slide.kpis || []).slice(0, 3).map((_, ki) => (
+                        <div key={ki} className="w-1.5 h-3 rounded-sm bg-[#0FB5AD]/40" />
+                      ))}
+                    </div>
+                  )}
+                  {hasCards && !hasKpis && (
+                    <div className="grid grid-cols-2 gap-0.5 p-1">
+                      {(slide.cards || []).slice(0, 4).map((_, ci) => (
+                        <div key={ci} className="w-3 h-2 rounded-[1px] bg-white/10" />
+                      ))}
+                    </div>
+                  )}
+                  {!hasKpis && !hasCards && (
+                    <div className="space-y-0.5 p-1.5">
+                      <div className="h-[2px] w-8 bg-white/15 rounded-full" />
+                      <div className="h-[2px] w-6 bg-white/10 rounded-full" />
+                    </div>
                   )}
                 </div>
-                {current.formats.length > 0 && (
-                  <div className="flex flex-col gap-1 shrink-0 ml-4">
-                    <div className="text-[7px] font-mono uppercase tracking-wider text-white/25">Format</div>
-                    {current.formats.map(f => {
-                      const badge = FORMAT_BADGES[f] || { bg: 'bg-gray-700 text-gray-300', text: f };
-                      return <span key={f} className={`text-[8px] font-mono px-2 py-0.5 rounded ${badge.bg}`}>{badge.text}</span>;
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+                <div className={`text-[9px] font-mono leading-none mb-0.5 ${isActive ? 'text-[#0FB5AD]' : 'text-white/30'}`}>
+                  {slide.slideLabel || String(slide.number).padStart(2, '0')}
+                </div>
+                <div className={`text-[8px] leading-tight line-clamp-2 ${isActive ? 'text-white/80' : 'text-white/40'}`}>
+                  {slide.title}
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
-            {/* Slide body */}
-            <div className="px-8 py-6">
-              <div className="max-w-4xl mx-auto">
-                {/* Smart content blocks */}
-                {(() => {
-                  const blocks = current.contentBlocks && current.contentBlocks.length > 0
-                    ? current.contentBlocks
-                    : current.content.split('\n\n').filter(Boolean);
+        {/* Slide content — PPT Canvas Renderer */}
+        {current && (
+          <div className="flex-1 overflow-y-auto" style={{ background: '#0a0f1e' }}>
+            {/* ═══ PPT CANVAS — shapes positioned like actual slide ═══ */}
+            {current.shapes && current.shapes.length > 0 ? (
+              <div className="flex justify-center py-4 px-4">
+                <div className="relative w-full" style={{
+                  maxWidth: '1100px',
+                  aspectRatio: '16 / 9',
+                  background: current.bgColor || '#0B1120',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
+                }}>
+                  {/* Render each shape at its PPT position */}
+                  {current.shapes.map((shape, si) => {
+                    // Determine font size — use first run's size, or estimate from shape height
+                    const firstRun = shape.paragraphs?.[0]?.runs?.[0];
+                    const fontSize = firstRun?.size || Math.max(8, Math.min(24, shape.height * 0.3));
+                    const textColor = firstRun?.color || (shape.fill && isLightColor(shape.fill) ? '#1a1a2e' : '#ffffff');
+                    const isBold = firstRun?.bold || false;
+                    const textAlign = shape.paragraphs?.[0]?.align || 'left';
 
-                  // Detect cards (heading + body pairs)
-                  const items: { type: 'card' | 'kpi' | 'text' | 'heading'; heading?: string; body?: string; value?: string; label?: string; idx: number }[] = [];
-                  let bi = 0;
-                  while (bi < blocks.length) {
-                    const b = blocks[bi];
-                    const next = blocks[bi + 1];
-                    // KPI: short with digit + short label
-                    if (b.length <= 6 && /\d/.test(b) && next && next.length < 50) {
-                      items.push({ type: 'kpi', value: b, label: next, idx: bi }); bi += 2; continue;
-                    }
-                    // Card: short heading + longer body
-                    if (b.length < 55 && !b.includes('\n') && next && next.length > 40) {
-                      items.push({ type: 'card', heading: b, body: next, idx: bi }); bi += 2; continue;
-                    }
-                    // Heading: short, no period
-                    if (b.length < 55 && !b.includes('\n') && !b.endsWith('.')) {
-                      items.push({ type: 'heading', heading: b, idx: bi }); bi++; continue;
-                    }
-                    items.push({ type: 'text', body: b, idx: bi }); bi++;
-                  }
+                    // Skip tiny invisible shapes
+                    if (shape.width < 0.5 && shape.height < 0.5) return null;
+                    // Skip shapes with no content (no text, no fill)
+                    if (!shape.text && !shape.fill) return null;
 
-                  const cards = items.filter(i => i.type === 'card');
-                  const kpis = items.filter(i => i.type === 'kpi');
-                  const rest = items.filter(i => i.type !== 'kpi');
-
-                  const updateBlock = (idx: number, text: string) => {
-                    const b = [...blocks]; b[idx] = text;
-                    updateSlide(activeSlide, { content: b.join('\n\n'), contentBlocks: b });
-                  };
-
-                  return (
-                    <div className="space-y-4">
-                      {/* Content in grid if cards detected */}
-                      <div className={cards.length >= 2 ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3' : 'space-y-3'}>
-                        {rest.map((item, idx) => {
-                          if (item.type === 'card') return (
-                            <div key={idx} className="rounded-xl border border-border bg-card overflow-hidden hover:border-[#0FB5AD]/30 transition-colors">
-                              <div className="px-4 py-2.5 bg-[#0B1120]">
-                                <div className="text-sm font-semibold text-white" contentEditable suppressContentEditableWarning
-                                  onBlur={e => updateBlock(item.idx, e.currentTarget.textContent || '')}>{item.heading}</div>
-                              </div>
-                              <div className="px-4 py-3 text-xs text-foreground leading-relaxed" contentEditable suppressContentEditableWarning
-                                onBlur={e => updateBlock(item.idx + 1, e.currentTarget.textContent || '')}>{item.body}</div>
-                            </div>
-                          );
-                          if (item.type === 'heading') return (
-                            <div key={idx} className={cards.length >= 2 ? 'col-span-full' : ''}>
-                              <div className="flex items-center gap-3">
-                                <div className="h-px flex-1 bg-gradient-to-r from-[#0FB5AD]/30 to-transparent" />
-                                <h3 className="text-sm font-semibold text-foreground" contentEditable suppressContentEditableWarning
-                                  onBlur={e => updateBlock(item.idx, e.currentTarget.textContent || '')}>{item.heading}</h3>
-                                <div className="h-px flex-1 bg-gradient-to-l from-[#0FB5AD]/30 to-transparent" />
-                              </div>
-                            </div>
-                          );
-                          return (
-                            <div key={idx} className={`rounded-xl border border-border/50 bg-card p-4 ${cards.length >= 2 ? 'col-span-full' : ''}`}>
-                              <div className="text-xs text-foreground leading-relaxed whitespace-pre-wrap" contentEditable suppressContentEditableWarning
-                                ref={idx === 0 ? contentEditRef : undefined}
-                                onBlur={e => updateBlock(item.idx, e.currentTarget.textContent || '')}>{item.body}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {/* KPI band */}
-                      {kpis.length > 0 && (
-                        <div className="rounded-xl bg-[#0B1120] p-5" style={{ backgroundImage: 'radial-gradient(50% 100% at 50% 0%, rgba(15,181,173,0.08), transparent)' }}>
-                          <div className={`grid gap-4 ${kpis.length <= 2 ? 'grid-cols-2' : kpis.length <= 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
-                            {kpis.map((kpi, ki) => (
-                              <div key={ki} className="text-center">
-                                <div className="text-2xl font-bold text-[#0FB5AD] font-display" contentEditable suppressContentEditableWarning
-                                  onBlur={e => updateBlock(kpi.idx, e.currentTarget.textContent || '')}>{kpi.value}</div>
-                                <div className="text-[10px] text-white/50 mt-1" contentEditable suppressContentEditableWarning
-                                  onBlur={e => updateBlock(kpi.idx + 1, e.currentTarget.textContent || '')}>{kpi.label}</div>
+                    return (
+                      <div
+                        key={si}
+                        className="absolute overflow-hidden group"
+                        style={{
+                          left: `${shape.left}%`,
+                          top: `${shape.top}%`,
+                          width: `${shape.width}%`,
+                          height: `${shape.height}%`,
+                          backgroundColor: shape.fill || 'transparent',
+                          border: shape.border ? `${Math.max(1, shape.borderWidth)}px solid ${shape.border}` : 'none',
+                          borderRadius: shape.cornerRadius > 0 ? `${shape.cornerRadius * 0.4}px` : '0',
+                          transform: shape.rotation ? `rotate(${shape.rotation}deg)` : undefined,
+                          zIndex: si + 1,
+                        }}
+                      >
+                        {/* Shape text content */}
+                        {shape.paragraphs && shape.paragraphs.length > 0 ? (
+                          <div className="w-full h-full flex flex-col justify-center px-[6%] py-[4%]"
+                            contentEditable suppressContentEditableWarning>
+                            {shape.paragraphs.map((para, pi) => (
+                              <div key={pi} className="leading-snug" style={{
+                                textAlign: (para.align || textAlign) as any,
+                                marginBottom: shape.paragraphs!.length > 1 ? '2px' : 0,
+                              }}>
+                                {para.runs && para.runs.length > 0 ? (
+                                  para.runs.map((run, ri) => (
+                                    <span key={ri} style={{
+                                      color: run.color || textColor,
+                                      fontSize: `${Math.max(6, Math.min(42, run.size || fontSize))}px`,
+                                      fontWeight: run.bold ? 700 : 400,
+                                      fontStyle: run.italic ? 'italic' : 'normal',
+                                      fontFamily: run.name || 'inherit',
+                                      lineHeight: 1.3,
+                                    }}>{run.text}</span>
+                                  ))
+                                ) : (
+                                  <span style={{
+                                    color: textColor,
+                                    fontSize: `${Math.max(6, Math.min(36, fontSize))}px`,
+                                    fontWeight: isBold ? 700 : 400,
+                                    lineHeight: 1.3,
+                                  }}>{para.text}</span>
+                                )}
                               </div>
                             ))}
                           </div>
+                        ) : shape.text ? (
+                          <div className="w-full h-full flex items-center justify-center px-[6%] py-[4%]"
+                            contentEditable suppressContentEditableWarning>
+                            <span style={{
+                              color: textColor,
+                              fontSize: `${Math.max(6, Math.min(36, fontSize))}px`,
+                              fontWeight: isBold ? 700 : 400,
+                              textAlign: textAlign as any,
+                              lineHeight: 1.3,
+                            }}>{shape.text}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              /* ═══ FALLBACK: structured card/KPI layout for slides without shape data ═══ */
+              <>
+                {/* Header band */}
+                <div className="relative overflow-hidden" style={{
+                  background: 'linear-gradient(135deg, #0B1120 0%, #0f1629 40%, #0B1120 100%)',
+                  minHeight: '100px',
+                }}>
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{
+                    background: 'linear-gradient(90deg, transparent, #0FB5AD, transparent)', opacity: 0.4,
+                  }} />
+                  <div className="relative z-10 max-w-5xl mx-auto px-8 py-5 flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="inline-flex items-center gap-2 mb-2">
+                        <div className="flex items-center justify-center w-7 h-7 rounded-lg text-[10px] font-bold font-mono"
+                          style={{ background: 'rgba(15,181,173,0.15)', color: '#0FB5AD', border: '1px solid rgba(15,181,173,0.25)' }}>
+                          {current.slideLabel || String(current.number).padStart(2, '0')}
                         </div>
+                        <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-white/30">of {slides.length}</div>
+                      </div>
+                      <h2 className="text-2xl font-bold text-white leading-tight" contentEditable suppressContentEditableWarning
+                        onBlur={e => updateSlide(activeSlide, { title: e.currentTarget.textContent || '' })}>{current.title}</h2>
+                      {current.subtitle && (
+                        <p className="text-sm text-white/45 mt-1.5" contentEditable suppressContentEditableWarning
+                          onBlur={e => updateSlide(activeSlide, { subtitle: e.currentTarget.textContent || '' })}>{current.subtitle}</p>
                       )}
                     </div>
-                  );
-                })()}
-              </div>
-            </div>
+                    {current.formats.length > 0 && (
+                      <div className="flex flex-col gap-1.5 shrink-0 ml-6">
+                        {current.formats.map(f => {
+                          const badge = FORMAT_BADGES[f] || { bg: 'bg-gray-700 text-gray-300', text: f };
+                          return <span key={f} className={`text-[9px] font-mono px-2.5 py-1 rounded-md ${badge.bg}`}>{badge.text}</span>;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Fallback card/KPI layout */}
+                <div className="px-8 py-6">
+                  <div className="max-w-5xl mx-auto">
+                    {(() => {
+                      const cards: SlideCard[] = current.cards?.length ? current.cards : [];
+                      const kpis: SlideKpi[] = current.kpis?.length ? current.kpis : [];
+                      const miscItems: string[] = current.misc?.length ? current.misc : [];
+                      const blocks: string[] = current.contentBlocks?.length
+                        ? current.contentBlocks : current.content ? current.content.split('\n\n').filter(Boolean) : [];
+                      const CARD_ACCENTS = ['#0FB5AD', '#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981'];
+
+                      return (
+                        <div className="space-y-5">
+                          {/* KPIs */}
+                          {kpis.length > 0 && (
+                            <div className="rounded-2xl p-5 relative overflow-hidden" style={{
+                              background: 'linear-gradient(135deg, #0B1120, #101b30)', border: '1px solid rgba(15,181,173,0.12)',
+                            }}>
+                              <div className={`grid ${kpis.length <= 3 ? `grid-cols-${kpis.length}` : 'grid-cols-3 md:grid-cols-5'}`}>
+                                {kpis.map((kpi, ki) => (
+                                  <div key={ki} className="text-center py-2 relative">
+                                    {ki > 0 && <div className="absolute left-0 top-2 bottom-2 w-px bg-white/[0.06]" />}
+                                    <div className="text-3xl font-bold" style={{ color: '#0FB5AD' }}
+                                      contentEditable suppressContentEditableWarning>{kpi.value}</div>
+                                    <div className="text-[10px] text-white/40 mt-1.5 uppercase tracking-wider"
+                                      contentEditable suppressContentEditableWarning>{kpi.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {/* Cards */}
+                          {cards.length >= 2 && (
+                            <div className={`grid gap-4 ${cards.length === 2 ? 'grid-cols-2' : cards.length === 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-3'}`}>
+                              {cards.map((c, ci) => (
+                                <div key={ci} className="rounded-xl overflow-hidden hover:translate-y-[-2px] transition-all"
+                                  style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                  <div className="h-[3px]" style={{ background: CARD_ACCENTS[ci % 6] }} />
+                                  {c.heading && <div className="px-4 py-3 border-b border-white/[0.05] text-[13px] font-semibold text-white"
+                                    contentEditable suppressContentEditableWarning>{c.heading}</div>}
+                                  <div className="px-4 py-3 text-[11px] text-white/55 leading-[1.7]"
+                                    contentEditable suppressContentEditableWarning>{c.body}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {cards.length === 1 && (
+                            <div className="rounded-xl overflow-hidden" style={{ background: '#111827', border: '1px solid rgba(15,181,173,0.15)' }}>
+                              <div className="h-[3px]" style={{ background: '#0FB5AD' }} />
+                              {cards[0].heading && <div className="px-5 py-3 border-b border-white/[0.05] text-sm font-semibold text-white"
+                                contentEditable suppressContentEditableWarning>{cards[0].heading}</div>}
+                              <div className="px-5 py-4 text-xs text-white/55 leading-[1.8]"
+                                contentEditable suppressContentEditableWarning>{cards[0].body}</div>
+                            </div>
+                          )}
+                          {/* Misc */}
+                          {miscItems.length > 0 && (
+                            <div className="flex flex-wrap gap-2">{miscItems.map((m, mi) => (
+                              <div key={mi} className="px-4 py-2 rounded-lg text-[11px] text-white/70"
+                                style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}
+                                contentEditable suppressContentEditableWarning>{m}</div>
+                            ))}</div>
+                          )}
+                          {/* Text blocks */}
+                          {cards.length === 0 && kpis.length === 0 && blocks.length > 0 && (
+                            <div className="space-y-3">{blocks.map((b, bi) => {
+                              const t = b.trim(); if (!t) return null;
+                              if (t.length < 60 && !t.includes('\n') && !t.endsWith('.')) return (
+                                <div key={bi} className="flex items-center gap-3 pt-1">
+                                  <div className="w-2 h-2 rounded-full" style={{ background: CARD_ACCENTS[bi % 6] }} />
+                                  <h3 className="text-[13px] font-semibold text-white/80" contentEditable suppressContentEditableWarning>{t}</h3>
+                                  <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.06), transparent)' }} />
+                                </div>
+                              );
+                              return (
+                                <div key={bi} className="rounded-xl overflow-hidden flex" style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                  <div className="w-[3px] shrink-0" style={{ background: CARD_ACCENTS[bi % 6] }} />
+                                  <div className="px-5 py-4 text-[12px] text-white/60 leading-[1.8] whitespace-pre-wrap"
+                                    contentEditable suppressContentEditableWarning>{t}</div>
+                                </div>
+                              );
+                            })}</div>
+                          )}
+                          {/* Empty */}
+                          {cards.length === 0 && kpis.length === 0 && blocks.length === 0 && (
+                            <div className="rounded-xl p-8 text-center" style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <div className="text-sm text-white/50 whitespace-pre-wrap" contentEditable suppressContentEditableWarning
+                                ref={contentEditRef} onBlur={handleContentBlur} onFocus={() => setEditingText(current.id)}>{current.content || 'Click to add content'}</div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Interaction zones below content */}
             <div className="px-8 pb-6">
-              <div className="max-w-4xl mx-auto">
-                <div className="border-t border-border my-4" />
+              <div className="max-w-5xl mx-auto">
+                <div className="border-t border-white/[0.06] my-5" />
 
               {/* ── SCORE zone (shown when SCORE format) ── */}
               {current.formats.includes('SCORE') && (
                 <div className="mb-6">
-                  <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <h3 className="text-xs font-mono text-white/30 uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5">
                     <Target className="w-3.5 h-3.5" /> Maturity Score
                   </h3>
                   <div className="flex gap-2">
                     {MATURITY_LABELS.map((label, val) => (
                       <button key={val}
-                        className="flex-1 rounded-lg border border-border px-2 py-2 text-center
-                          hover:border-teal-500 transition-colors"
-                        style={{ borderColor: MATURITY_COLORS[val] + '40' }}
+                        className="flex-1 rounded-lg px-2 py-2.5 text-center transition-all hover:scale-105"
+                        style={{ background: '#111827', border: `1px solid ${MATURITY_COLORS[val]}30` }}
                       >
                         <div className="text-lg font-bold" style={{ color: MATURITY_COLORS[val] }}>{val}</div>
-                        <div className="text-[9px] text-muted-foreground">{label}</div>
+                        <div className="text-[9px] text-white/40">{label}</div>
                       </button>
                     ))}
                   </div>
@@ -769,11 +994,12 @@ Return each insight as a separate line starting with "- ".`,
               {/* ── WHITEBOARD zone ── */}
               {current.formats.includes('WHITEBOARD') && (
                 <div className="mb-6">
-                  <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <h3 className="text-xs font-mono text-white/30 uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5">
                     <PenTool className="w-3.5 h-3.5" /> Sketch Area
                   </h3>
-                  <div className="border border-dashed border-border rounded-lg bg-muted/30 h-[200px]
-                    flex items-center justify-center text-muted-foreground text-sm">
+                  <div className="border border-dashed border-white/[0.08] rounded-xl h-[200px]
+                    flex items-center justify-center text-white/20 text-sm"
+                    style={{ background: '#0d1426' }}>
                     <PenTool className="w-5 h-5 mr-2 opacity-40" />
                     Canvas sketching available in Whiteboard tab
                   </div>
@@ -782,24 +1008,24 @@ Return each insight as a separate line starting with "- ".`,
 
               {/* ── Stickies zone ── */}
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-mono text-white/30 uppercase tracking-[0.15em] flex items-center gap-1.5">
                     <StickyNote className="w-3.5 h-3.5" /> Stickies ({current.stickies.length})
                   </h3>
                   <button onClick={() => setAddingSticky(true)}
-                    className="text-xs text-teal-600 hover:text-teal-700 flex items-center gap-1">
+                    className="text-xs text-[#0FB5AD] hover:text-[#0FB5AD]/80 flex items-center gap-1">
                     <Plus className="w-3 h-3" /> Add
                   </button>
                 </div>
 
                 {addingSticky && (
-                  <div className="bg-card border border-border rounded-lg p-3 mb-3">
+                  <div className="rounded-xl p-3 mb-3" style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <textarea
                       value={newStickyText}
                       onChange={(e) => setNewStickyText(e.target.value)}
                       placeholder="Type your sticky note..."
-                      className="w-full text-sm bg-transparent border-none outline-none resize-none
-                        placeholder:text-muted-foreground"
+                      className="w-full text-sm bg-transparent border-none outline-none resize-none text-white
+                        placeholder:text-white/30"
                       rows={2}
                       autoFocus
                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addSticky(); } }}
@@ -809,28 +1035,28 @@ Return each insight as a separate line starting with "- ".`,
                         {STICKY_COLORS.map((c, i) => (
                           <button key={i} onClick={() => setNewStickyColor(i)}
                             className={`w-5 h-5 rounded-full border-2 transition-all
-                              ${i === newStickyColor ? 'border-foreground scale-110' : 'border-transparent'}`}
+                              ${i === newStickyColor ? 'border-white scale-110' : 'border-transparent'}`}
                             style={{ backgroundColor: c.bg }}
                           />
                         ))}
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => { setAddingSticky(false); setNewStickyText(''); }}
-                          className="text-xs text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+                          className="text-xs text-white/40 hover:text-white"><X className="w-4 h-4" /></button>
                         <button onClick={addSticky}
-                          className="text-xs bg-teal-600 text-white px-3 py-1 rounded hover:bg-teal-700">Add</button>
+                          className="text-xs bg-[#0FB5AD] text-white px-3 py-1 rounded-lg hover:bg-[#0a867f]">Add</button>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {current.stickies.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
                     {current.stickies.map(s => (
-                      <div key={s.id} className="rounded-lg p-2.5 text-xs shadow-sm group relative"
+                      <div key={s.id} className="rounded-lg p-3 text-xs shadow-md group relative"
                         style={{ backgroundColor: s.color }}>
                         <p className="text-gray-800 leading-snug">{s.text}</p>
-                        <div className="flex items-center justify-between mt-1.5">
+                        <div className="flex items-center justify-between mt-2">
                           <button onClick={() => voteSticky(s.id)}
                             className="flex items-center gap-0.5 text-gray-500 hover:text-gray-700">
                             <ThumbsUp className="w-3 h-3" />
@@ -849,45 +1075,45 @@ Return each insight as a separate line starting with "- ".`,
 
               {/* ── Notes zone ── */}
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-mono text-white/30 uppercase tracking-[0.15em] flex items-center gap-1.5">
                     <MessageSquare className="w-3.5 h-3.5" /> Notes ({current.notes.length})
                   </h3>
                   <button onClick={() => setAddingNote(true)}
-                    className="text-xs text-teal-600 hover:text-teal-700 flex items-center gap-1">
+                    className="text-xs text-[#0FB5AD] hover:text-[#0FB5AD]/80 flex items-center gap-1">
                     <Plus className="w-3 h-3" /> Add
                   </button>
                 </div>
 
                 {addingNote && (
-                  <div className="bg-card border border-border rounded-lg p-3 mb-3">
+                  <div className="rounded-xl p-3 mb-3" style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <textarea
                       value={newNoteText}
                       onChange={(e) => setNewNoteText(e.target.value)}
                       placeholder="Add a note or observation..."
-                      className="w-full text-sm bg-transparent border-none outline-none resize-none
-                        placeholder:text-muted-foreground"
+                      className="w-full text-sm bg-transparent border-none outline-none resize-none text-white
+                        placeholder:text-white/30"
                       rows={2}
                       autoFocus
                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addNote(); } }}
                     />
                     <div className="flex justify-end gap-2 mt-2">
                       <button onClick={() => { setAddingNote(false); setNewNoteText(''); }}
-                        className="text-xs text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+                        className="text-xs text-white/40 hover:text-white"><X className="w-4 h-4" /></button>
                       <button onClick={addNote}
-                        className="text-xs bg-teal-600 text-white px-3 py-1 rounded hover:bg-teal-700">Add</button>
+                        className="text-xs bg-[#0FB5AD] text-white px-3 py-1 rounded-lg hover:bg-[#0a867f]">Add</button>
                     </div>
                   </div>
                 )}
 
                 {current.notes.length > 0 && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {current.notes.map(n => (
-                      <div key={n.id} className="bg-card border border-border rounded-lg px-3 py-2
-                        flex items-start justify-between group">
-                        <p className="text-sm text-foreground flex-1">{n.text}</p>
+                      <div key={n.id} className="rounded-lg px-4 py-2.5 flex items-start justify-between group"
+                        style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <p className="text-sm text-white/60 flex-1">{n.text}</p>
                         <button onClick={() => deleteNote(n.id)}
-                          className="text-muted-foreground hover:text-red-500 opacity-0
+                          className="text-white/20 hover:text-red-400 opacity-0
                             group-hover:opacity-100 transition-opacity ml-2 mt-0.5">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -900,13 +1126,13 @@ Return each insight as a separate line starting with "- ".`,
               {/* ── Uploads zone ── */}
               {current.uploads.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <h3 className="text-xs font-mono text-white/30 uppercase tracking-[0.15em] mb-2 flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5" /> Uploads ({current.uploads.length})
                   </h3>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {current.uploads.map(u => (
-                      <div key={u.id} className="flex items-center gap-2 text-xs text-muted-foreground
-                        bg-muted/50 rounded px-2 py-1.5">
+                      <div key={u.id} className="flex items-center gap-2 text-xs text-white/40
+                        rounded-lg px-3 py-2" style={{ background: '#111827' }}>
                         <FileText className="w-3 h-3" />
                         <span className="truncate">{u.name}</span>
                       </div>
@@ -916,37 +1142,36 @@ Return each insight as a separate line starting with "- ".`,
               )}
 
               {/* ── Action bar ── */}
-              <div className="border-t border-border pt-4 mt-4">
+              <div className="border-t border-white/[0.06] pt-4 mt-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* Record */}
                   {isRecording ? (
                     <button onClick={stopRecording}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                        bg-red-50 text-red-600 border border-red-200 hover:bg-red-100">
+                        bg-red-900/30 text-red-400 border border-red-800/30 hover:bg-red-900/50">
                       <Square className="w-3.5 h-3.5" />
                       Stop {Math.floor(recordTime / 60)}:{String(recordTime % 60).padStart(2, '0')}
                     </button>
                   ) : (
                     <button onClick={startRecording}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                        bg-card border border-border text-foreground hover:bg-muted transition-colors">
+                        text-white/50 hover:text-white/70 transition-colors"
+                      style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <Mic className="w-3.5 h-3.5" /> Record
                     </button>
                   )}
 
-                  {/* Upload */}
                   <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                    bg-card border border-border text-foreground hover:bg-muted transition-colors cursor-pointer">
+                    text-white/50 hover:text-white/70 transition-colors cursor-pointer"
+                    style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <Upload className="w-3.5 h-3.5" /> Upload
                     <input type="file" className="hidden" multiple
                       onChange={(e) => handleUpload(e.target.files)} />
                   </label>
 
-                  {/* AI Insights */}
                   <button onClick={generateInsights} disabled={aiLoading}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                      bg-purple-50 border border-purple-200 text-purple-700
-                      hover:bg-purple-100 disabled:opacity-50 transition-colors">
+                      text-[#0FB5AD] disabled:opacity-50 transition-colors"
+                    style={{ background: 'rgba(15,181,173,0.08)', border: '1px solid rgba(15,181,173,0.15)' }}>
                     {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                     {aiLoading ? 'Generating...' : 'AI Insights'}
                   </button>
@@ -960,7 +1185,8 @@ Return each insight as a separate line starting with "- ".`,
 
       {/* Copilot sidebar */}
       {copilotOpen && !isPresenterMode && (
-        <div className="w-[280px] border-l border-border flex flex-col shrink-0 bg-card absolute right-0 top-0 bottom-0 z-20">
+        <div className="w-[280px] border-l border-white/[0.06] flex flex-col shrink-0 absolute right-0 top-0 bottom-0 z-20"
+          style={{ background: '#0B1120' }}>
           <div className="px-3 py-2.5 bg-[#0B1120] text-white flex items-center gap-2 shrink-0">
             <Sparkles className="h-3 w-3 text-[#0FB5AD]" />
             <span className="text-[10px] font-semibold">Slide Copilot</span>
@@ -970,7 +1196,7 @@ Return each insight as a separate line starting with "- ".`,
           <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
             {chatMessages.length === 0 && (
               <div className="space-y-1.5 py-2">
-                <p className="text-[9px] text-muted-foreground text-center">Ask about this slide or add content</p>
+                <p className="text-[9px] text-white/30 text-center">Ask about this slide or add content</p>
                 {[
                   'Add stickies for key observations',
                   'Summarize this slide\'s discussion points',
@@ -978,14 +1204,14 @@ Return each insight as a separate line starting with "- ".`,
                   `Suggest action items for ${workshop.customerName}`,
                 ].map((q, i) => (
                   <button key={i} onClick={() => setChatInput(q)}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg bg-secondary/30 text-[9px] text-foreground hover:bg-secondary/50">{q}</button>
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg bg-white/[0.04] text-[9px] text-white/50 hover:bg-white/[0.08] hover:text-white/70">{q}</button>
                 ))}
               </div>
             )}
             {chatMessages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[90%] px-2.5 py-1.5 rounded-xl text-[10px] leading-relaxed ${
-                  m.role === 'user' ? 'bg-[#0FB5AD] text-white rounded-tr-sm' : 'bg-secondary/50 text-foreground rounded-tl-sm'
+                  m.role === 'user' ? 'bg-[#0FB5AD] text-white rounded-tr-sm' : 'bg-white/[0.06] text-white/70 rounded-tl-sm'
                 }`}>{m.text}</div>
               </div>
             ))}
@@ -998,43 +1224,44 @@ Return each insight as a separate line starting with "- ".`,
             )}
             <div ref={copilotEndRef} />
           </div>
-          <div className="px-2.5 py-2 border-t border-border shrink-0 flex gap-1">
+          <div className="px-2.5 py-2 border-t border-white/[0.06] shrink-0 flex gap-1">
             <input value={chatInput} onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleCopilotChat()}
               placeholder="Ask about this slide..."
-              className="flex-1 px-2.5 py-1 text-[9px] bg-secondary/30 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#0FB5AD]/40" />
+              className="flex-1 px-2.5 py-1 text-[9px] bg-white/[0.04] border border-white/[0.08] rounded text-white placeholder:text-white/25 focus:outline-none focus:border-[#0FB5AD]/40" />
             <button onClick={handleCopilotChat} disabled={!chatInput.trim() || chatThinking}
               className="p-1.5 rounded bg-[#0FB5AD] text-white disabled:opacity-40"><Send className="h-3 w-3" /></button>
           </div>
         </div>
       )}
 
-      {/* Bottom bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-card text-xs">
+      {/* Bottom bar — dark chrome */}
+      <div className="flex items-center justify-between px-4 py-2 border-t border-white/[0.06] text-xs"
+        style={{ background: '#0B1120' }}>
         <button onClick={() => goTo(activeSlide - 1)} disabled={activeSlide === 0}
-          className="flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
+          className="flex items-center gap-1 text-white/40 hover:text-white/70 disabled:opacity-20">
           <ChevronLeft className="w-4 h-4" /> Prev
         </button>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-muted-foreground">
+          <span className="font-mono text-white/30">
             {activeSlide + 1} / {slides.length}
           </span>
-          <div className="flex gap-0.5">
+          <div className="flex gap-1">
             {slides.map((_, i) => (
               <button key={i} onClick={() => goTo(i)}
-                className={`w-1.5 h-1.5 rounded-full transition-colors
-                  ${i === activeSlide ? 'bg-teal-500' : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'}`}
+                className={`w-2 h-2 rounded-full transition-all duration-300
+                  ${i === activeSlide ? 'bg-[#0FB5AD] scale-125 shadow-[0_0_6px_rgba(15,181,173,0.5)]' : 'bg-white/15 hover:bg-white/30'}`}
               />
             ))}
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setCopilotOpen(o => !o)}
-            className={`flex items-center gap-1 px-2 py-1 rounded-lg border transition-colors ${copilotOpen ? 'border-[#0FB5AD]/30 text-[#0FB5AD] bg-[#0FB5AD]/10' : 'border-border text-muted-foreground hover:text-foreground'}`}>
-            <MessageSquare className="h-3 w-3" /> Copilot
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-colors text-[10px] ${copilotOpen ? 'border-[#0FB5AD]/30 text-[#0FB5AD] bg-[#0FB5AD]/10' : 'border-white/10 text-white/40 hover:text-white/60'}`}>
+            <Sparkles className="h-3 w-3" /> Copilot
           </button>
           <button onClick={() => goTo(activeSlide + 1)} disabled={activeSlide === slides.length - 1}
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
+            className="flex items-center gap-1 text-white/40 hover:text-white/70 disabled:opacity-20">
             Next <ChevronRight className="w-4 h-4" />
           </button>
         </div>
