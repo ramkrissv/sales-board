@@ -391,9 +391,122 @@ Return each insight as a separate line starting with "- ".`,
     setAiLoading(false);
   };
 
-  // --- Empty state ---
-  // Upload PPTX → parse → create slides
+  // --- Upload state ---
   const [uploading, setUploading] = useState(false);
+  // Merge/Replace/Cancel confirmation
+  const [pendingUpload, setPendingUpload] = useState<WorkshopSlide[] | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const parseSlidesToWorkshopSlides = (parsed: any): WorkshopSlide[] => {
+    if (parsed.slides && parsed.slides.length > 0) {
+      return parsed.slides.map((s: any) => ({
+        id: uid(), number: s.slideNumber || 1,
+        title: s.title || `Slide ${s.slideNumber}`,
+        subtitle: s.subtitle || '',
+        content: s.content || '',
+        contentBlocks: s.contentBlocks || [],
+        cards: s.cards || [],
+        kpis: s.kpis || [],
+        misc: s.misc || [],
+        formats: s.formats || [],
+        shapes: s.shapes || [],
+        bgColor: s.bgColor || null,
+        slideLabel: s.slideLabel || '',
+        stickies: [], notes: [], canvasData: '', uploads: [],
+      }));
+    } else if (parsed.text) {
+      const chunks = parsed.text.split(/\n{2,}/).filter((c: string) => c.trim().length > 20);
+      return chunks.slice(0, 25).map((chunk: string, i: number) => ({
+        id: uid(), number: i + 1, title: chunk.split('\n')[0]?.slice(0, 60) || `Section ${i + 1}`,
+        subtitle: '', content: chunk, formats: [],
+        stickies: [], notes: [], canvasData: '', uploads: [],
+      }));
+    }
+    return [];
+  };
+
+  // AI enhancement: for slides where parser couldn't extract colors/layout,
+  // ask AI to classify content and suggest visual treatment
+  const aiEnhanceSlides = async (rawSlides: WorkshopSlide[]): Promise<WorkshopSlide[]> => {
+    try {
+      // Build a compact summary of slides that need enhancement
+      const slidesNeedingHelp = rawSlides.filter(s => {
+        // Slides with shapes but most have no fill = theme colors not extracted
+        const shapesNoFill = (s.shapes || []).filter(sh => !sh.fill && sh.text);
+        return shapesNoFill.length > 2 || (!(s.shapes?.length) && s.contentBlocks && s.contentBlocks.length > 2);
+      });
+
+      if (slidesNeedingHelp.length === 0) return rawSlides;
+
+      // Ask AI to classify content blocks and suggest cards/kpis/colors
+      const slideSummaries = slidesNeedingHelp.slice(0, 15).map(s => ({
+        num: s.number,
+        title: s.title,
+        subtitle: s.subtitle,
+        blocks: (s.contentBlocks || []).slice(0, 15),
+        shapeTexts: (s.shapes || []).filter(sh => sh.text).map(sh => ({
+          text: sh.text.slice(0, 100),
+          hasFill: !!sh.fill,
+          w: sh.width,
+          h: sh.height,
+        })).slice(0, 15),
+      }));
+
+      const result = await chatMutation.mutateAsync({
+        message: `Analyze these presentation slides and classify their content blocks for visual rendering.
+
+For each slide, return JSON with:
+- cards: [{heading, body}] — paired heading+description blocks (for card grid layout)
+- kpis: [{value, label}] — numeric stats with labels (for KPI band)
+- suggestedBg: hex color for slide background (dark theme preferred, e.g. #0B1120, #1a1a2e, #0f172a)
+- shapeFills: [{index, fill}] — suggested fill colors for shapes without fills (use brand colors: #0FB5AD teal, #0B1120 navy, #1e293b slate, #111827 dark gray, #D97A2B copper, #ffffff white)
+
+Slides: ${JSON.stringify(slideSummaries)}
+
+Return ONLY a JSON array with one object per slide, matching by slide number. Example:
+[{"num":1,"cards":[],"kpis":[{"value":"50+","label":"Use Cases"}],"suggestedBg":"#0B1120","shapeFills":[{"index":2,"fill":"#0FB5AD"}]}]`,
+        context: { page: 'workshop-slides' },
+      });
+
+      // Parse AI response
+      try {
+        const jsonMatch = result.response.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const enhancements = JSON.parse(jsonMatch[0]);
+          const enhMap = new Map(enhancements.map((e: any) => [e.num, e]));
+
+          return rawSlides.map(s => {
+            const enh = enhMap.get(s.number) as any;
+            if (!enh) return s;
+
+            // Merge AI-suggested cards/kpis if parser didn't find them
+            const mergedCards = (s.cards?.length || 0) > 0 ? s.cards : (enh.cards || []);
+            const mergedKpis = (s.kpis?.length || 0) > 0 ? s.kpis : (enh.kpis || []);
+
+            // Apply suggested fill colors to shapes without fills
+            let mergedShapes = s.shapes;
+            if (enh.shapeFills && s.shapes) {
+              mergedShapes = s.shapes.map((sh, idx) => {
+                if (sh.fill) return sh;
+                const suggested = enh.shapeFills.find((sf: any) => sf.index === idx);
+                return suggested ? { ...sh, fill: suggested.fill } : sh;
+              });
+            }
+
+            return {
+              ...s,
+              cards: mergedCards,
+              kpis: mergedKpis,
+              bgColor: s.bgColor || enh.suggestedBg || null,
+              shapes: mergedShapes,
+            };
+          });
+        }
+      } catch { /* AI parse failed — use raw slides */ }
+    } catch { /* AI call failed — use raw slides */ }
+    return rawSlides;
+  };
+
   const handlePptxUpload = async (file: File) => {
     setUploading(true);
     try {
@@ -404,41 +517,52 @@ Return each insight as a separate line starting with "- ".`,
       const res = await fetch('/api/parse-doc', { method: 'POST', body: formData });
       if (res.ok) {
         const parsed = await res.json();
-        if (parsed.slides && parsed.slides.length > 0) {
-          // PPTX with slide-by-slide parsing — ALL slides
-          const newSlides: WorkshopSlide[] = parsed.slides.map((s: any) => ({
-            id: uid(), number: s.slideNumber || 1,
-            title: s.title || `Slide ${s.slideNumber}`,
-            subtitle: s.subtitle || '',
-            content: s.content || '',
-            contentBlocks: s.contentBlocks || [],
-            cards: s.cards || [],
-            kpis: s.kpis || [],
-            misc: s.misc || [],
-            formats: s.formats || [],
-            shapes: s.shapes || [],
-            bgColor: s.bgColor || null,
-            slideLabel: s.slideLabel || '',
-            stickies: [], notes: [], canvasData: '', uploads: [],
-          }));
-          setSlides(newSlides);
-          slidesRef.current = newSlides;
-          setTimeout(() => persist(), 100);
-        } else if (parsed.text) {
-          // Non-PPTX: split text into sections as slides
-          const chunks = parsed.text.split(/\n{2,}/).filter((c: string) => c.trim().length > 20);
-          const newSlides: WorkshopSlide[] = chunks.slice(0, 25).map((chunk: string, i: number) => ({
-            id: uid(), number: i + 1, title: chunk.split('\n')[0]?.slice(0, 60) || `Section ${i + 1}`,
-            subtitle: '', content: chunk, formats: [],
-            stickies: [], notes: [], canvasData: '', uploads: [],
-          }));
-          setSlides(newSlides);
-          slidesRef.current = newSlides;
-          setTimeout(() => persist(), 100);
+        let newSlides = parseSlidesToWorkshopSlides(parsed);
+
+        // AI enhancement pass — fill in missing colors/layout
+        if (newSlides.length > 0) {
+          try {
+            newSlides = await aiEnhanceSlides(newSlides);
+          } catch { /* continue without AI enhancement */ }
+        }
+
+        if (newSlides.length > 0) {
+          if (slides.length > 0) {
+            setPendingUpload(newSlides);
+          } else {
+            setSlides(newSlides);
+            slidesRef.current = newSlides;
+            setTimeout(() => persist(), 100);
+          }
         }
       }
     } catch (e) { console.error('Slide upload error:', e); }
     setUploading(false);
+  };
+
+  const handleUploadReplace = () => {
+    if (!pendingUpload) return;
+    setSlides(pendingUpload);
+    slidesRef.current = pendingUpload;
+    setActiveSlide(0);
+    setPendingUpload(null);
+    setTimeout(() => persist(), 100);
+  };
+
+  const handleUploadMerge = () => {
+    if (!pendingUpload) return;
+    // Append new slides after existing, renumber
+    const merged = [...slides, ...pendingUpload.map((s, i) => ({
+      ...s, number: slides.length + i + 1,
+    }))];
+    setSlides(merged);
+    slidesRef.current = merged;
+    setPendingUpload(null);
+    setTimeout(() => persist(), 100);
+  };
+
+  const handleUploadCancel = () => {
+    setPendingUpload(null);
   };
 
   // Auto-populate from Board sections if no slides but sections exist
@@ -669,6 +793,12 @@ Return each insight as a separate line starting with "- ".`,
               <Check className="w-3 h-3 text-[#0FB5AD]" /> Saved
             </span>
           )}
+          {/* Re-upload */}
+          <label className="p-1.5 rounded hover:bg-white/10 transition-colors cursor-pointer" title="Upload PPTX">
+            {uploading ? <Loader2 className="w-4 h-4 text-[#0FB5AD] animate-spin" /> : <Upload className="w-4 h-4 text-white/50" />}
+            <input ref={fileInputRef} type="file" className="hidden" accept=".pptx,.ppt,.pdf,.docx"
+              onChange={e => { const f = e.target.files?.[0]; if (f) handlePptxUpload(f); e.target.value = ''; }} />
+          </label>
           <button onClick={() => setIsPresenterMode(true)}
             className="p-1.5 rounded hover:bg-white/10 transition-colors" title="Presenter mode">
             <Maximize2 className="w-4 h-4 text-white/50" />
@@ -679,6 +809,52 @@ Return each insight as a separate line starting with "- ".`,
           </button>
         </div>
       </div>
+
+      {/* ═══ Merge / Replace / Cancel Popup ═══ */}
+      {pendingUpload && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl" style={{
+            background: 'linear-gradient(135deg, #111827, #0f1629)',
+            border: '1px solid rgba(15,181,173,0.2)',
+          }}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: 'rgba(15,181,173,0.15)' }}>
+                <Layers className="w-5 h-5 text-[#0FB5AD]" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">Slides Already Exist</h3>
+                <p className="text-xs text-white/40">
+                  {slides.length} existing &middot; {pendingUpload.length} new slides parsed
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-white/50 mb-5">
+              You already have {slides.length} slide{slides.length !== 1 ? 's' : ''}. How would you like to handle the {pendingUpload.length} new slide{pendingUpload.length !== 1 ? 's' : ''}?
+            </p>
+            <div className="flex gap-2">
+              <button onClick={handleUploadMerge}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium
+                  transition-colors text-white"
+                style={{ background: 'rgba(15,181,173,0.15)', border: '1px solid rgba(15,181,173,0.3)' }}>
+                <Plus className="w-4 h-4" /> Merge
+              </button>
+              <button onClick={handleUploadReplace}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium
+                  transition-colors text-white"
+                style={{ background: 'rgba(217,122,43,0.15)', border: '1px solid rgba(217,122,43,0.3)' }}>
+                <Layers className="w-4 h-4" /> Replace
+              </button>
+              <button onClick={handleUploadCancel}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium
+                  text-white/50 hover:text-white/80 transition-colors"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <X className="w-4 h-4" /> Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main area */}
       <div className="flex flex-1 overflow-hidden">
