@@ -1042,33 +1042,32 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
               /* ═══ FALLBACK: structured card/KPI layout for slides without shape data ═══ */
               <>
                 {/* Header band */}
-                <div className="relative overflow-hidden" style={{
-                  background: 'linear-gradient(135deg, #0B1120 0%, #0f1629 40%, #0B1120 100%)',
+                <div className="relative overflow-hidden bg-white" style={{
                   minHeight: '100px',
                 }}>
                   <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{
-                    background: 'linear-gradient(90deg, transparent, #0FB5AD, transparent)', opacity: 0.4,
+                    background: 'linear-gradient(90deg, transparent, #0FB5AD, transparent)', opacity: 0.3,
                   }} />
                   <div className="relative z-10 max-w-5xl mx-auto px-8 py-5 flex items-start justify-between">
                     <div className="flex-1">
                       <div className="inline-flex items-center gap-2 mb-2">
                         <div className="flex items-center justify-center w-7 h-7 rounded-lg text-[10px] font-bold font-mono"
-                          style={{ background: 'rgba(15,181,173,0.15)', color: '#0FB5AD', border: '1px solid rgba(15,181,173,0.25)' }}>
+                          style={{ background: 'rgba(139,92,246,0.1)', color: '#7C3AED', border: '1px solid rgba(139,92,246,0.2)' }}>
                           {current.slideLabel || String(current.number).padStart(2, '0')}
                         </div>
-                        <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-white/30">of {slides.length}</div>
+                        <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-gray-400">of {slides.length}</div>
                       </div>
-                      <h2 className="text-2xl font-bold text-white leading-tight" contentEditable suppressContentEditableWarning
+                      <h2 className="text-2xl font-bold text-gray-900 leading-tight" contentEditable suppressContentEditableWarning
                         onBlur={e => updateSlide(activeSlide, { title: e.currentTarget.textContent || '' })}>{current.title}</h2>
                       {current.subtitle && (
-                        <p className="text-sm text-white/45 mt-1.5" contentEditable suppressContentEditableWarning
+                        <p className="text-sm text-gray-500 mt-1.5" contentEditable suppressContentEditableWarning
                           onBlur={e => updateSlide(activeSlide, { subtitle: e.currentTarget.textContent || '' })}>{current.subtitle}</p>
                       )}
                     </div>
                     {current.formats.length > 0 && (
                       <div className="flex flex-col gap-1.5 shrink-0 ml-6">
                         {current.formats.map(f => {
-                          const badge = FORMAT_BADGES[f] || { bg: 'bg-gray-700 text-gray-300', text: f };
+                          const badge = FORMAT_BADGES[f] || { bg: 'bg-gray-100 text-gray-600', text: f };
                           return <span key={f} className={`text-[9px] font-mono px-2.5 py-1 rounded-md ${badge.bg}`}>{badge.text}</span>;
                         })}
                       </div>
@@ -1091,16 +1090,14 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
                         <div className="space-y-5">
                           {/* KPIs */}
                           {kpis.length > 0 && (
-                            <div className="rounded-2xl p-5 relative overflow-hidden" style={{
-                              background: 'linear-gradient(135deg, #0B1120, #101b30)', border: '1px solid rgba(15,181,173,0.12)',
-                            }}>
+                            <div className="rounded-2xl p-5 relative overflow-hidden bg-gray-50 border border-gray-100">
                               <div className={`grid ${kpis.length <= 3 ? `grid-cols-${kpis.length}` : 'grid-cols-3 md:grid-cols-5'}`}>
                                 {kpis.map((kpi, ki) => (
                                   <div key={ki} className="text-center py-2 relative">
-                                    {ki > 0 && <div className="absolute left-0 top-2 bottom-2 w-px bg-white/[0.06]" />}
+                                    {ki > 0 && <div className="absolute left-0 top-2 bottom-2 w-px bg-gray-200" />}
                                     <div className="text-3xl font-bold" style={{ color: '#0FB5AD' }}
                                       contentEditable suppressContentEditableWarning>{kpi.value}</div>
-                                    <div className="text-[10px] text-white/40 mt-1.5 uppercase tracking-wider"
+                                    <div className="text-[10px] text-gray-500 mt-1.5 uppercase tracking-wider"
                                       contentEditable suppressContentEditableWarning>{kpi.label}</div>
                                   </div>
                                 ))}
@@ -1111,31 +1108,29 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
                           {cards.length >= 2 && (
                             <div className={`grid gap-4 ${cards.length === 2 ? 'grid-cols-2' : cards.length === 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-3'}`}>
                               {cards.map((c, ci) => (
-                                <div key={ci} className="rounded-xl overflow-hidden hover:translate-y-[-2px] transition-all"
-                                  style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                <div key={ci} className="rounded-xl overflow-hidden hover:translate-y-[-2px] transition-all bg-white border border-gray-200">
                                   <div className="h-[3px]" style={{ background: CARD_ACCENTS[ci % 6] }} />
-                                  {c.heading && <div className="px-4 py-3 border-b border-white/[0.05] text-[13px] font-semibold text-white"
+                                  {c.heading && <div className="px-4 py-3 border-b border-gray-200 text-[13px] font-semibold text-gray-900"
                                     contentEditable suppressContentEditableWarning>{c.heading}</div>}
-                                  <div className="px-4 py-3 text-[11px] text-white/55 leading-[1.7]"
+                                  <div className="px-4 py-3 text-[11px] text-gray-600 leading-[1.7]"
                                     contentEditable suppressContentEditableWarning>{c.body}</div>
                                 </div>
                               ))}
                             </div>
                           )}
                           {cards.length === 1 && (
-                            <div className="rounded-xl overflow-hidden" style={{ background: '#111827', border: '1px solid rgba(15,181,173,0.15)' }}>
+                            <div className="rounded-xl overflow-hidden bg-white border border-gray-200">
                               <div className="h-[3px]" style={{ background: '#0FB5AD' }} />
-                              {cards[0].heading && <div className="px-5 py-3 border-b border-white/[0.05] text-sm font-semibold text-white"
+                              {cards[0].heading && <div className="px-5 py-3 border-b border-gray-200 text-sm font-semibold text-gray-900"
                                 contentEditable suppressContentEditableWarning>{cards[0].heading}</div>}
-                              <div className="px-5 py-4 text-xs text-white/55 leading-[1.8]"
+                              <div className="px-5 py-4 text-xs text-gray-600 leading-[1.8]"
                                 contentEditable suppressContentEditableWarning>{cards[0].body}</div>
                             </div>
                           )}
                           {/* Misc */}
                           {miscItems.length > 0 && (
                             <div className="flex flex-wrap gap-2">{miscItems.map((m, mi) => (
-                              <div key={mi} className="px-4 py-2 rounded-lg text-[11px] text-white/70"
-                                style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}
+                              <div key={mi} className="px-4 py-2 rounded-lg text-[11px] bg-gray-50 border border-gray-200 text-gray-700"
                                 contentEditable suppressContentEditableWarning>{m}</div>
                             ))}</div>
                           )}
@@ -1146,14 +1141,14 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
                               if (t.length < 60 && !t.includes('\n') && !t.endsWith('.')) return (
                                 <div key={bi} className="flex items-center gap-3 pt-1">
                                   <div className="w-2 h-2 rounded-full" style={{ background: CARD_ACCENTS[bi % 6] }} />
-                                  <h3 className="text-[13px] font-semibold text-white/80" contentEditable suppressContentEditableWarning>{t}</h3>
-                                  <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.06), transparent)' }} />
+                                  <h3 className="text-[13px] font-semibold text-gray-800" contentEditable suppressContentEditableWarning>{t}</h3>
+                                  <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.06), transparent)' }} />
                                 </div>
                               );
                               return (
-                                <div key={bi} className="rounded-xl overflow-hidden flex" style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div key={bi} className="rounded-xl overflow-hidden flex bg-white border border-gray-200">
                                   <div className="w-[3px] shrink-0" style={{ background: CARD_ACCENTS[bi % 6] }} />
-                                  <div className="px-5 py-4 text-[12px] text-white/60 leading-[1.8] whitespace-pre-wrap"
+                                  <div className="px-5 py-4 text-[12px] text-gray-700 leading-[1.8] whitespace-pre-wrap"
                                     contentEditable suppressContentEditableWarning>{t}</div>
                                 </div>
                               );
@@ -1161,8 +1156,8 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
                           )}
                           {/* Empty */}
                           {cards.length === 0 && kpis.length === 0 && blocks.length === 0 && (
-                            <div className="rounded-xl p-8 text-center" style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.05)' }}>
-                              <div className="text-sm text-white/50 whitespace-pre-wrap" contentEditable suppressContentEditableWarning
+                            <div className="rounded-xl p-8 text-center bg-gray-50 border border-gray-200">
+                              <div className="text-sm text-gray-600 whitespace-pre-wrap" contentEditable suppressContentEditableWarning
                                 ref={contentEditRef} onBlur={handleContentBlur} onFocus={() => setEditingText(current.id)}>{current.content || 'Click to add content'}</div>
                             </div>
                           )}
@@ -1177,22 +1172,21 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
             {/* Interaction zones below content */}
             <div className="px-8 pb-6">
               <div className="max-w-5xl mx-auto">
-                <div className="border-t border-white/[0.06] my-5" />
+                <div className="border-t border-gray-200 my-5" />
 
               {/* ── SCORE zone (shown when SCORE format) ── */}
               {current.formats.includes('SCORE') && (
                 <div className="mb-6">
-                  <h3 className="text-xs font-mono text-white/30 uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5">
+                  <h3 className="text-xs font-mono text-gray-500 uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5">
                     <Target className="w-3.5 h-3.5" /> Maturity Score
                   </h3>
                   <div className="flex gap-2">
                     {MATURITY_LABELS.map((label, val) => (
                       <button key={val}
-                        className="flex-1 rounded-lg px-2 py-2.5 text-center transition-all hover:scale-105"
-                        style={{ background: '#111827', border: `1px solid ${MATURITY_COLORS[val]}30` }}
+                        className="flex-1 rounded-lg px-2 py-2.5 text-center transition-all hover:scale-105 bg-gray-50 border border-gray-200"
                       >
                         <div className="text-lg font-bold" style={{ color: MATURITY_COLORS[val] }}>{val}</div>
-                        <div className="text-[9px] text-white/40">{label}</div>
+                        <div className="text-[9px] text-gray-500">{label}</div>
                       </button>
                     ))}
                   </div>
@@ -1202,12 +1196,11 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
               {/* ── WHITEBOARD zone ── */}
               {current.formats.includes('WHITEBOARD') && (
                 <div className="mb-6">
-                  <h3 className="text-xs font-mono text-white/30 uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5">
+                  <h3 className="text-xs font-mono text-gray-500 uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5">
                     <PenTool className="w-3.5 h-3.5" /> Sketch Area
                   </h3>
-                  <div className="border border-dashed border-white/[0.08] rounded-xl h-[200px]
-                    flex items-center justify-center text-white/20 text-sm"
-                    style={{ background: '#0d1426' }}>
+                  <div className="border border-dashed border-gray-300 rounded-xl h-[200px]
+                    flex items-center justify-center text-gray-400 text-sm bg-gray-50">
                     <PenTool className="w-5 h-5 mr-2 opacity-40" />
                     Canvas sketching available in Whiteboard tab
                   </div>
@@ -1217,23 +1210,23 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
               {/* ── Stickies zone ── */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-mono text-white/30 uppercase tracking-[0.15em] flex items-center gap-1.5">
+                  <h3 className="text-xs font-mono text-gray-500 uppercase tracking-[0.15em] flex items-center gap-1.5">
                     <StickyNote className="w-3.5 h-3.5" /> Stickies ({current.stickies.length})
                   </h3>
                   <button onClick={() => setAddingSticky(true)}
-                    className="text-xs text-[#0FB5AD] hover:text-[#0FB5AD]/80 flex items-center gap-1">
+                    className="text-xs text-teal-600 hover:text-teal-700 flex items-center gap-1">
                     <Plus className="w-3 h-3" /> Add
                   </button>
                 </div>
 
                 {addingSticky && (
-                  <div className="rounded-xl p-3 mb-3" style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="rounded-xl p-3 mb-3 bg-white border border-gray-200">
                     <textarea
                       value={newStickyText}
                       onChange={(e) => setNewStickyText(e.target.value)}
                       placeholder="Type your sticky note..."
-                      className="w-full text-sm bg-transparent border-none outline-none resize-none text-white
-                        placeholder:text-white/30"
+                      className="w-full text-sm bg-transparent border-none outline-none resize-none text-gray-800
+                        placeholder:text-gray-400"
                       rows={2}
                       autoFocus
                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addSticky(); } }}
@@ -1250,7 +1243,7 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => { setAddingSticky(false); setNewStickyText(''); }}
-                          className="text-xs text-white/40 hover:text-white"><X className="w-4 h-4" /></button>
+                          className="text-xs text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
                         <button onClick={addSticky}
                           className="text-xs bg-[#0FB5AD] text-white px-3 py-1 rounded-lg hover:bg-[#0a867f]">Add</button>
                       </div>
@@ -1284,30 +1277,30 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
               {/* ── Notes zone ── */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-mono text-white/30 uppercase tracking-[0.15em] flex items-center gap-1.5">
+                  <h3 className="text-xs font-mono text-gray-500 uppercase tracking-[0.15em] flex items-center gap-1.5">
                     <MessageSquare className="w-3.5 h-3.5" /> Notes ({current.notes.length})
                   </h3>
                   <button onClick={() => setAddingNote(true)}
-                    className="text-xs text-[#0FB5AD] hover:text-[#0FB5AD]/80 flex items-center gap-1">
+                    className="text-xs text-teal-600 hover:text-teal-700 flex items-center gap-1">
                     <Plus className="w-3 h-3" /> Add
                   </button>
                 </div>
 
                 {addingNote && (
-                  <div className="rounded-xl p-3 mb-3" style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="rounded-xl p-3 mb-3 bg-white border border-gray-200">
                     <textarea
                       value={newNoteText}
                       onChange={(e) => setNewNoteText(e.target.value)}
                       placeholder="Add a note or observation..."
-                      className="w-full text-sm bg-transparent border-none outline-none resize-none text-white
-                        placeholder:text-white/30"
+                      className="w-full text-sm bg-transparent border-none outline-none resize-none text-gray-800
+                        placeholder:text-gray-400"
                       rows={2}
                       autoFocus
                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addNote(); } }}
                     />
                     <div className="flex justify-end gap-2 mt-2">
                       <button onClick={() => { setAddingNote(false); setNewNoteText(''); }}
-                        className="text-xs text-white/40 hover:text-white"><X className="w-4 h-4" /></button>
+                        className="text-xs text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
                       <button onClick={addNote}
                         className="text-xs bg-[#0FB5AD] text-white px-3 py-1 rounded-lg hover:bg-[#0a867f]">Add</button>
                     </div>
@@ -1317,11 +1310,10 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
                 {current.notes.length > 0 && (
                   <div className="space-y-2">
                     {current.notes.map(n => (
-                      <div key={n.id} className="rounded-lg px-4 py-2.5 flex items-start justify-between group"
-                        style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <p className="text-sm text-white/60 flex-1">{n.text}</p>
+                      <div key={n.id} className="rounded-lg px-4 py-2.5 flex items-start justify-between group bg-white border border-gray-200">
+                        <p className="text-sm text-gray-700 flex-1">{n.text}</p>
                         <button onClick={() => deleteNote(n.id)}
-                          className="text-white/20 hover:text-red-400 opacity-0
+                          className="text-gray-300 hover:text-red-400 opacity-0
                             group-hover:opacity-100 transition-opacity ml-2 mt-0.5">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1334,13 +1326,13 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
               {/* ── Uploads zone ── */}
               {current.uploads.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-xs font-mono text-white/30 uppercase tracking-[0.15em] mb-2 flex items-center gap-1.5">
+                  <h3 className="text-xs font-mono text-gray-500 uppercase tracking-[0.15em] mb-2 flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5" /> Uploads ({current.uploads.length})
                   </h3>
                   <div className="space-y-1.5">
                     {current.uploads.map(u => (
-                      <div key={u.id} className="flex items-center gap-2 text-xs text-white/40
-                        rounded-lg px-3 py-2" style={{ background: '#111827' }}>
+                      <div key={u.id} className="flex items-center gap-2 text-xs text-gray-500
+                        rounded-lg px-3 py-2 bg-gray-50">
                         <FileText className="w-3 h-3" />
                         <span className="truncate">{u.name}</span>
                       </div>
@@ -1350,7 +1342,7 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
               )}
 
               {/* ── Action bar ── */}
-              <div className="border-t border-white/[0.06] pt-4 mt-4">
+              <div className="border-t border-gray-200 pt-4 mt-4">
                 <div className="flex flex-wrap items-center gap-2">
                   {isRecording ? (
                     <button onClick={stopRecording}
@@ -1362,15 +1354,13 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
                   ) : (
                     <button onClick={startRecording}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                        text-white/50 hover:text-white/70 transition-colors"
-                      style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        bg-white border border-gray-200 text-gray-600 hover:text-gray-800 transition-colors">
                       <Mic className="w-3.5 h-3.5" /> Record
                     </button>
                   )}
 
                   <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                    text-white/50 hover:text-white/70 transition-colors cursor-pointer"
-                    style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    bg-white border border-gray-200 text-gray-600 hover:text-gray-800 transition-colors cursor-pointer">
                     <Upload className="w-3.5 h-3.5" /> Upload
                     <input type="file" className="hidden" multiple
                       onChange={(e) => handleUpload(e.target.files)} />
@@ -1378,8 +1368,7 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
 
                   <button onClick={generateInsights} disabled={aiLoading}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                      text-[#0FB5AD] disabled:opacity-50 transition-colors"
-                    style={{ background: 'rgba(15,181,173,0.08)', border: '1px solid rgba(15,181,173,0.15)' }}>
+                      bg-teal-50 border border-teal-200 text-teal-700 disabled:opacity-50 transition-colors">
                     {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                     {aiLoading ? 'Generating...' : 'AI Insights'}
                   </button>
