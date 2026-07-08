@@ -32,10 +32,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Python for PPTX/DOCX/PDF parsing
-RUN apk add --no-cache python3 py3-pip poppler-utils && \
-    pip3 install --break-system-packages python-pptx python-docx 2>/dev/null || \
-    pip3 install python-pptx python-docx 2>/dev/null || true
+# Python for PPTX/DOCX/PDF parsing + LibreOffice for slide-to-image conversion
+RUN apk add --no-cache python3 py3-pip poppler-utils \
+    libreoffice-impress libreoffice-common font-noto font-noto-cjk && \
+    pip3 install --break-system-packages python-pptx python-docx Pillow 2>/dev/null || \
+    pip3 install python-pptx python-docx Pillow 2>/dev/null || true
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

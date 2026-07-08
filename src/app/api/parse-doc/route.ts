@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { execSync } from 'child_process';
-import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, unlinkSync, existsSync, mkdirSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 const TMP_DIR = '/tmp/salespilot-parse';
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     writeFileSync(tmpPath, buffer);
 
     let extractedText = '';
-    let slides: { slideNumber: number; title: string; content: string }[] = [];
+    let slides: { slideNumber: number; title: string; content: string; imageBase64?: string; [key: string]: any }[] = [];
 
     try {
       if (ext === 'pptx' || ext === 'ppt') {
@@ -275,6 +275,57 @@ print(json.dumps(slides))
         });
         slides = JSON.parse(result.trim());
         extractedText = slides.map(s => `[Slide ${s.slideNumber}: ${s.title}]\n${s.content}`).join('\n\n');
+
+        // ── Generate slide images via LibreOffice headless ──
+        // Convert PPTX → PDF → PNG per slide for pixel-perfect rendering
+        try {
+          const imgDir = join(TMP_DIR, `imgs-${Date.now()}`);
+          mkdirSync(imgDir, { recursive: true });
+
+          // Step 1: PPTX → PDF via LibreOffice
+          execSync(
+            `libreoffice --headless --convert-to pdf --outdir "${imgDir}" "${tmpPath}"`,
+            { timeout: 120000, encoding: 'utf-8' }
+          );
+
+          // Find the generated PDF
+          const pdfFiles = readdirSync(imgDir).filter(f => f.endsWith('.pdf'));
+          if (pdfFiles.length > 0) {
+            const pdfPath = join(imgDir, pdfFiles[0]);
+
+            // Step 2: PDF → PNG per page via pdftoppm (from poppler-utils)
+            execSync(
+              `pdftoppm -png -r 192 "${pdfPath}" "${join(imgDir, 'slide')}"`,
+              { timeout: 60000, encoding: 'utf-8' }
+            );
+
+            // Read generated PNGs and attach as base64 to slide data
+            const pngFiles = readdirSync(imgDir)
+              .filter(f => f.startsWith('slide') && f.endsWith('.png'))
+              .sort();
+
+            for (let pi = 0; pi < pngFiles.length && pi < slides.length; pi++) {
+              const pngPath = join(imgDir, pngFiles[pi]);
+              const imgBuffer = readFileSync(pngPath);
+              const base64 = imgBuffer.toString('base64');
+              slides[pi].imageBase64 = `data:image/png;base64,${base64}`;
+              // Cleanup individual PNG
+              try { unlinkSync(pngPath); } catch {}
+            }
+
+            // Cleanup PDF
+            try { unlinkSync(pdfPath); } catch {}
+          }
+
+          // Cleanup img dir
+          try {
+            readdirSync(imgDir).forEach(f => { try { unlinkSync(join(imgDir, f)); } catch {} });
+            execSync(`rmdir "${imgDir}" 2>/dev/null || true`);
+          } catch {}
+        } catch (imgErr) {
+          console.error('Slide image generation failed (non-fatal):', imgErr);
+          // Continue without images — fallback to shape/text rendering
+        }
 
       } else if (ext === 'docx' || ext === 'doc') {
         // Parse DOCX — try python-docx, fallback to strings

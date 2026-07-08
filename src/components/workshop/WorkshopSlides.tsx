@@ -79,6 +79,7 @@ interface WorkshopSlide {
   formats: string[];
   shapes?: SlideShape[];
   bgColor?: string | null;
+  imageBase64?: string;  // Full slide image from LibreOffice rendering
   stickies: SlideSticky[];
   notes: SlideNote[];
   canvasData: string;
@@ -411,6 +412,7 @@ Return each insight as a separate line starting with "- ".`,
         formats: s.formats || [],
         shapes: s.shapes || [],
         bgColor: s.bgColor || null,
+        imageBase64: s.imageBase64 || undefined,
         slideLabel: s.slideLabel || '',
         stickies: [], notes: [], canvasData: '', uploads: [],
       }));
@@ -655,13 +657,20 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
 
         {/* Content — full screen PPT canvas */}
         <div className="flex-1 overflow-hidden flex items-center justify-center p-6">
-          {current.shapes && current.shapes.length > 0 ? (
+          {current.imageBase64 ? (
+            /* Pixel-perfect slide image — full screen */
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img src={current.imageBase64} alt={current.title}
+                className="max-w-full max-h-full object-contain rounded"
+                draggable={false} />
+            </div>
+          ) : current.shapes && current.shapes.length > 0 ? (
             /* Shape-based PPT canvas — full screen */
             <div className="relative w-full h-full" style={{
               maxWidth: '100%',
               maxHeight: '100%',
               aspectRatio: '16 / 9',
-              background: current.bgColor || '#0B1120',
+              background: current.bgColor || '#ffffff',
               borderRadius: '4px',
               overflow: 'hidden',
             }}>
@@ -879,27 +888,27 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
                   <div className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[#0FB5AD]" />
                 )}
                 {/* Mini slide preview */}
-                <div className={`rounded border mb-1.5 h-[36px] flex items-center justify-center overflow-hidden
-                  ${isActive ? 'border-[#0FB5AD]/30' : 'border-white/[0.08]'}`}
-                  style={{ background: '#0B1120' }}>
-                  {hasKpis && (
+                <div className={`rounded border mb-1.5 h-[42px] flex items-center justify-center overflow-hidden
+                  ${isActive ? 'border-[#0FB5AD]/40' : 'border-white/[0.08]'}`}
+                  style={{ background: slide.imageBase64 ? 'transparent' : '#f5f5f5' }}>
+                  {slide.imageBase64 ? (
+                    <img src={slide.imageBase64} alt="" className="w-full h-full object-cover" draggable={false} />
+                  ) : hasKpis ? (
                     <div className="flex gap-1">
                       {(slide.kpis || []).slice(0, 3).map((_, ki) => (
                         <div key={ki} className="w-1.5 h-3 rounded-sm bg-[#0FB5AD]/40" />
                       ))}
                     </div>
-                  )}
-                  {hasCards && !hasKpis && (
+                  ) : hasCards && !hasKpis ? (
                     <div className="grid grid-cols-2 gap-0.5 p-1">
                       {(slide.cards || []).slice(0, 4).map((_, ci) => (
-                        <div key={ci} className="w-3 h-2 rounded-[1px] bg-white/10" />
+                        <div key={ci} className="w-3 h-2 rounded-[1px] bg-gray-300" />
                       ))}
                     </div>
-                  )}
-                  {!hasKpis && !hasCards && (
+                  ) : (
                     <div className="space-y-0.5 p-1.5">
-                      <div className="h-[2px] w-8 bg-white/15 rounded-full" />
-                      <div className="h-[2px] w-6 bg-white/10 rounded-full" />
+                      <div className="h-[2px] w-8 bg-gray-300 rounded-full" />
+                      <div className="h-[2px] w-6 bg-gray-200 rounded-full" />
                     </div>
                   )}
                 </div>
@@ -916,89 +925,112 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
 
         {/* Slide content — PPT Canvas Renderer */}
         {current && (
-          <div className="flex-1 overflow-y-auto" style={{ background: '#0a0f1e' }}>
-            {/* ═══ PPT CANVAS — shapes positioned like actual slide ═══ */}
-            {current.shapes && current.shapes.length > 0 ? (
+          <div className="flex-1 overflow-y-auto" style={{ background: '#f0f0f0' }}>
+            {/* ═══ SLIDE IMAGE — pixel-perfect PPT rendering ═══ */}
+            {current.imageBase64 ? (
               <div className="flex justify-center py-4 px-4">
                 <div className="relative w-full" style={{
-                  maxWidth: '1100px',
+                  maxWidth: '1200px',
                   aspectRatio: '16 / 9',
-                  background: current.bgColor || '#0B1120',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   overflow: 'hidden',
-                  boxShadow: '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)',
                 }}>
-                  {/* Render each shape at its PPT position */}
+                  {/* The actual slide image — pixel-perfect PPT rendering */}
+                  <img
+                    src={current.imageBase64}
+                    alt={`Slide ${current.number}: ${current.title}`}
+                    className="w-full h-full object-contain"
+                    draggable={false}
+                  />
+                  {/* Interactive overlay — stickies added during the session appear on top */}
+                  {current.stickies.length > 0 && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      {/* Stickies rendered as floating post-its on the slide */}
+                      {current.stickies.map((s, si) => {
+                        // Distribute stickies across the slide area
+                        const row = Math.floor(si / 3);
+                        const col = si % 3;
+                        const left = 10 + col * 30 + (Math.random() * 5);
+                        const top = 30 + row * 25 + (Math.random() * 5);
+                        const rotation = -5 + (si * 3) % 10;
+                        return (
+                          <div key={s.id} className="absolute pointer-events-auto cursor-pointer group"
+                            style={{
+                              left: `${left}%`, top: `${top}%`,
+                              width: '120px',
+                              transform: `rotate(${rotation}deg)`,
+                              zIndex: 10 + si,
+                            }}>
+                            <div className="rounded-sm p-2.5 text-[10px] shadow-lg leading-snug"
+                              style={{ backgroundColor: s.color, boxShadow: '2px 3px 8px rgba(0,0,0,0.15)' }}>
+                              <p className="text-gray-800">{s.text}</p>
+                              <div className="flex items-center justify-between mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => voteSticky(s.id)} className="text-gray-500 hover:text-gray-700">
+                                  <ThumbsUp className="w-2.5 h-2.5" />
+                                </button>
+                                <button onClick={() => deleteSticky(s.id)} className="text-gray-400 hover:text-red-500">
+                                  <Trash2 className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : current.shapes && current.shapes.length > 0 ? (
+              /* ═══ SHAPE CANVAS fallback — when no image available ═══ */
+              <div className="flex justify-center py-4 px-4">
+                <div className="relative w-full" style={{
+                  maxWidth: '1200px',
+                  aspectRatio: '16 / 9',
+                  background: current.bgColor || '#ffffff',
+                  borderRadius: '6px',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)',
+                }}>
                   {current.shapes.map((shape, si) => {
-                    // Determine font size — use first run's size, or estimate from shape height
                     const firstRun = shape.paragraphs?.[0]?.runs?.[0];
                     const fontSize = firstRun?.size || Math.max(8, Math.min(24, shape.height * 0.3));
-                    const textColor = firstRun?.color || (shape.fill && isLightColor(shape.fill) ? '#1a1a2e' : '#ffffff');
+                    const textColor = firstRun?.color || (shape.fill && isLightColor(shape.fill) ? '#1a1a2e' : '#333333');
                     const isBold = firstRun?.bold || false;
                     const textAlign = shape.paragraphs?.[0]?.align || 'left';
-
-                    // Skip tiny invisible shapes
                     if (shape.width < 0.5 && shape.height < 0.5) return null;
-                    // Skip shapes with no content (no text, no fill)
                     if (!shape.text && !shape.fill) return null;
-
                     return (
-                      <div
-                        key={si}
-                        className="absolute overflow-hidden group"
-                        style={{
-                          left: `${shape.left}%`,
-                          top: `${shape.top}%`,
-                          width: `${shape.width}%`,
-                          height: `${shape.height}%`,
-                          backgroundColor: shape.fill || 'transparent',
-                          border: shape.border ? `${Math.max(1, shape.borderWidth)}px solid ${shape.border}` : 'none',
-                          borderRadius: shape.cornerRadius > 0 ? `${shape.cornerRadius * 0.4}px` : '0',
-                          transform: shape.rotation ? `rotate(${shape.rotation}deg)` : undefined,
-                          zIndex: si + 1,
-                        }}
-                      >
-                        {/* Shape text content */}
+                      <div key={si} className="absolute overflow-hidden" style={{
+                        left: `${shape.left}%`, top: `${shape.top}%`,
+                        width: `${shape.width}%`, height: `${shape.height}%`,
+                        backgroundColor: shape.fill || 'transparent',
+                        border: shape.border ? `${Math.max(1, shape.borderWidth)}px solid ${shape.border}` : 'none',
+                        borderRadius: shape.cornerRadius > 0 ? `${shape.cornerRadius * 0.4}px` : '0',
+                        transform: shape.rotation ? `rotate(${shape.rotation}deg)` : undefined,
+                        zIndex: si + 1,
+                      }}>
                         {shape.paragraphs && shape.paragraphs.length > 0 ? (
                           <div className="w-full h-full flex flex-col justify-center px-[6%] py-[4%]"
                             contentEditable suppressContentEditableWarning>
                             {shape.paragraphs.map((para, pi) => (
-                              <div key={pi} className="leading-snug" style={{
-                                textAlign: (para.align || textAlign) as any,
-                                marginBottom: shape.paragraphs!.length > 1 ? '2px' : 0,
-                              }}>
-                                {para.runs && para.runs.length > 0 ? (
-                                  para.runs.map((run, ri) => (
-                                    <span key={ri} style={{
-                                      color: run.color || textColor,
-                                      fontSize: `${Math.max(6, Math.min(42, run.size || fontSize))}px`,
-                                      fontWeight: run.bold ? 700 : 400,
-                                      fontStyle: run.italic ? 'italic' : 'normal',
-                                      fontFamily: run.name || 'inherit',
-                                      lineHeight: 1.3,
-                                    }}>{run.text}</span>
-                                  ))
-                                ) : (
-                                  <span style={{
-                                    color: textColor,
-                                    fontSize: `${Math.max(6, Math.min(36, fontSize))}px`,
-                                    fontWeight: isBold ? 700 : 400,
+                              <div key={pi} style={{ textAlign: (para.align || textAlign) as any, marginBottom: '2px' }}>
+                                {para.runs?.length ? para.runs.map((run, ri) => (
+                                  <span key={ri} style={{
+                                    color: run.color || textColor,
+                                    fontSize: `${Math.max(6, Math.min(42, run.size || fontSize))}px`,
+                                    fontWeight: run.bold ? 700 : 400,
+                                    fontStyle: run.italic ? 'italic' : 'normal',
                                     lineHeight: 1.3,
-                                  }}>{para.text}</span>
-                                )}
+                                  }}>{run.text}</span>
+                                )) : <span style={{ color: textColor, fontSize: `${fontSize}px`, lineHeight: 1.3 }}>{para.text}</span>}
                               </div>
                             ))}
                           </div>
                         ) : shape.text ? (
-                          <div className="w-full h-full flex items-center justify-center px-[6%] py-[4%]"
+                          <div className="w-full h-full flex items-center justify-center px-[6%]"
                             contentEditable suppressContentEditableWarning>
-                            <span style={{
-                              color: textColor,
-                              fontSize: `${Math.max(6, Math.min(36, fontSize))}px`,
-                              fontWeight: isBold ? 700 : 400,
-                              textAlign: textAlign as any,
-                              lineHeight: 1.3,
-                            }}>{shape.text}</span>
+                            <span style={{ color: textColor, fontSize: `${fontSize}px`, fontWeight: isBold ? 700 : 400, lineHeight: 1.3 }}>{shape.text}</span>
                           </div>
                         ) : null}
                       </div>
