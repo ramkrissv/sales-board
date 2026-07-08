@@ -282,10 +282,11 @@ print(json.dumps(slides))
           const imgDir = join(TMP_DIR, `imgs-${Date.now()}`);
           mkdirSync(imgDir, { recursive: true });
 
-          // Step 1: PPTX → PDF via LibreOffice (HOME=/tmp needed for nextjs user)
+          // Step 1: PPTX → PDF via LibreOffice
+          const loEnv = { ...process.env, HOME: '/home/nextjs', XDG_CONFIG_HOME: '/home/nextjs/.config', XDG_CACHE_HOME: '/home/nextjs/.cache' };
           execSync(
-            `HOME=/tmp libreoffice --headless --norestore --convert-to pdf --outdir "${imgDir}" "${tmpPath}"`,
-            { timeout: 120000, encoding: 'utf-8', env: { ...process.env, HOME: '/tmp' } }
+            `libreoffice --headless --norestore --convert-to pdf --outdir "${imgDir}" "${tmpPath}"`,
+            { timeout: 120000, encoding: 'utf-8', env: loEnv }
           );
 
           // Find the generated PDF

@@ -39,9 +39,10 @@ RUN apk add --no-cache python3 py3-pip poppler-utils \
     pip3 install python-pptx python-docx Pillow 2>/dev/null || true
 
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-# LibreOffice needs a writable home + config dir
-RUN mkdir -p /tmp/.config/libreoffice && chown -R 1001:1001 /tmp/.config
+RUN adduser --system --uid 1001 -h /home/nextjs nextjs
+# Give nextjs user a real home dir for LibreOffice profile
+RUN mkdir -p /home/nextjs && chown 1001:1001 /home/nextjs
+RUN mkdir -p /tmp/.config /tmp/.cache && chmod 1777 /tmp /tmp/.config /tmp/.cache
 
 COPY --from=builder /app/public ./public
 
