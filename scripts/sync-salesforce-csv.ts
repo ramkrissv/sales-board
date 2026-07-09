@@ -36,40 +36,63 @@ const FORECAST_MAP: Record<string, string> = {
   'Omitted': 'omitted',
 };
 
-// ── CSV parser (handles quoted fields with commas/newlines) ──
+// ── CSV parser (handles quoted fields with commas, newlines, and embedded quotes) ──
 function parseCSV(text: string): Record<string, string>[] {
   const rows: Record<string, string>[] = [];
-  const lines: string[] = [];
+
+  // Split into logical rows (respecting quoted multiline fields)
+  const logicalRows: string[] = [];
   let current = '';
   let inQuotes = false;
 
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     if (ch === '"') {
-      if (inQuotes && text[i + 1] === '"') {
-        current += '"';
-        i++;
+      if (inQuotes && i + 1 < text.length && text[i + 1] === '"') {
+        current += '""';
+        i++; // skip escaped quote
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (ch === '\n' && !inQuotes) {
-      lines.push(current);
+      current += ch;
+    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && text[i + 1] === '\n') i++; // skip \r\n
+      if (current.trim()) logicalRows.push(current);
       current = '';
     } else {
       current += ch;
     }
   }
-  if (current.trim()) lines.push(current);
+  if (current.trim()) logicalRows.push(current);
 
-  if (lines.length < 2) return rows;
+  if (logicalRows.length < 2) return rows;
 
-  const headers = parseCSVLine(lines[0]);
-  for (let i = 1; i < lines.length; i++) {
-    const vals = parseCSVLine(lines[i]);
-    if (vals.length === 0) continue;
+  const headers = parseCSVLine(logicalRows[0]);
+  const expectedCols = headers.length;
+
+  for (let i = 1; i < logicalRows.length; i++) {
+    const vals = parseCSVLine(logicalRows[i]);
+    // Validate: row must have the right number of columns
+    if (vals.length !== expectedCols) {
+      // Try to salvage: if it has at least most columns and first looks like an owner name
+      if (vals.length >= expectedCols - 2 && /^[A-Z][a-z]/.test(vals[0])) {
+        // Pad with empty strings
+        while (vals.length < expectedCols) vals.push('');
+      } else {
+        continue; // skip malformed row
+      }
+    }
     const row: Record<string, string> = {};
     headers.forEach((h, idx) => { row[h] = (vals[idx] || '').trim(); });
-    if (row['Opportunity Name'] || row['Account Name']) rows.push(row);
+
+    // Validate critical fields
+    const accName = row['Account Name'] || '';
+    const oppName = row['Opportunity Name'] || '';
+    // Account names shouldn't be numbers or very short
+    if (!accName || /^\d+\.?\d*$/.test(accName) || accName.length < 2) continue;
+    if (!oppName || oppName.length < 3) continue;
+
+    rows.push(row);
   }
   return rows;
 }
@@ -81,10 +104,15 @@ function parseCSVLine(line: string): string[] {
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else inQuotes = !inQuotes;
+      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+        current += '"';
+        i++; // skip escaped quote
+      } else {
+        inQuotes = !inQuotes;
+      }
     } else if (ch === ',' && !inQuotes) {
-      fields.push(current); current = '';
+      fields.push(current);
+      current = '';
     } else {
       current += ch;
     }
@@ -199,6 +227,22 @@ async function main() {
 
   const Opportunity = mongoose.models.Opportunity || mongoose.model('Opportunity', OppSchema);
   const Account = mongoose.models.Account || mongoose.model('Account', AccountSchema);
+
+  // Clean up garbage accounts from prior bad parse
+  const garbageAccountNames = ['27003.90', '6.0', 'Unknown', '318000.00', 'India; United States',
+    'India', 'Best Case', '12.0', '523314.54', '9.0', '68917.56', '0.00',
+    '350.0000000000', '152304.00', '187875.00', '141.0000000000'];
+  const garbageDeleted = await Account.deleteMany({ companyName: { $in: garbageAccountNames } });
+  if (garbageDeleted.deletedCount > 0) {
+    console.log(`🧹 Cleaned up ${garbageDeleted.deletedCount} garbage accounts from prior run`);
+  }
+  // Also clean up garbage opportunities (account name is a number)
+  const garbageOpps = await Opportunity.deleteMany({
+    customerName: { $regex: /^\d+\.?\d*$/ }
+  });
+  if (garbageOpps.deletedCount > 0) {
+    console.log(`🧹 Cleaned up ${garbageOpps.deletedCount} garbage opportunities from prior run`);
+  }
 
   // Load all existing opportunities
   const existingOpps = await Opportunity.find({}).lean();
