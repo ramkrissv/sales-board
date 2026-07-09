@@ -63,7 +63,35 @@ function getContextPrompts(page: string, dealName?: string | null): { label: str
       { label: 'Proposal outline', prompt: 'Draft an executive summary for the proposal based on the assessment findings so far', icon: Zap },
     ].slice(0, 3); // Show top 3
   }
-  // Default (home, tasks, etc.)
+  if (page.includes('forecast')) {
+    return [
+      { label: 'Forecast check', prompt: 'What is our commit vs best-case forecast? Are we on track?', icon: Target },
+      { label: 'Deals to push', prompt: 'Which best-case deals are most likely to convert to commit?', icon: Zap },
+      { label: 'Risk to forecast', prompt: 'Which commit deals are at risk of slipping? What should I do?', icon: Lightbulb },
+    ];
+  }
+  if (page.includes('dashboard') || page === '/') {
+    return [
+      { label: 'Today\'s priorities', prompt: 'What are my top 5 priorities for today?', icon: Target },
+      { label: 'Revenue check', prompt: 'How is our revenue tracking? Any immediate risks?', icon: Zap },
+      { label: 'Key actions', prompt: 'What deals need immediate attention this week?', icon: Lightbulb },
+    ];
+  }
+  if (page.includes('insight') || page.includes('graph')) {
+    return [
+      { label: 'Win patterns', prompt: 'What patterns do our winning deals share?', icon: Target },
+      { label: 'Performance', prompt: 'How does performance compare across sales owners?', icon: Zap },
+      { label: 'Trends', prompt: 'What are the key pipeline trends over the last quarter?', icon: Lightbulb },
+    ];
+  }
+  if (page.includes('leads') || page.includes('growth')) {
+    return [
+      { label: 'Hot leads', prompt: 'Which leads should I prioritize converting?', icon: Target },
+      { label: 'Outreach plan', prompt: 'Suggest an outreach plan for the highest-intent leads', icon: Zap },
+      { label: 'Conversion tips', prompt: 'What can I do to improve lead conversion rates?', icon: Lightbulb },
+    ];
+  }
+  // Default (tasks, timeline, etc.)
   return [
     { label: 'Today\'s focus', prompt: 'What should I focus on today?', icon: Target },
     { label: 'Quick wins', prompt: 'Which deals are closest to closing and what do they need?', icon: Zap },
@@ -89,13 +117,15 @@ export function DealCopilot({ activeDealId, activeDealName }: DealCopilotProps) 
   const contextPrompts = getContextPrompts(pathname, activeDealName);
   const contextLabel = activeDealName
     ? `Focused: ${activeDealName}`
-    : pathname.includes('workshop')
-      ? 'Workshop Context'
-      : pathname.includes('pipeline')
-        ? 'Pipeline Context'
-        : pathname.includes('accounts')
-        ? 'Accounts Context'
-        : 'General';
+    : pathname.includes('workshop') ? 'Workshop Facilitator'
+    : pathname.includes('pipeline') ? 'Pipeline Manager'
+    : pathname.includes('accounts') ? 'Account Intelligence'
+    : pathname.includes('presales') ? 'Presales Coach'
+    : pathname.includes('forecast') ? 'Forecast Analyst'
+    : pathname.includes('dashboard') || pathname === '/' ? 'Executive Assistant'
+    : pathname.includes('insight') || pathname.includes('graph') ? 'Analytics Advisor'
+    : pathname.includes('leads') || pathname.includes('growth') ? 'Growth Advisor'
+    : 'Sales Assistant';
 
   const chatMutation = trpc.ai.chat.useMutation({
     onSuccess: (data) => {

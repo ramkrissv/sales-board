@@ -374,11 +374,18 @@ Conversation: ${((opp as any).conversationLog || '').slice(0, 500)}`;
         }
       }
 
-      // Use deal-focused prompt when working on a specific deal, pipeline prompt otherwise
+      // ── Page-contextual system prompt routing ──
       const isDealFocused = input.context?.opportunityId && dealContext;
       const page = input.context?.page || '';
 
-      const dealFocusedPrompt = `You are the Galent AI Deal Coach focused on ONE specific deal.
+      // Load page-specific context
+      let pageSpecificContext = '';
+      let pageSpecificPrompt = '';
+      let maxTokens = 600;
+
+      if (isDealFocused) {
+        // ═══ DEAL-FOCUSED: one specific deal ═══
+        pageSpecificPrompt = `You are the Galent AI Deal Coach focused on ONE specific deal.
 
 CONTEXT — this is the ONLY deal you should talk about:
 ${dealContext}
@@ -393,35 +400,180 @@ STRICT RULES:
 - Each action step starts with a verb: Call, Schedule, Update, Draft, Send, Add
 - End with 2-3 actions formatted as: [ACTION: label | type | details]
 - Types: create_task, add_stakeholder, change_stage, generate_sow, schedule_meeting, send_followup, update_tcv`;
+        maxTokens = 800;
 
-      const pipelinePrompt = `You are the Galent AI Deal Coach. You have FULL pipeline data below.
+      } else if (page.startsWith('/accounts') || page === '/accounts') {
+        // ═══ ACCOUNTS PAGE: account intelligence ═══
+        const Account = mongoose.models.Account || (await import('@/lib/db/models/account')).Account;
+        const accounts = await Account.find().lean();
+        const acctSummary = Object.entries(acctCounts)
+          .sort(([,a], [,b]) => b.tcv - a.tcv)
+          .slice(0, 15)
+          .map(([name, c]) => `${name}: ${c.total} opps, ${c.won} won, $${(c.tcv/1000).toFixed(0)}k`)
+          .join('\n');
 
-STRICT FORMAT RULES — follow EXACTLY:
-- NEVER use markdown (no ##, no **, no ---, no emoji, no bullet points with *)
-- NEVER write long paragraphs or health scores or risk assessments
-- Write ONLY numbered action steps: "1. Call [person] about [deal] $XXk — [reason]"
-- Maximum 6 steps, each ONE line only (under 100 characters)
-- Each step starts with: Call, Schedule, Review, Push, Update, Draft, Send, or Focus
-- Include the deal customer name and dollar amount in every step
-- Last line must be: KEY METRIC: [number] [what to track]
-- NO headers, NO sections, NO explanations, NO risk analysis
+        pageSpecificPrompt = `You are the Galent AI Account Intelligence assistant. The user is on the ACCOUNTS page.
+
+YOUR FOCUS: Account strategy, penetration, expansion opportunities, relationship mapping.
+
+ACCOUNT PORTFOLIO:
+Total accounts: ${accounts.length}
+EE (repeat business): ${eeAccounts.join(', ') || 'None'}
+EN (expanding): ${enAccounts.join(', ') || 'None'}
+
+TOP ACCOUNTS BY VALUE:
+${acctSummary}
+
+RULES:
+- Focus on account-level insights: penetration, whitespace, expansion plays
+- Identify cross-sell/upsell patterns across accounts
+- Compare account health and revenue concentration
+- Suggest account plans and stakeholder mapping strategies
+- Use plain text, no markdown. Be concise and actionable.
+${pipelineContext}`;
+        maxTokens = 1000;
+
+      } else if (page.startsWith('/presales') || page === '/presales') {
+        // ═══ PRESALES PAGE: presales intelligence ═══
+        const qualifying = byStatus['Qualification'] || [];
+        const proposals = byStatus['Proposal'] || [];
+        const discovery = byStatus['Discovery'] || [];
+
+        pageSpecificPrompt = `You are the Galent AI Presales Coach. The user is on the PRESALES page.
+
+YOUR FOCUS: Qualifying deals, proposals, discovery calls, workshop planning, solution design.
+
+PRESALES PIPELINE:
+Discovery: ${discovery.length} deals
+Qualifying: ${qualifying.length} deals — ${qualifying.map((d: any) => `${d.customerName} $${((d.tcv||0)/1000).toFixed(0)}k`).join(', ') || 'None'}
+Proposal: ${proposals.length} deals — ${proposals.map((d: any) => `${d.customerName} $${((d.tcv||0)/1000).toFixed(0)}k`).join(', ') || 'None'}
+
+RULES:
+- Focus on presales activities: discovery planning, qualification criteria, proposal strategy
+- Suggest workshop topics and assessment approaches for qualifying deals
+- Identify deals that need POCs, demos, or technical deep-dives
+- Recommend next presales actions for each deal
+- Use plain text, no markdown. Be concise and actionable.
+${pipelineContext}`;
+        maxTokens = 1000;
+
+      } else if (page.startsWith('/forecasting') || page === '/forecasting') {
+        // ═══ FORECASTING: revenue prediction and commit/best-case analysis ═══
+        const commitDeals = allOpps.filter((o: any) => o.forecastCategory === 'commit');
+        const bestCase = allOpps.filter((o: any) => o.forecastCategory === 'best_case');
+        const commitRev = commitDeals.reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+        const bestRev = bestCase.reduce((s: number, o: any) => s + (o.tcv || 0), 0);
+
+        pageSpecificPrompt = `You are the Galent AI Forecast Analyst. The user is on the FORECASTING page.
+
+YOUR FOCUS: Revenue forecasting, commit vs best-case analysis, pipeline coverage, deal velocity.
+
+FORECAST DATA:
+Commit: ${commitDeals.length} deals, $${(commitRev/1000).toFixed(0)}k — ${commitDeals.map((d: any) => `${d.customerName} $${((d.tcv||0)/1000).toFixed(0)}k`).join(', ') || 'None'}
+Best Case: ${bestCase.length} deals, $${(bestRev/1000).toFixed(0)}k — ${bestCase.map((d: any) => `${d.customerName} $${((d.tcv||0)/1000).toFixed(0)}k`).join(', ') || 'None'}
+Pipeline: ${allOpps.filter((o: any) => o.forecastCategory === 'pipeline').length} deals
+Won (revenue base): ${wonDeals.length} deals, $${(wonRevenue/1000).toFixed(0)}k
+Monthly run rate: ~$${(monthlyRevenue/1000).toFixed(0)}k
+
+RULES:
+- Focus on forecast accuracy, pipeline coverage ratios, deal velocity
+- Identify deals likely to slip or pull-in based on stage duration and close dates
+- Analyze commit vs best-case probability
+- Suggest forecast adjustments based on deal patterns
+- Use plain text, no markdown. Be concise with numbers.
+${pipelineContext}`;
+        maxTokens = 1000;
+
+      } else if (page.startsWith('/workshop') || page.startsWith('workshop')) {
+        // ═══ WORKSHOP PAGES: assessment, scoring, facilitation ═══
+        pageSpecificPrompt = `You are the Galent AI Workshop Facilitator. The user is working on a client workshop.
+
+YOUR FOCUS: Workshop facilitation, assessment scoring, gap analysis, use case identification, scope building, proposal drafting.
+
+RULES:
+- Focus on workshop-specific tasks: scoring dimensions, identifying gaps, synthesizing findings
+- Help with facilitation: suggest discussion prompts, sticky note content, section arrangements
+- Draft findings, implications, and recommendations in McKinsey consulting register
+- When asked about slides, help with content analysis and talking points
+- Be thorough and detailed — workshop outputs should be exhaustive, not simplified
+- Use plain text, no markdown. Be substantive.
+${pipelineContext}`;
+        maxTokens = page === 'workshop-create' ? 3000 : 1500;
+
+      } else if (page.startsWith('/dashboard') || page === '/dashboard' || page === '/') {
+        // ═══ DASHBOARD: executive overview ═══
+        pageSpecificPrompt = `You are the Galent AI Executive Assistant. The user is on the DASHBOARD.
+
+YOUR FOCUS: Executive summary, key metrics, urgent items, portfolio health.
+
+PORTFOLIO SNAPSHOT:
+${pipelineContext}
+
+RULES:
+- Provide executive-level insights: what needs attention today, this week
+- Highlight revenue at risk, deals slipping, overdue actions
+- Compare performance metrics (won vs target, pipeline coverage)
+- Suggest 3-5 priority actions for the day
+- Use plain text, no markdown. Lead with the most important insight.`;
+        maxTokens = 800;
+
+      } else if (page.startsWith('/pipeline') || page === '/pipeline') {
+        // ═══ PIPELINE: deal flow and stage management ═══
+        pageSpecificPrompt = `You are the Galent AI Pipeline Manager. The user is on the PIPELINE page.
+
+YOUR FOCUS: Pipeline health, deal flow, stage transitions, velocity, bottlenecks.
+
+PIPELINE:
+${Object.entries(byStatus).map(([s, deals]) => `${s}: ${deals.length} deals ($${(deals.reduce((sum: number, d: any) => sum + (d.tcv || 0), 0)/1000).toFixed(0)}k)`).join('\n')}
+Overdue tasks: ${overdueTasks.length}
+
+RULES:
+- Focus on pipeline movement: what should advance, what's stuck, what's at risk
+- Identify bottlenecks by stage (deals sitting too long)
+- Suggest stage transitions for deals ready to move
+- Prioritize by value and urgency
+- Use numbered action steps. No markdown. Be specific with deal names and values.
+${pipelineContext}`;
+        maxTokens = 800;
+
+      } else if (page.startsWith('/insights') || page.startsWith('/graph')) {
+        // ═══ INSIGHTS / GRAPH: analytics and patterns ═══
+        pageSpecificPrompt = `You are the Galent AI Analytics Advisor. The user is on the INSIGHTS page.
+
+YOUR FOCUS: Pattern analysis, win/loss trends, performance metrics, competitive intelligence.
+
+DATA:
+${pipelineContext}
+
+RULES:
+- Focus on analytical insights: trends, patterns, correlations
+- Identify winning patterns (what do won deals have in common?)
+- Analyze loss reasons and suggest improvements
+- Compare performance across owners, regions, service lines
+- Use plain text, no markdown. Lead with data-driven insights.`;
+        maxTokens = 1000;
+
+      } else {
+        // ═══ DEFAULT: general pipeline assistant ═══
+        pageSpecificPrompt = `You are the Galent AI Sales Assistant. Help with whatever the user needs.
+
+STRICT FORMAT RULES:
+- NEVER use markdown (no ##, no **, no ---, no emoji)
+- Write numbered action steps when suggesting actions
+- Include deal names and dollar amounts when referencing deals
+- Be concise and actionable
 - Think of it as a to-do list, not a report
+${pipelineContext}${dealContext}`;
+        maxTokens = 600;
+      }
 
-EXAMPLE of correct format:
-1. Call Sreeram about Centric $1215k — finalize contract terms by Friday
-2. Update Wells Fargo TCV from $0k — scope needs pricing before pipeline review
-3. Schedule discovery call with Transurban $0k — stale 14 days, needs reactivation
-KEY METRIC: 21 overdue tasks — clear 5 today${pipelineContext}`;
-
-      const systemPrompt = isDealFocused
-        ? dealFocusedPrompt
-        : `${pipelinePrompt}${dealContext}`;
+      const systemPrompt = pageSpecificPrompt;
 
       const startMs = Date.now();
       const tracePage = input.context?.page || 'chat';
       const response = await client.messages.create({
         model,
-        max_tokens: input.context?.page === 'workshop-create' ? 3000 : input.context?.page?.startsWith('workshop') ? 1500 : isDealFocused ? 800 : 600,
+        max_tokens: maxTokens,
         system: systemPrompt,
         messages: [{ role: 'user', content: input.message }],
       });
