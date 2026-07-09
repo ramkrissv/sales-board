@@ -25,24 +25,24 @@ ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 
 RUN npm run build
 
-# Production image, copy all the files and run next
-FROM base AS runner
+# Production image — Debian-slim for LibreOffice compatibility
+FROM node:20-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Python for PPTX/DOCX/PDF parsing + LibreOffice for slide-to-image conversion
-RUN apk add --no-cache python3 py3-pip poppler-utils \
-    libreoffice-impress libreoffice-common font-noto font-noto-cjk && \
-    pip3 install --break-system-packages python-pptx python-docx Pillow 2>/dev/null || \
-    pip3 install python-pptx python-docx Pillow 2>/dev/null || true
+# Python + LibreOffice + poppler for PPTX→PDF→PNG conversion
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv \
+    libreoffice-impress libreoffice-common \
+    poppler-utils fonts-noto-core fonts-liberation \
+    && pip3 install --break-system-packages python-pptx python-docx \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/*
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 -h /home/nextjs nextjs
-# Give nextjs user a real home dir for LibreOffice profile
-RUN mkdir -p /home/nextjs && chown 1001:1001 /home/nextjs
-RUN mkdir -p /tmp/.config /tmp/.cache && chmod 1777 /tmp /tmp/.config /tmp/.cache
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 --gid nodejs --create-home nextjs
 
 COPY --from=builder /app/public ./public
 

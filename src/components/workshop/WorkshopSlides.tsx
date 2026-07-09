@@ -923,459 +923,256 @@ Return ONLY a JSON array with one object per slide, matching by slide number. Ex
           })}
         </div>
 
-        {/* Slide content — PPT Canvas Renderer */}
+        {/* Slide content — integrated interactive canvas */}
         {current && (
-          <div className="flex-1 overflow-y-auto" style={{ background: '#f0f0f0' }}>
-            {/* ═══ SLIDE IMAGE — pixel-perfect PPT rendering ═══ */}
-            {current.imageBase64 ? (
-              <div className="flex justify-center py-4 px-4">
-                <div className="relative w-full" style={{
-                  maxWidth: '1200px',
-                  aspectRatio: '16 / 9',
-                  borderRadius: '6px',
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)',
-                }}>
-                  {/* The actual slide image — pixel-perfect PPT rendering */}
-                  <img
-                    src={current.imageBase64}
-                    alt={`Slide ${current.number}: ${current.title}`}
-                    className="w-full h-full object-contain"
-                    draggable={false}
-                  />
-                  {/* Interactive overlay — stickies added during the session appear on top */}
-                  {current.stickies.length > 0 && (
-                    <div className="absolute inset-0 pointer-events-none">
-                      {/* Stickies rendered as floating post-its on the slide */}
-                      {current.stickies.map((s, si) => {
-                        // Distribute stickies across the slide area
-                        const row = Math.floor(si / 3);
-                        const col = si % 3;
-                        const left = 10 + col * 30 + (Math.random() * 5);
-                        const top = 30 + row * 25 + (Math.random() * 5);
-                        const rotation = -5 + (si * 3) % 10;
-                        return (
-                          <div key={s.id} className="absolute pointer-events-auto cursor-pointer group"
-                            style={{
-                              left: `${left}%`, top: `${top}%`,
-                              width: '120px',
-                              transform: `rotate(${rotation}deg)`,
-                              zIndex: 10 + si,
-                            }}>
-                            <div className="rounded-sm p-2.5 text-[10px] shadow-lg leading-snug"
-                              style={{ backgroundColor: s.color, boxShadow: '2px 3px 8px rgba(0,0,0,0.15)' }}>
-                              <p className="text-gray-800">{s.text}</p>
-                              <div className="flex items-center justify-between mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => voteSticky(s.id)} className="text-gray-500 hover:text-gray-700">
-                                  <ThumbsUp className="w-2.5 h-2.5" />
-                                </button>
-                                <button onClick={() => deleteSticky(s.id)} className="text-gray-400 hover:text-red-500">
-                                  <Trash2 className="w-2.5 h-2.5" />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : current.shapes && current.shapes.length > 0 ? (
-              /* ═══ SHAPE CANVAS fallback — when no image available ═══ */
-              <div className="flex justify-center py-4 px-4">
-                <div className="relative w-full" style={{
-                  maxWidth: '1200px',
-                  aspectRatio: '16 / 9',
-                  background: current.bgColor || '#ffffff',
-                  borderRadius: '6px',
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)',
-                }}>
-                  {current.shapes.map((shape, si) => {
-                    const firstRun = shape.paragraphs?.[0]?.runs?.[0];
-                    const fontSize = firstRun?.size || Math.max(8, Math.min(24, shape.height * 0.3));
-                    const textColor = firstRun?.color || (shape.fill && isLightColor(shape.fill) ? '#1a1a2e' : '#333333');
-                    const isBold = firstRun?.bold || false;
-                    const textAlign = shape.paragraphs?.[0]?.align || 'left';
-                    if (shape.width < 0.5 && shape.height < 0.5) return null;
-                    if (!shape.text && !shape.fill) return null;
-                    return (
-                      <div key={si} className="absolute overflow-hidden" style={{
-                        left: `${shape.left}%`, top: `${shape.top}%`,
-                        width: `${shape.width}%`, height: `${shape.height}%`,
-                        backgroundColor: shape.fill || 'transparent',
-                        border: shape.border ? `${Math.max(1, shape.borderWidth)}px solid ${shape.border}` : 'none',
-                        borderRadius: shape.cornerRadius > 0 ? `${shape.cornerRadius * 0.4}px` : '0',
-                        transform: shape.rotation ? `rotate(${shape.rotation}deg)` : undefined,
-                        zIndex: si + 1,
-                      }}>
-                        {shape.paragraphs && shape.paragraphs.length > 0 ? (
-                          <div className="w-full h-full flex flex-col justify-center px-[6%] py-[4%]"
-                            contentEditable suppressContentEditableWarning>
-                            {shape.paragraphs.map((para, pi) => (
-                              <div key={pi} style={{ textAlign: (para.align || textAlign) as any, marginBottom: '2px' }}>
-                                {para.runs?.length ? para.runs.map((run, ri) => (
-                                  <span key={ri} style={{
-                                    color: run.color || textColor,
-                                    fontSize: `${Math.max(6, Math.min(42, run.size || fontSize))}px`,
-                                    fontWeight: run.bold ? 700 : 400,
-                                    fontStyle: run.italic ? 'italic' : 'normal',
-                                    lineHeight: 1.3,
-                                  }}>{run.text}</span>
-                                )) : <span style={{ color: textColor, fontSize: `${fontSize}px`, lineHeight: 1.3 }}>{para.text}</span>}
-                              </div>
-                            ))}
-                          </div>
-                        ) : shape.text ? (
-                          <div className="w-full h-full flex items-center justify-center px-[6%]"
-                            contentEditable suppressContentEditableWarning>
-                            <span style={{ color: textColor, fontSize: `${fontSize}px`, fontWeight: isBold ? 700 : 400, lineHeight: 1.3 }}>{shape.text}</span>
-                          </div>
-                        ) : null}
+          <div className="flex-1 overflow-hidden relative" style={{ background: '#f0f0f0' }}>
+            {/* ═══ SLIDE CANVAS ═══ */}
+            <div className="flex justify-center items-start h-full p-4 pb-16 overflow-y-auto">
+              <div className="relative w-full" style={{
+                maxWidth: '1200px',
+                aspectRatio: '16 / 9',
+                borderRadius: '6px',
+                overflow: 'visible',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+              }}>
+                {/* Slide image or fallback */}
+                {current.imageBase64 ? (
+                  <img src={current.imageBase64} alt={`Slide ${current.number}`}
+                    className="w-full h-full object-contain rounded-md" draggable={false} />
+                ) : (
+                  <div className="w-full h-full rounded-md bg-white flex flex-col">
+                    {/* Fallback header */}
+                    <div className="px-6 pt-5 pb-3 border-b border-gray-100">
+                      <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-purple-600 font-bold mb-1.5">
+                        Slide {current.slideLabel || String(current.number).padStart(2, '0')} of {slides.length}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              /* ═══ FALLBACK: structured card/KPI layout for slides without shape data ═══ */
-              <>
-                {/* Header band */}
-                <div className="relative overflow-hidden bg-white" style={{
-                  minHeight: '100px',
-                }}>
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{
-                    background: 'linear-gradient(90deg, transparent, #0FB5AD, transparent)', opacity: 0.3,
-                  }} />
-                  <div className="relative z-10 max-w-5xl mx-auto px-8 py-5 flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="inline-flex items-center gap-2 mb-2">
-                        <div className="flex items-center justify-center w-7 h-7 rounded-lg text-[10px] font-bold font-mono"
-                          style={{ background: 'rgba(139,92,246,0.1)', color: '#7C3AED', border: '1px solid rgba(139,92,246,0.2)' }}>
-                          {current.slideLabel || String(current.number).padStart(2, '0')}
-                        </div>
-                        <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-gray-400">of {slides.length}</div>
-                      </div>
-                      <h2 className="text-2xl font-bold text-gray-900 leading-tight" contentEditable suppressContentEditableWarning
+                      <h2 className="text-xl font-bold text-gray-900 leading-tight" contentEditable suppressContentEditableWarning
                         onBlur={e => updateSlide(activeSlide, { title: e.currentTarget.textContent || '' })}>{current.title}</h2>
                       {current.subtitle && (
-                        <p className="text-sm text-gray-500 mt-1.5" contentEditable suppressContentEditableWarning
+                        <p className="text-sm text-gray-500 mt-1" contentEditable suppressContentEditableWarning
                           onBlur={e => updateSlide(activeSlide, { subtitle: e.currentTarget.textContent || '' })}>{current.subtitle}</p>
                       )}
+                      {current.formats.length > 0 && (
+                        <div className="flex gap-1.5 mt-2">
+                          {current.formats.map(f => {
+                            const badge = FORMAT_BADGES[f] || { bg: 'bg-gray-100 text-gray-600', text: f };
+                            return <span key={f} className={`text-[9px] font-mono px-2 py-0.5 rounded-md ${badge.bg}`}>{badge.text}</span>;
+                          })}
+                        </div>
+                      )}
                     </div>
-                    {current.formats.length > 0 && (
-                      <div className="flex flex-col gap-1.5 shrink-0 ml-6">
-                        {current.formats.map(f => {
-                          const badge = FORMAT_BADGES[f] || { bg: 'bg-gray-100 text-gray-600', text: f };
-                          return <span key={f} className={`text-[9px] font-mono px-2.5 py-1 rounded-md ${badge.bg}`}>{badge.text}</span>;
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Fallback card/KPI layout */}
-                <div className="px-8 py-6">
-                  <div className="max-w-5xl mx-auto">
-                    {(() => {
-                      const cards: SlideCard[] = current.cards?.length ? current.cards : [];
-                      const kpis: SlideKpi[] = current.kpis?.length ? current.kpis : [];
-                      const miscItems: string[] = current.misc?.length ? current.misc : [];
-                      const blocks: string[] = current.contentBlocks?.length
-                        ? current.contentBlocks : current.content ? current.content.split('\n\n').filter(Boolean) : [];
-                      const CARD_ACCENTS = ['#0FB5AD', '#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981'];
-
-                      return (
-                        <div className="space-y-5">
-                          {/* KPIs */}
-                          {kpis.length > 0 && (
-                            <div className="rounded-2xl p-5 relative overflow-hidden bg-gray-50 border border-gray-100">
-                              <div className={`grid ${kpis.length <= 3 ? `grid-cols-${kpis.length}` : 'grid-cols-3 md:grid-cols-5'}`}>
-                                {kpis.map((kpi, ki) => (
-                                  <div key={ki} className="text-center py-2 relative">
-                                    {ki > 0 && <div className="absolute left-0 top-2 bottom-2 w-px bg-gray-200" />}
-                                    <div className="text-3xl font-bold" style={{ color: '#0FB5AD' }}
-                                      contentEditable suppressContentEditableWarning>{kpi.value}</div>
-                                    <div className="text-[10px] text-gray-500 mt-1.5 uppercase tracking-wider"
-                                      contentEditable suppressContentEditableWarning>{kpi.label}</div>
+                    {/* Fallback content */}
+                    <div className="flex-1 px-6 py-4 overflow-y-auto">
+                      {(() => {
+                        const cards = current.cards?.length ? current.cards : [];
+                        const kpis = current.kpis?.length ? current.kpis : [];
+                        const blocks = current.contentBlocks?.length ? current.contentBlocks
+                          : current.content ? current.content.split('\n\n').filter(Boolean) : [];
+                        const ACCENTS = ['#0FB5AD', '#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981'];
+                        return (
+                          <div className="space-y-4">
+                            {kpis.length > 0 && (
+                              <div className="rounded-lg p-4 bg-gray-50 border border-gray-100">
+                                <div className={`grid ${kpis.length <= 3 ? 'grid-cols-' + kpis.length : 'grid-cols-3'}`}>
+                                  {kpis.map((kpi, ki) => (
+                                    <div key={ki} className="text-center py-1">
+                                      <div className="text-2xl font-bold" style={{ color: '#0FB5AD' }}>{kpi.value}</div>
+                                      <div className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">{kpi.label}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {cards.length >= 2 && (
+                              <div className={`grid gap-3 ${cards.length <= 3 ? 'grid-cols-' + cards.length : 'grid-cols-2 lg:grid-cols-3'}`}>
+                                {cards.map((c, ci) => (
+                                  <div key={ci} className="rounded-lg bg-white border border-gray-200 shadow-sm overflow-hidden">
+                                    <div className="h-[3px]" style={{ background: ACCENTS[ci % 6] }} />
+                                    {c.heading && <div className="px-3 py-2 border-b border-gray-100 text-[12px] font-semibold text-gray-900">{c.heading}</div>}
+                                    <div className="px-3 py-2 text-[11px] text-gray-600 leading-relaxed">{c.body}</div>
                                   </div>
                                 ))}
                               </div>
-                            </div>
-                          )}
-                          {/* Cards */}
-                          {cards.length >= 2 && (
-                            <div className={`grid gap-4 ${cards.length === 2 ? 'grid-cols-2' : cards.length === 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-3'}`}>
-                              {cards.map((c, ci) => (
-                                <div key={ci} className="rounded-xl overflow-hidden hover:translate-y-[-2px] transition-all bg-white border border-gray-200">
-                                  <div className="h-[3px]" style={{ background: CARD_ACCENTS[ci % 6] }} />
-                                  {c.heading && <div className="px-4 py-3 border-b border-gray-200 text-[13px] font-semibold text-gray-900"
-                                    contentEditable suppressContentEditableWarning>{c.heading}</div>}
-                                  <div className="px-4 py-3 text-[11px] text-gray-600 leading-[1.7]"
-                                    contentEditable suppressContentEditableWarning>{c.body}</div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {cards.length === 1 && (
-                            <div className="rounded-xl overflow-hidden bg-white border border-gray-200">
-                              <div className="h-[3px]" style={{ background: '#0FB5AD' }} />
-                              {cards[0].heading && <div className="px-5 py-3 border-b border-gray-200 text-sm font-semibold text-gray-900"
-                                contentEditable suppressContentEditableWarning>{cards[0].heading}</div>}
-                              <div className="px-5 py-4 text-xs text-gray-600 leading-[1.8]"
-                                contentEditable suppressContentEditableWarning>{cards[0].body}</div>
-                            </div>
-                          )}
-                          {/* Misc */}
-                          {miscItems.length > 0 && (
-                            <div className="flex flex-wrap gap-2">{miscItems.map((m, mi) => (
-                              <div key={mi} className="px-4 py-2 rounded-lg text-[11px] bg-gray-50 border border-gray-200 text-gray-700"
-                                contentEditable suppressContentEditableWarning>{m}</div>
-                            ))}</div>
-                          )}
-                          {/* Text blocks */}
-                          {cards.length === 0 && kpis.length === 0 && blocks.length > 0 && (
-                            <div className="space-y-3">{blocks.map((b, bi) => {
+                            )}
+                            {cards.length < 2 && blocks.length > 0 && blocks.map((b, bi) => {
                               const t = b.trim(); if (!t) return null;
-                              if (t.length < 60 && !t.includes('\n') && !t.endsWith('.')) return (
-                                <div key={bi} className="flex items-center gap-3 pt-1">
-                                  <div className="w-2 h-2 rounded-full" style={{ background: CARD_ACCENTS[bi % 6] }} />
-                                  <h3 className="text-[13px] font-semibold text-gray-800" contentEditable suppressContentEditableWarning>{t}</h3>
-                                  <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.06), transparent)' }} />
-                                </div>
-                              );
                               return (
-                                <div key={bi} className="rounded-xl overflow-hidden flex bg-white border border-gray-200">
-                                  <div className="w-[3px] shrink-0" style={{ background: CARD_ACCENTS[bi % 6] }} />
-                                  <div className="px-5 py-4 text-[12px] text-gray-700 leading-[1.8] whitespace-pre-wrap"
+                                <div key={bi} className="flex">
+                                  <div className="w-[3px] shrink-0 rounded-full mr-3" style={{ background: ACCENTS[bi % 6] }} />
+                                  <div className="text-[12px] text-gray-700 leading-[1.7] whitespace-pre-wrap"
                                     contentEditable suppressContentEditableWarning>{t}</div>
                                 </div>
                               );
-                            })}</div>
-                          )}
-                          {/* Empty */}
-                          {cards.length === 0 && kpis.length === 0 && blocks.length === 0 && (
-                            <div className="rounded-xl p-8 text-center bg-gray-50 border border-gray-200">
-                              <div className="text-sm text-gray-600 whitespace-pre-wrap" contentEditable suppressContentEditableWarning
-                                ref={contentEditRef} onBlur={handleContentBlur} onFocus={() => setEditingText(current.id)}>{current.content || 'Click to add content'}</div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Interaction zones below content */}
-            <div className="px-8 pb-6">
-              <div className="max-w-5xl mx-auto">
-                <div className="border-t border-gray-200 my-5" />
-
-              {/* ── SCORE zone (shown when SCORE format) ── */}
-              {current.formats.includes('SCORE') && (
-                <div className="mb-6">
-                  <h3 className="text-xs font-mono text-gray-500 uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5">
-                    <Target className="w-3.5 h-3.5" /> Maturity Score
-                  </h3>
-                  <div className="flex gap-2">
-                    {MATURITY_LABELS.map((label, val) => (
-                      <button key={val}
-                        className="flex-1 rounded-lg px-2 py-2.5 text-center transition-all hover:scale-105 bg-gray-50 border border-gray-200"
-                      >
-                        <div className="text-lg font-bold" style={{ color: MATURITY_COLORS[val] }}>{val}</div>
-                        <div className="text-[9px] text-gray-500">{label}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── WHITEBOARD zone ── */}
-              {current.formats.includes('WHITEBOARD') && (
-                <div className="mb-6">
-                  <h3 className="text-xs font-mono text-gray-500 uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5">
-                    <PenTool className="w-3.5 h-3.5" /> Sketch Area
-                  </h3>
-                  <div className="border border-dashed border-gray-300 rounded-xl h-[200px]
-                    flex items-center justify-center text-gray-400 text-sm bg-gray-50">
-                    <PenTool className="w-5 h-5 mr-2 opacity-40" />
-                    Canvas sketching available in Whiteboard tab
-                  </div>
-                </div>
-              )}
-
-              {/* ── Stickies zone ── */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-mono text-gray-500 uppercase tracking-[0.15em] flex items-center gap-1.5">
-                    <StickyNote className="w-3.5 h-3.5" /> Stickies ({current.stickies.length})
-                  </h3>
-                  <button onClick={() => setAddingSticky(true)}
-                    className="text-xs text-teal-600 hover:text-teal-700 flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Add
-                  </button>
-                </div>
-
-                {addingSticky && (
-                  <div className="rounded-xl p-3 mb-3 bg-white border border-gray-200">
-                    <textarea
-                      value={newStickyText}
-                      onChange={(e) => setNewStickyText(e.target.value)}
-                      placeholder="Type your sticky note..."
-                      className="w-full text-sm bg-transparent border-none outline-none resize-none text-gray-800
-                        placeholder:text-gray-400"
-                      rows={2}
-                      autoFocus
-                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addSticky(); } }}
-                    />
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex gap-1">
-                        {STICKY_COLORS.map((c, i) => (
-                          <button key={i} onClick={() => setNewStickyColor(i)}
-                            className={`w-5 h-5 rounded-full border-2 transition-all
-                              ${i === newStickyColor ? 'border-white scale-110' : 'border-transparent'}`}
-                            style={{ backgroundColor: c.bg }}
-                          />
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => { setAddingSticky(false); setNewStickyText(''); }}
-                          className="text-xs text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
-                        <button onClick={addSticky}
-                          className="text-xs bg-[#0FB5AD] text-white px-3 py-1 rounded-lg hover:bg-[#0a867f]">Add</button>
-                      </div>
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
 
-                {current.stickies.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
-                    {current.stickies.map(s => (
-                      <div key={s.id} className="rounded-lg p-3 text-xs shadow-md group relative"
-                        style={{ backgroundColor: s.color }}>
-                        <p className="text-gray-800 leading-snug">{s.text}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <button onClick={() => voteSticky(s.id)}
-                            className="flex items-center gap-0.5 text-gray-500 hover:text-gray-700">
-                            <ThumbsUp className="w-3 h-3" />
+                {/* ═══ INTERACTIVE STICKIES overlaid on slide ═══ */}
+                {current.stickies.length > 0 && current.stickies.map((s, si) => {
+                  const col = si % 4;
+                  const row = Math.floor(si / 4);
+                  const left = 5 + col * 23 + ((si * 7) % 5);
+                  const top = 15 + row * 28 + ((si * 3) % 8);
+                  const rot = -6 + (si * 4) % 12;
+                  return (
+                    <div key={s.id} className="absolute group cursor-pointer z-10"
+                      style={{ left: `${left}%`, top: `${top}%`, transform: `rotate(${rot}deg)`, width: '140px' }}>
+                      <div className="rounded-sm p-2.5 text-[10px] leading-snug shadow-lg"
+                        style={{ backgroundColor: s.color, boxShadow: '3px 4px 10px rgba(0,0,0,0.15)' }}>
+                        <p className="text-gray-800" contentEditable suppressContentEditableWarning
+                          onBlur={e => {
+                            const newStickies = [...current.stickies];
+                            newStickies[si] = { ...s, text: e.currentTarget.textContent || '' };
+                            updateSlide(activeSlide, { stickies: newStickies });
+                          }}>{s.text}</p>
+                        <div className="flex items-center justify-between mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => voteSticky(s.id)} className="flex items-center gap-0.5 text-gray-500 hover:text-gray-700 text-[9px]">
+                            <ThumbsUp className="w-2.5 h-2.5" />
                             {s.votes > 0 && <span>{s.votes}</span>}
                           </button>
-                          <button onClick={() => deleteSticky(s.id)}
-                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Trash2 className="w-3 h-3" />
+                          <button onClick={() => deleteSticky(s.id)} className="text-gray-400 hover:text-red-500">
+                            <Trash2 className="w-2.5 h-2.5" />
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* ── Notes zone ── */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-mono text-gray-500 uppercase tracking-[0.15em] flex items-center gap-1.5">
-                    <MessageSquare className="w-3.5 h-3.5" /> Notes ({current.notes.length})
-                  </h3>
-                  <button onClick={() => setAddingNote(true)}
-                    className="text-xs text-teal-600 hover:text-teal-700 flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Add
-                  </button>
-                </div>
-
-                {addingNote && (
-                  <div className="rounded-xl p-3 mb-3 bg-white border border-gray-200">
-                    <textarea
-                      value={newNoteText}
-                      onChange={(e) => setNewNoteText(e.target.value)}
-                      placeholder="Add a note or observation..."
-                      className="w-full text-sm bg-transparent border-none outline-none resize-none text-gray-800
-                        placeholder:text-gray-400"
-                      rows={2}
-                      autoFocus
-                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addNote(); } }}
-                    />
-                    <div className="flex justify-end gap-2 mt-2">
-                      <button onClick={() => { setAddingNote(false); setNewNoteText(''); }}
-                        className="text-xs text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
-                      <button onClick={addNote}
-                        className="text-xs bg-[#0FB5AD] text-white px-3 py-1 rounded-lg hover:bg-[#0a867f]">Add</button>
                     </div>
-                  </div>
-                )}
-
-                {current.notes.length > 0 && (
-                  <div className="space-y-2">
-                    {current.notes.map(n => (
-                      <div key={n.id} className="rounded-lg px-4 py-2.5 flex items-start justify-between group bg-white border border-gray-200">
-                        <p className="text-sm text-gray-700 flex-1">{n.text}</p>
-                        <button onClick={() => deleteNote(n.id)}
-                          className="text-gray-300 hover:text-red-400 opacity-0
-                            group-hover:opacity-100 transition-opacity ml-2 mt-0.5">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  );
+                })}
               </div>
+            </div>
 
-              {/* ── Uploads zone ── */}
-              {current.uploads.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-xs font-mono text-gray-500 uppercase tracking-[0.15em] mb-2 flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5" /> Uploads ({current.uploads.length})
-                  </h3>
-                  <div className="space-y-1.5">
-                    {current.uploads.map(u => (
-                      <div key={u.id} className="flex items-center gap-2 text-xs text-gray-500
-                        rounded-lg px-3 py-2 bg-gray-50">
-                        <FileText className="w-3 h-3" />
-                        <span className="truncate">{u.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+            {/* ═══ FLOATING ACTION BAR — bottom of slide area ═══ */}
+            <div className="absolute bottom-0 left-0 right-0 z-20">
+              <div className="max-w-[1200px] mx-auto px-4 pb-3">
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg backdrop-blur-md"
+                  style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                  {/* Add Sticky */}
+                  <button onClick={() => setAddingSticky(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors">
+                    <StickyNote className="w-3.5 h-3.5" />
+                    Sticky {current.stickies.length > 0 ? `(${current.stickies.length})` : ''}
+                  </button>
 
-              {/* ── Action bar ── */}
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <div className="flex flex-wrap items-center gap-2">
+                  {/* Add Note */}
+                  <button onClick={() => setAddingNote(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Note {current.notes.length > 0 ? `(${current.notes.length})` : ''}
+                  </button>
+
+                  {/* Record */}
                   {isRecording ? (
                     <button onClick={stopRecording}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                        bg-red-900/30 text-red-400 border border-red-800/30 hover:bg-red-900/50">
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 animate-pulse">
                       <Square className="w-3.5 h-3.5" />
-                      Stop {Math.floor(recordTime / 60)}:{String(recordTime % 60).padStart(2, '0')}
+                      {Math.floor(recordTime / 60)}:{String(recordTime % 60).padStart(2, '0')}
                     </button>
                   ) : (
                     <button onClick={startRecording}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                        bg-white border border-gray-200 text-gray-600 hover:text-gray-800 transition-colors">
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100 transition-colors">
                       <Mic className="w-3.5 h-3.5" /> Record
                     </button>
                   )}
 
-                  <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                    bg-white border border-gray-200 text-gray-600 hover:text-gray-800 transition-colors cursor-pointer">
+                  {/* Upload */}
+                  <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer">
                     <Upload className="w-3.5 h-3.5" /> Upload
-                    <input type="file" className="hidden" multiple
-                      onChange={(e) => handleUpload(e.target.files)} />
+                    <input type="file" className="hidden" multiple onChange={(e) => handleUpload(e.target.files)} />
                   </label>
 
+                  {/* AI Insights */}
                   <button onClick={generateInsights} disabled={aiLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs
-                      bg-teal-50 border border-teal-200 text-teal-700 disabled:opacity-50 transition-colors">
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 disabled:opacity-50 transition-colors">
                     {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    {aiLoading ? 'Generating...' : 'AI Insights'}
+                    {aiLoading ? 'Thinking...' : 'AI Insights'}
                   </button>
+
+                  {/* Spacer */}
+                  <div className="flex-1" />
+
+                  {/* Notes count + uploads count */}
+                  {current.uploads.length > 0 && (
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                      <FileText className="w-3 h-3" /> {current.uploads.length} file{current.uploads.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
+
+            {/* ═══ STICKY INPUT POPUP ═══ */}
+            {addingSticky && (
+              <div className="absolute inset-0 z-30 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.3)' }}>
+                <div className="bg-white rounded-xl shadow-2xl p-4 w-[320px]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <StickyNote className="w-4 h-4 text-amber-500" />
+                    <span className="text-sm font-semibold text-gray-900">Add Sticky Note</span>
+                  </div>
+                  <textarea value={newStickyText} onChange={(e) => setNewStickyText(e.target.value)}
+                    placeholder="Type your sticky note..."
+                    className="w-full text-sm bg-gray-50 border border-gray-200 rounded-lg p-3 outline-none focus:border-teal-400 resize-none text-gray-800 placeholder:text-gray-400"
+                    rows={3} autoFocus
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addSticky(); } }} />
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex gap-1.5">
+                      {STICKY_COLORS.map((c, i) => (
+                        <button key={i} onClick={() => setNewStickyColor(i)}
+                          className={`w-6 h-6 rounded-full border-2 transition-all ${i === newStickyColor ? 'border-gray-800 scale-110' : 'border-transparent'}`}
+                          style={{ backgroundColor: c.bg }} />
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setAddingSticky(false); setNewStickyText(''); }}
+                        className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1">Cancel</button>
+                      <button onClick={addSticky}
+                        className="text-sm bg-[#0FB5AD] text-white px-4 py-1.5 rounded-lg hover:bg-[#0a867f] font-medium">Add</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ═══ NOTE INPUT POPUP ═══ */}
+            {addingNote && (
+              <div className="absolute inset-0 z-30 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.3)' }}>
+                <div className="bg-white rounded-xl shadow-2xl p-4 w-[360px]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MessageSquare className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm font-semibold text-gray-900">Add Note</span>
+                  </div>
+                  <textarea value={newNoteText} onChange={(e) => setNewNoteText(e.target.value)}
+                    placeholder="Add a note or observation..."
+                    className="w-full text-sm bg-gray-50 border border-gray-200 rounded-lg p-3 outline-none focus:border-teal-400 resize-none text-gray-800 placeholder:text-gray-400"
+                    rows={3} autoFocus
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addNote(); } }} />
+                  {/* Show existing notes */}
+                  {current.notes.length > 0 && (
+                    <div className="mt-3 max-h-[120px] overflow-y-auto space-y-1.5">
+                      <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Existing notes</div>
+                      {current.notes.map(n => (
+                        <div key={n.id} className="flex items-start justify-between bg-gray-50 rounded-lg px-3 py-2 group">
+                          <p className="text-xs text-gray-600 flex-1">{n.text}</p>
+                          <button onClick={() => deleteNote(n.id)}
+                            className="text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 ml-2">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-end gap-2 mt-3">
+                    <button onClick={() => { setAddingNote(false); setNewNoteText(''); }}
+                      className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1">Cancel</button>
+                    <button onClick={addNote}
+                      className="text-sm bg-[#0FB5AD] text-white px-4 py-1.5 rounded-lg hover:bg-[#0a867f] font-medium">Add</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
