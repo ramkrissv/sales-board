@@ -16,6 +16,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { DealDetail } from '@/components/modals/DealDetail';
 import { FilterPanel } from '@/components/shared/FilterPanel';
 import { ScopeSwitch } from '@/components/shared/ScopeSwitch';
+import { computeFunnelHealth, computeOpportunityHealth } from '@/lib/health-scores';
 import PilotNudges from '@/components/ai/PilotNudges';
 import SignalCards from '@/components/ai/SignalCards';
 import { usePipelineInsight } from '@/lib/intelligence/useInsight';
@@ -119,6 +120,22 @@ function HomeContent() {
   const eeAccounts = Object.entries(accountDealCounts).filter(([, c]) => c >= 3).length;
   const enAccounts = Object.entries(accountDealCounts).filter(([, c]) => c === 2).length;
   const nnAccounts = Object.entries(accountDealCounts).filter(([, c]) => c === 1).length;
+
+  // ── Health Scores ──
+  const funnelHealth = useMemo(() => computeFunnelHealth(opportunities as any), [opportunities]);
+  const oppHealthScores = useMemo(() => {
+    const scores: Record<string, ReturnType<typeof computeOpportunityHealth>> = {};
+    activeDeals.forEach(o => { scores[o.id] = computeOpportunityHealth(o as any); });
+    return scores;
+  }, [activeDeals]);
+  const avgOppHealth = useMemo(() => {
+    const vals = Object.values(oppHealthScores);
+    return vals.length > 0 ? Math.round(vals.reduce((s, v) => s + v.score, 0) / vals.length) : 0;
+  }, [oppHealthScores]);
+  const criticalDeals = useMemo(() =>
+    activeDeals.filter(o => oppHealthScores[o.id]?.status === 'critical' || oppHealthScores[o.id]?.status === 'stale'),
+    [activeDeals, oppHealthScores]
+  );
 
   // AI-detected signals
   const atRiskDeals = activeDeals.filter(o => {
@@ -319,36 +336,108 @@ function HomeContent() {
           )}
 
           {/* KPI Strip */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="p-4 rounded-xl g-surface g-elevated">
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{filters.scope === 'my' ? 'My Pipeline' : 'Pipeline (Org)'}</div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-bold text-[#7c3aed] g-kpi">${(totalPipeline/1e6).toFixed(1)}M</span>
-                <span className="text-xs text-muted-foreground">{activeDeals.length} deals</span>
+                <span className="text-xs text-muted-foreground">{activeDeals.length}</span>
               </div>
             </div>
             <div className="p-4 rounded-xl g-surface g-elevated">
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Monthly Revenue</div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-bold text-emerald-500 g-kpi">${(monthlyRevenue/1000).toFixed(0)}k</span>
-                <span className="text-xs text-muted-foreground">from won deals</span>
+                <span className="text-xs text-muted-foreground">won</span>
+              </div>
+            </div>
+            {/* Funnel Health Score */}
+            <div className="p-4 rounded-xl g-surface g-elevated relative overflow-hidden">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Funnel Health</div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl font-bold g-kpi" style={{ color: funnelHealth.color }}>{funnelHealth.score}</span>
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{
+                  color: funnelHealth.color,
+                  background: funnelHealth.color + '15',
+                }}>{funnelHealth.grade}</span>
+              </div>
+              {/* Mini bar showing score */}
+              <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: funnelHealth.color + '20' }}>
+                <div className="h-full rounded-r" style={{ width: `${funnelHealth.score}%`, background: funnelHealth.color }} />
+              </div>
+            </div>
+            {/* Avg Opportunity Health */}
+            <div className="p-4 rounded-xl g-surface g-elevated relative overflow-hidden">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Avg Deal Health</div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl font-bold g-kpi" style={{
+                  color: avgOppHealth >= 70 ? '#10b981' : avgOppHealth >= 45 ? '#f59e0b' : '#ef4444'
+                }}>{avgOppHealth}</span>
+                <span className="text-xs text-muted-foreground">{criticalDeals.length > 0 ? `${criticalDeals.length} critical` : 'of 100'}</span>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{
+                background: (avgOppHealth >= 70 ? '#10b981' : avgOppHealth >= 45 ? '#f59e0b' : '#ef4444') + '20'
+              }}>
+                <div className="h-full rounded-r" style={{
+                  width: `${avgOppHealth}%`,
+                  background: avgOppHealth >= 70 ? '#10b981' : avgOppHealth >= 45 ? '#f59e0b' : '#ef4444',
+                }} />
               </div>
             </div>
             <div className="p-4 rounded-xl g-surface g-elevated">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Waiting on You</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Overdue Tasks</div>
               <div className="flex items-baseline gap-1.5">
                 <span className={`text-xl font-bold g-kpi ${overdueTasks.length > 0 ? 'text-red-400' : 'text-foreground'}`}>{overdueTasks.length}</span>
-                <span className="text-xs text-muted-foreground">overdue tasks</span>
+                <span className="text-xs text-muted-foreground">pending</span>
               </div>
             </div>
             <div className="p-4 rounded-xl g-surface g-elevated">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Closing This Month</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Closing Soon</div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-bold text-amber-500 g-kpi">{closingSoonDeals.length}</span>
-                <span className="text-xs text-muted-foreground">within 30 days</span>
+                <span className="text-xs text-muted-foreground">30 days</span>
               </div>
             </div>
           </div>
+
+          {/* Funnel Health Breakdown — expandable metrics */}
+          {funnelHealth.score < 100 && (
+            <div className="rounded-xl g-surface g-elevated p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" style={{ color: funnelHealth.color }} />
+                  <span className="text-sm font-semibold text-foreground">Funnel Health Breakdown</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
+                    color: funnelHealth.color, background: funnelHealth.color + '15',
+                  }}>{funnelHealth.score}/100 — Grade {funnelHealth.grade}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { label: 'Pipeline Coverage', value: funnelHealth.metrics.pipelineCoverage, desc: '3x target' },
+                  { label: 'Deal Velocity', value: funnelHealth.metrics.velocityScore, desc: 'movement speed' },
+                  { label: 'Aging Health', value: funnelHealth.metrics.agingScore, desc: `${criticalDeals.length} stale deals` },
+                  { label: 'Win Rate', value: funnelHealth.metrics.winRate, desc: `${winRate}% historical` },
+                  { label: 'Forecast Quality', value: funnelHealth.metrics.forecastQuality, desc: 'commit + best case' },
+                  { label: 'DM Coverage', value: funnelHealth.metrics.stakeholderCoverage, desc: '% with decision maker' },
+                  { label: 'TCV Health', value: funnelHealth.metrics.tcvHealth, desc: '% deals with value' },
+                  { label: 'Stage Balance', value: funnelHealth.metrics.stageBalance, desc: 'pipeline distribution' },
+                ].map((m, i) => (
+                  <div key={i} className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
+                      style={{
+                        color: m.value >= 70 ? '#10b981' : m.value >= 45 ? '#f59e0b' : '#ef4444',
+                        background: (m.value >= 70 ? '#10b981' : m.value >= 45 ? '#f59e0b' : '#ef4444') + '12',
+                      }}>{m.value}</div>
+                    <div>
+                      <div className="text-xs font-medium text-foreground">{m.label}</div>
+                      <div className="text-[10px] text-muted-foreground">{m.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Incoming Signals — Teams/Outlook alerts with Accept/Dismiss */}
           <SignalCards onOpenDeal={(dealId) => setSelectedOppId(dealId)} />

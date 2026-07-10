@@ -1,9 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { OpportunityProvider } from '@/lib/store';
+import { computeFunnelHealth } from '@/lib/health-scores';
 import { DealDetail } from '@/components/modals/DealDetail';
 import { Sparkles, Table as TableIcon, Eye, Kanban, CalendarDays, TrendingUp, BarChart3, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
@@ -50,15 +51,34 @@ function PipelineHeader({ localView, setLocalView }: { localView: LocalView; set
   const pathname = usePathname();
   const activeDeals = filteredOpportunities.filter(o => !['Won', 'Lost'].includes(o.status));
   const totalPipeline = activeDeals.reduce((s, o) => s + (o.tcv || 0), 0);
+  const funnelHealth = useMemo(() => computeFunnelHealth(filteredOpportunities as any), [filteredOpportunities]);
 
   return (
     <div className="space-y-4 mb-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground font-display">Pipeline</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {activeDeals.length} active opportunities · ${(totalPipeline / 1e6).toFixed(1)}M pipeline
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-xl font-semibold text-foreground font-display">Pipeline</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {activeDeals.length} active · ${(totalPipeline / 1e6).toFixed(1)}M
+            </p>
+          </div>
+          {/* Funnel Health Badge */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{
+            background: funnelHealth.color + '10', border: `1px solid ${funnelHealth.color}25`,
+          }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold" style={{
+              color: funnelHealth.color, background: funnelHealth.color + '18',
+            }}>{funnelHealth.score}</div>
+            <div>
+              <div className="text-[10px] font-semibold" style={{ color: funnelHealth.color }}>
+                Funnel Health {funnelHealth.grade}
+              </div>
+              <div className="text-[9px] text-muted-foreground">
+                {funnelHealth.metrics.winRate}% win · {funnelHealth.metrics.stakeholderCoverage}% DM
+              </div>
+            </div>
+          </div>
         </div>
         <ScopeSwitch
           value={filters.scope || 'org'}

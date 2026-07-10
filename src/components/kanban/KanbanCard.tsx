@@ -5,7 +5,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { format, differenceInDays, isPast } from 'date-fns';
-import { ArrowRight, Clock, Sparkles, AlertTriangle, Zap, TrendingUp } from 'lucide-react';
+import { ArrowRight, Clock, Sparkles, AlertTriangle, Zap, TrendingUp, Shield } from 'lucide-react';
+import { computeOpportunityHealth } from '@/lib/health-scores';
 
 // Stage probability weights for weighted value
 const STAGE_WEIGHTS: Record<string, number> = {
@@ -38,6 +39,7 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
   };
 
   const opp = opportunity;
+  const health = computeOpportunityHealth(opp as any);
   const weight = STAGE_WEIGHTS[opp.status] || 0;
   const weightedValue = Math.round((opp.tcv || 0) * weight);
 
@@ -124,16 +126,14 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
 
       {/* AI Signal indicators — health score, risk flags, recent signals */}
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-        {/* Health score badge */}
-        {(opp as any).dealHealthScore > 0 && (
-          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5 ${
-            (opp as any).dealHealthScore >= 70 ? 'bg-emerald-500/10 text-emerald-400' :
-            (opp as any).dealHealthScore >= 40 ? 'bg-amber-500/10 text-amber-400' :
-            'bg-red-500/10 text-red-400'
-          }`}>
-            <Sparkles className="h-2 w-2" /> {(opp as any).dealHealthScore}
-          </span>
-        )}
+        {/* Health score badge — always visible, computed */}
+        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5 ${
+          health.score >= 70 ? 'bg-emerald-500/10 text-emerald-400' :
+          health.score >= 45 ? 'bg-amber-500/10 text-amber-400' :
+          'bg-red-500/10 text-red-400'
+        }`}>
+          <Shield className="h-2 w-2" /> {health.score} {health.grade}
+        </span>
         {/* Win probability badge */}
         {(opp as any).winProbability > 0 && (
           <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5 ${
