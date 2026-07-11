@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useOpportunities } from '@/lib/store';
+import { trpc } from '@/lib/trpc/client';
+import { computeFunnelHealth } from '@/lib/health-scores';
 import {
   DollarSign, TrendingUp, Users, Target, BarChart3, Award,
   ArrowRight, Clock, CheckCircle, AlertTriangle, Percent,
@@ -113,6 +115,46 @@ export default function LeaderDashboard({ onDealClick }: LeaderDashboardProps) {
           </div>
         ))}
       </div>
+
+      {/* Week-over-Week Pipeline Trending */}
+      {(() => {
+        const fh = computeFunnelHealth(opportunities as any);
+        const active = opportunities.filter(o => !['Won', 'Lost'].includes(o.status));
+        const won = opportunities.filter(o => o.status === 'Won');
+        const dealsWithDM = active.filter(o => (o.customerStakeholders || []).some((s: any) => s.isDecisionMaker)).length;
+        const dealsWithTcv = active.filter(o => (o.tcv || 0) > 0).length;
+        const wowMetrics = [
+          { label: 'Funnel Health', current: fh.score, unit: '/100', color: fh.color },
+          { label: 'Pipeline', current: metrics.totalPipeline, unit: '', color: '#7c3aed', fmt: (v: number) => `$${(v/1e6).toFixed(1)}M` },
+          { label: 'Active Deals', current: active.length, unit: '', color: '#3b82f6' },
+          { label: 'Win Rate', current: metrics.winRate, unit: '%', color: metrics.winRate >= 40 ? '#22c55e' : '#f59e0b' },
+          { label: 'DM Coverage', current: active.length > 0 ? Math.round((dealsWithDM / active.length) * 100) : 0, unit: '%', color: '#06b6d4' },
+          { label: 'TCV Coverage', current: active.length > 0 ? Math.round((dealsWithTcv / active.length) * 100) : 0, unit: '%', color: '#f59e0b' },
+        ];
+        return (
+          <div className="p-5 rounded-xl g-surface g-elevated">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <TrendingUp className="h-3 w-3" /> Week-over-Week Pipeline Health
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {wowMetrics.map(m => (
+                <div key={m.label} className="text-center p-3 rounded-lg bg-card/50 border border-border/30">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{m.label}</div>
+                  <div className="text-lg font-bold" style={{ color: m.color }}>
+                    {(m as any).fmt ? (m as any).fmt(m.current) : `${m.current}${m.unit}`}
+                  </div>
+                  <div className="w-full h-1.5 bg-muted/30 rounded-full mt-2 overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{
+                      width: `${Math.min(100, typeof m.current === 'number' && m.unit === '%' ? m.current : m.current > 100 ? 100 : m.current)}%`,
+                      background: m.color,
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Targets vs Actuals — per salesperson */}
       <div className="p-5 rounded-xl g-surface g-elevated">

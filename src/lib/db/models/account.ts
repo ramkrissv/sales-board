@@ -16,6 +16,17 @@ export interface IAccount extends Document {
   aiBrief?: string;
   aiBriefGeneratedAt?: Date;
   intentData?: any;
+  // Hierarchy
+  parentAccountId?: mongoose.Types.ObjectId;
+  hierarchyLevel?: number;     // 0 = top-level, 1 = subsidiary, 2 = division
+  // Ownership & Permissions
+  accountOwner?: string;
+  teamMembers?: { userId: string; name: string; role: 'owner' | 'contributor' | 'viewer' }[];
+  // Enrichment
+  region?: string;
+  country?: string;
+  segment?: string;
+  linkedinUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,9 +51,26 @@ const AccountSchema = new Schema<IAccount>(
     aiBrief: { type: String },
     aiBriefGeneratedAt: { type: Date },
     intentData: { type: Schema.Types.Mixed },
+    // Hierarchy
+    parentAccountId: { type: Schema.Types.ObjectId, ref: 'Account' },
+    hierarchyLevel: { type: Number, default: 0 },
+    // Ownership
+    accountOwner: { type: String },
+    teamMembers: [{
+      userId: String,
+      name: String,
+      role: { type: String, enum: ['owner', 'contributor', 'viewer'], default: 'viewer' },
+    }],
+    // Enrichment
+    region: String,
+    country: String,
+    segment: { type: String, enum: ['Enterprise', 'Mid-Market', 'SMB', 'Strategic'] },
+    linkedinUrl: String,
   },
   { timestamps: true }
 );
+
+AccountSchema.index({ parentAccountId: 1 });
 
 export const Account =
   mongoose.models.Account || mongoose.model<IAccount>('Account', AccountSchema);

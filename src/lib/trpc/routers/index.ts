@@ -23,6 +23,7 @@ import { harnessRouter } from './harness';
 import { campaignRouter } from './campaign';
 import { directoryRouter } from './directory';
 import { workshopRouter } from './workshop';
+import { pipelineSnapshotRouter } from './pipeline-snapshot';
 
 export const appRouter = router({
   opportunity: opportunityRouter,
@@ -49,6 +50,7 @@ export const appRouter = router({
   campaign: campaignRouter,
   directory: directoryRouter,
   workshop: workshopRouter,
+  pipelineSnapshot: pipelineSnapshotRouter,
 });
 
 export type AppRouter = typeof appRouter;
