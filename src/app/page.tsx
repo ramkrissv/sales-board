@@ -90,6 +90,23 @@ function HomeContent() {
     }
   }, [isLoading, opportunities.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Health Scores (must be before any early return) ──
+  const funnelHealth = useMemo(() => computeFunnelHealth(opportunities as any), [opportunities]);
+  const oppHealthScores = useMemo(() => {
+    const active = opportunities.filter(o => !['Won', 'Lost'].includes(o.status));
+    const scores: Record<string, ReturnType<typeof computeOpportunityHealth>> = {};
+    active.forEach(o => { scores[o.id] = computeOpportunityHealth(o as any); });
+    return scores;
+  }, [opportunities]);
+  const avgOppHealth = useMemo(() => {
+    const vals = Object.values(oppHealthScores);
+    return vals.length > 0 ? Math.round(vals.reduce((s, v) => s + v.score, 0) / vals.length) : 0;
+  }, [oppHealthScores]);
+  const criticalDeals = useMemo(() => {
+    const active = opportunities.filter(o => !['Won', 'Lost'].includes(o.status));
+    return active.filter(o => oppHealthScores[o.id]?.status === 'critical' || oppHealthScores[o.id]?.status === 'stale');
+  }, [opportunities, oppHealthScores]);
+
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto space-y-6 px-2 sm:px-0">
@@ -121,21 +138,7 @@ function HomeContent() {
   const enAccounts = Object.entries(accountDealCounts).filter(([, c]) => c === 2).length;
   const nnAccounts = Object.entries(accountDealCounts).filter(([, c]) => c === 1).length;
 
-  // ── Health Scores ──
-  const funnelHealth = useMemo(() => computeFunnelHealth(opportunities as any), [opportunities]);
-  const oppHealthScores = useMemo(() => {
-    const scores: Record<string, ReturnType<typeof computeOpportunityHealth>> = {};
-    activeDeals.forEach(o => { scores[o.id] = computeOpportunityHealth(o as any); });
-    return scores;
-  }, [activeDeals]);
-  const avgOppHealth = useMemo(() => {
-    const vals = Object.values(oppHealthScores);
-    return vals.length > 0 ? Math.round(vals.reduce((s, v) => s + v.score, 0) / vals.length) : 0;
-  }, [oppHealthScores]);
-  const criticalDeals = useMemo(() =>
-    activeDeals.filter(o => oppHealthScores[o.id]?.status === 'critical' || oppHealthScores[o.id]?.status === 'stale'),
-    [activeDeals, oppHealthScores]
-  );
+  // Health scores computed below after loading check
 
   // AI-detected signals
   const atRiskDeals = activeDeals.filter(o => {
