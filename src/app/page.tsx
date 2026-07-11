@@ -74,6 +74,8 @@ function HomeContent() {
   const [expandedNudge, setExpandedNudge] = useState<any>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [homeView, setHomeView] = useState<'myday' | 'dashboard'>('myday');
+  const [dailyBriefOpen, setDailyBriefOpen] = useState(true);
+  const [aiBriefOpen, setAiBriefOpen] = useState(true);
   const { data: activities = [] } = trpc.activity.list.useQuery();
 
   // Pilot Intelligence — cached insights
@@ -534,15 +536,20 @@ function HomeContent() {
 
           {/* AI Daily Brief — Timeline of deal stories */}
           <div>
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-6 h-6 rounded-lg bg-[#7c3aed]/15 flex items-center justify-center">
+            <button onClick={() => setDailyBriefOpen(o => !o)}
+              className="flex items-center gap-2 mb-5 group w-full text-left">
+              <div className="w-6 h-6 rounded-lg bg-[#7c3aed]/15 flex items-center justify-center transition-transform"
+                style={{ transform: dailyBriefOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
                 <Brain className="h-3.5 w-3.5 text-[#7c3aed]" />
               </div>
               <span className="text-sm font-semibold text-foreground">Daily Brief</span>
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-live ml-1" />
-            </div>
+              <span className="ml-auto text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                {dailyBriefOpen ? '−' : '+'}
+              </span>
+            </button>
 
-            {dealStories.length > 0 ? (
+            {dailyBriefOpen && dealStories.length > 0 ? (
               <div className="relative ml-3">
                 {/* Timeline line */}
                 <div className="absolute left-[5px] top-2 bottom-2 w-px bg-border/60" />
@@ -583,7 +590,7 @@ function HomeContent() {
                   ))}
                 </div>
               </div>
-            ) : (
+            ) : dailyBriefOpen ? (
               <div className="space-y-4 py-4">
                 {/* Show general pipeline summary when no specific stories */}
                 <div className="p-4 rounded-xl bg-card border border-border">
@@ -617,7 +624,7 @@ function HomeContent() {
                   </p>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Quick Navigation */}
@@ -671,26 +678,43 @@ function HomeContent() {
           {/* AI Insight Banner — below mindmap */}
           <div className="relative overflow-hidden rounded-xl ai-glow animate-flow-in g-gradient-border g-noise" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.02), transparent)' }}>
             <div className="g-fractal-orb g-fractal-orb-teal" style={{ width: '200px', height: '200px', top: '-60px', right: '-40px' }} />
-            <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
-              <Brain className="w-full h-full text-[#7c3aed]" />
-            </div>
             <div className="p-5">
-              <div className="flex items-center gap-2 mb-2">
+              <button onClick={() => setAiBriefOpen(o => !o)}
+                className="flex items-center gap-2 mb-2 w-full text-left group">
                 <div className="w-6 h-6 rounded-lg bg-[#7c3aed]/20 flex items-center justify-center">
                   <Sparkles className="h-3.5 w-3.5 text-[#7c3aed]" />
                 </div>
                 <span className="text-xs font-semibold text-[#7c3aed] uppercase tracking-wider">AI Intelligence Brief</span>
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-live ml-1" />
-              </div>
-              {pipelineMutation.isPending ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Sparkles className="h-4 w-4 animate-spin text-[#7c3aed]" />
-                  Analyzing your pipeline...
-                </div>
-              ) : aiSummary ? (
-                <p className="text-sm text-foreground leading-relaxed">{aiSummary}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground">Loading AI insights...</p>
+                <span className="ml-auto text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                  {aiBriefOpen ? '−' : '+'}
+                </span>
+              </button>
+              {aiBriefOpen && (
+                <>
+                  {pipelineMutation.isPending ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Sparkles className="h-4 w-4 animate-spin text-[#7c3aed]" />
+                      Analyzing your pipeline...
+                    </div>
+                  ) : aiSummary ? (
+                    <div className="text-sm text-foreground leading-relaxed space-y-2">
+                      {aiSummary.split(/(?<=\.)\s+/).map((sentence, i) => {
+                        const trimmed = sentence.trim();
+                        if (!trimmed) return null;
+                        // Bold sentences that start with "My recommendation" or contain action words
+                        const isAction = /^(My recommendation|Focus|Block|Priority|Action)/i.test(trimmed);
+                        return (
+                          <p key={i} className={isAction ? 'font-medium text-foreground border-l-2 border-[#7c3aed]/40 pl-3 mt-2' : 'text-muted-foreground'}>
+                            {trimmed}
+                          </p>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Loading AI insights...</p>
+                  )}
+                </>
               )}
             </div>
           </div>
